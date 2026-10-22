@@ -101,6 +101,33 @@ describe('zyzz', () => {
     }
   }, 60_000)
 
+  test('bundles set and variant selection without Object.hasOwn', async () => {
+    const root = await fixture()
+    try {
+      await Fs.writeFile(
+        Path.join(root, 'src/config.ts'),
+        `import { Config, Vars } from 'zyzz'\n\nconst base = Vars.define({ color: { brand: '#0066cc' } })\n\nconst large = Vars.extend(base, { color: { brand: '#ff0000' } })\n\nexport const { variants, vars } = Config.create({ defaultVars: 'base', vars: { base, large } })\n`,
+      )
+      await Fs.writeFile(
+        Path.join(root, 'src/App.tsx'),
+        `import { variants, vars } from './config'\n\nexport function App(props: { tone?: 'neutral' | 'success' }) {\n  return <view {...vars({ set: 'large' })}><text {...badge({ tone: props.tone })}>Hello</text></view>\n}\n\nconst badge = variants({\n  defaultVariants: { tone: 'neutral' },\n  variants: { tone: { neutral: { color: vars.color.brand }, success: { color: '#00aa00 !custom' } } },\n})\n`,
+      )
+
+      const result = await (await create(root)).build()
+      await result.close()
+
+      // Lynx's JavaScript engines do not implement Object.hasOwn.
+      const source = await Fs.readFile(
+        Path.join(root, 'dist/.lynx/main/tasm.json'),
+        'utf8',
+      )
+      expect(source.includes('Object.hasOwn(')).toMatchInlineSnapshot(`false`)
+      expect(source.includes('z-theme-large')).toMatchInlineSnapshot(`true`)
+    } finally {
+      await Fs.rm(root, { force: true, recursive: true })
+    }
+  }, 60_000)
+
   test('rebuilds the zyzz.css module after a style edit in watch mode', async () => {
     const root = await fixture()
     const rspeedy = await create(root)

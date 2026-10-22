@@ -59,13 +59,17 @@ export function create(options: create.Options) {
     let classes = ''
     for (const condition of conditions) {
       const selections =
-        selected && Object.hasOwn(selected, condition.name)
+        selected &&
+        Object.prototype.hasOwnProperty.call(selected, condition.name)
           ? selected[condition.name]
           : undefined
       if (!selections) continue
 
       for (const entry of condition.axes) {
-        const value = Object.hasOwn(selections, entry.axis)
+        const value = Object.prototype.hasOwnProperty.call(
+          selections,
+          entry.axis,
+        )
           ? selections[entry.axis]
           : undefined
         if (value === undefined) continue

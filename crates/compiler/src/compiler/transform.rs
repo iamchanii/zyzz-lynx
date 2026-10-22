@@ -403,7 +403,7 @@ fn write_selector(
         js::write_string(&mut key, axis);
         let _ = write!(
             output,
-            "value=Object.hasOwn(input,{key})?input[{key}]:void 0;"
+            "value=Object.prototype.hasOwnProperty.call(input,{key})?input[{key}]:void 0;"
         );
 
         if let Some(Some(fallback)) = recipe.defaults.get(axis) {
@@ -454,7 +454,7 @@ fn write_class_selector(
         js::write_string(&mut key, axis);
         let _ = write!(
             output,
-            "value=Object.hasOwn(input,{key})?input[{key}]:void 0;"
+            "value=Object.prototype.hasOwnProperty.call(input,{key})?input[{key}]:void 0;"
         );
 
         if let Some(Some(fallback)) = recipe.defaults.get(axis) {

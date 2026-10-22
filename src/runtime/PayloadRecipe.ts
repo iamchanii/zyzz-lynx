@@ -38,9 +38,12 @@ export function create(options: create.Options) {
     }
 
     for (const axis of axes) {
-      const value = Object.hasOwn(input, axis) ? input[axis] : undefined
+      const value = Object.prototype.hasOwnProperty.call(input, axis)
+        ? input[axis]
+        : undefined
       const fallback =
-        options.defaultPayloads && Object.hasOwn(options.defaultPayloads, axis)
+        options.defaultPayloads &&
+        Object.prototype.hasOwnProperty.call(options.defaultPayloads, axis)
           ? options.defaultPayloads[axis]
           : undefined
       normalized[axis] = select(
@@ -60,14 +63,14 @@ export function create(options: create.Options) {
         null,
       )
       for (const [index, name] of (options.conditions ?? []).entries()) {
-        const values = Object.hasOwn(conditions, name)
+        const values = Object.prototype.hasOwnProperty.call(conditions, name)
           ? conditions[name]
           : undefined
         if (!values) continue
 
         const selected: Record<string, unknown> = {}
         for (const axis of axes)
-          if (Object.hasOwn(values, axis))
+          if (Object.prototype.hasOwnProperty.call(values, axis))
             selected[axis] = select(values[axis], axis, index + 1)
         selections[name] = selected
       }
