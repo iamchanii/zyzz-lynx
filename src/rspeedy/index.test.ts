@@ -90,6 +90,12 @@ describe('zyzz', () => {
         ]
       `)
       expect(mainThread.includes('style({')).toMatchInlineSnapshot(`false`)
+
+      expect(
+        (await Fs.readdir(Path.join(root, 'dist'))).filter((file) =>
+          file.startsWith('zyzz'),
+        ),
+      ).toMatchInlineSnapshot(`[]`)
     } finally {
       await Fs.rm(root, { force: true, recursive: true })
     }

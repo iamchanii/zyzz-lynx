@@ -63,6 +63,9 @@ const portable = createUnplugin<Options | undefined, false>(
           fileName,
           source: Uint8Array.from(source),
         })
+      // Rspeedy bundles the stylesheet through `zyzz.css`, and Lynx pages have
+      // no document for the selection script to restore.
+      if (meta.framework === 'rspack') return
       context.emitFile({
         type: 'asset',
         fileName: 'zyzz.css',
