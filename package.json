@@ -90,7 +90,7 @@
     "vite-plus": "catalog:",
     "webpack": "catalog:",
     "zile": "catalog:",
-    "zyzz": "catalog:"
+    "zyzz": "workspace:zyzz-lynx@*"
   },
   "packageManager": "pnpm@11.19.0",
   "[!start-pkg]": "",
