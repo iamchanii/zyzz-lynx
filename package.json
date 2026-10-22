@@ -112,7 +112,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/iamchanii/zyzz.git"
+    "url": "git+https://github.com/iamchanii/zyzz-lynx.git"
   },
   "type": "module",
   "bin": {
