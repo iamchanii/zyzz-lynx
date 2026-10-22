@@ -40,7 +40,8 @@ export function create() {
     const root = await manifest(file, options)
     if (!root) return undefined
 
-    const { directory, name } = root
+    // Packages without Zyzz contribute only literal constants reached through literal-only modules.
+    const { directory, literal, name } = root
     const id = (path: string) =>
       `${name}/${Path.relative(directory, path).split(Path.sep).join('/')}`
     const contracts: Record<string, string> = Object.create(null)
@@ -183,11 +184,12 @@ export function create() {
       return false
     }
 
-    async function visit(path: string) {
+    async function visit(path: string): Promise<boolean> {
       const moduleId = id(path)
-      if (Object.hasOwn(modules, moduleId)) return
+      if (Object.hasOwn(modules, moduleId)) return true
 
       const entry = await parse(path)
+      if (literal && !constants(entry.parsed.program)) return false
       modules[moduleId] = entry.source
       const links: Record<string, string | null> = Object.create(null)
       imports[moduleId] = links
@@ -239,6 +241,7 @@ export function create() {
           continue
 
         if (!inside(directory, target)) {
+          if (literal) return false
           if (await link(target)) links[specifier] = target
           continue
         }
@@ -271,12 +274,14 @@ export function create() {
         }
 
         links[specifier] = id(target)
-        await visit(target)
+        if (!(await visit(target))) return false
       }
+      return true
     }
 
-    await visit(file)
-    if (!authored && !Object.keys(contracts).length) return undefined
+    if (!(await visit(file))) return undefined
+    if (!literal && !authored && !Object.keys(contracts).length)
+      return undefined
 
     const inputs = Crypto.createHash('sha256')
       .update(JSON.stringify([modules, contracts, imports]))
@@ -293,6 +298,8 @@ export function create() {
           modules,
         })
       } catch (error) {
+        // An unreadable constant module stays the plain runtime import it was before.
+        if (literal) return undefined
         throw new Error(
           `Unable to derive the Zyzz contract of ${file}: ${(error as Error).message}`,
           { cause: error },
@@ -300,7 +307,7 @@ export function create() {
       }
     })()
 
-    const contract = graph.contracts[id(file)]
+    const contract = graph?.contracts[id(file)]
     derived.set(file, { contract, inputs })
     return contract
   }
@@ -308,7 +315,9 @@ export function create() {
   return {
     /**
      * Returns the shipped `<file>.zyzz.json` contract, or derives it when the
-     * package depends on Zyzz and the module graph reaches its authoring APIs.
+     * package depends on Zyzz and the module graph reaches its authoring APIs,
+     * or when every module the file reaches only declares and re-exports
+     * constants, whose literal values then compile into styles.
      * Undefined marks a plain runtime import.
      */
     read(file: string, options: read.Options) {
@@ -333,6 +342,21 @@ export declare namespace read {
   }
 }
 
+/** Whether a module only declares constants and re-exports, so reading it runs no code. */
+function constants(program: ReturnType<typeof Syntax.parse>['program']) {
+  return program.body.every((node) => {
+    if (node.type === 'ExportAllDeclaration') return true
+    if (node.type === 'ExportNamedDeclaration' && !node.declaration) return true
+
+    const declaration =
+      node.type === 'ExportNamedDeclaration' ? node.declaration : node
+    return (
+      declaration?.type === 'VariableDeclaration' &&
+      declaration.kind === 'const'
+    )
+  })
+}
+
 function inside(directory: string, file: string) {
   const relative = Path.relative(directory, file)
 
@@ -344,7 +368,7 @@ function inside(directory: string, file: string) {
   )
 }
 
-/** Finds the named package owning a file, when its manifest declares Zyzz. */
+/** Finds the named package owning a file and whether its manifest declares Zyzz. */
 async function manifest(file: string, options: read.Options) {
   for (let directory = Path.dirname(file); ; ) {
     const data = await options.read(Path.join(directory, 'package.json')).then(
@@ -357,21 +381,23 @@ async function manifest(file: string, options: read.Options) {
 
     // Nested manifests without a name, such as `{"type":"module"}`, belong to the enclosing package.
     if (typeof data?.name === 'string')
-      return [
-        'dependencies',
-        'devDependencies',
-        'optionalDependencies',
-        'peerDependencies',
-      ].some((key) => {
-        const dependencies = data[key]
-        return (
-          !!dependencies &&
-          typeof dependencies === 'object' &&
-          Object.hasOwn(dependencies, 'zyzz')
-        )
-      })
-        ? { directory, name: data.name }
-        : undefined
+      return {
+        directory,
+        literal: ![
+          'dependencies',
+          'devDependencies',
+          'optionalDependencies',
+          'peerDependencies',
+        ].some((key) => {
+          const dependencies = data[key]
+          return (
+            !!dependencies &&
+            typeof dependencies === 'object' &&
+            Object.hasOwn(dependencies, 'zyzz')
+          )
+        }),
+        name: data.name,
+      }
 
     const parent = Path.dirname(directory)
     if (parent === directory) return undefined

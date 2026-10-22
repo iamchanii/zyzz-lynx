@@ -101,6 +101,55 @@ describe('zyzz', () => {
     }
   }, 60_000)
 
+  test('compiles literal constants from packages without a Zyzz dependency', async () => {
+    const root = await fixture()
+    try {
+      // Mirrors @seed-design/lynx-css: nested namespace re-exports of `var()` strings.
+      const tokens = Path.join(root, 'node_modules/@acme/tokens')
+      await Fs.mkdir(Path.join(tokens, 'vars/color'), { recursive: true })
+      await Fs.writeFile(
+        Path.join(tokens, 'package.json'),
+        JSON.stringify({
+          exports: { './vars': { import: './vars/index.mjs' } },
+          name: '@acme/tokens',
+          type: 'module',
+        }),
+      )
+      await Fs.writeFile(
+        Path.join(tokens, 'vars/index.mjs'),
+        'export * as vars from "./vars.mjs";\n',
+      )
+      await Fs.writeFile(
+        Path.join(tokens, 'vars/vars.mjs'),
+        'export * as color from "./color/index.mjs";\n',
+      )
+      await Fs.writeFile(
+        Path.join(tokens, 'vars/color/index.mjs'),
+        'export * as bg from "./bg.mjs";\n',
+      )
+      await Fs.writeFile(
+        Path.join(tokens, 'vars/color/bg.mjs'),
+        'export const layerDefault = "var(--seed-color-bg-layer-default)";\nexport const layerFloating = "var(--seed-color-bg-layer-floating)";\n',
+      )
+      await Fs.writeFile(
+        Path.join(root, 'src/App.tsx'),
+        `import { vars } from '@acme/tokens/vars'\nimport { style } from 'zyzz'\n\nexport function App() {\n  return <view {...styles.root()} />\n}\n\nnamespace styles {\n  export const root = style({ backgroundColor: vars.color.bg.layerDefault, borderColor: vars.color.bg['layerFloating'] })\n}\n`,
+      )
+
+      const result = await (await create(root)).build()
+      await result.close()
+
+      expect((await template(root)).css).toMatchInlineSnapshot(`
+        [
+          ".z_i6Fywm0 { background-color: {{--seed-color-bg-layer-default}} }",
+          ".z_i6Fywm1 { border-color: {{--seed-color-bg-layer-floating}} }",
+        ]
+      `)
+    } finally {
+      await Fs.rm(root, { force: true, recursive: true })
+    }
+  }, 60_000)
+
   test('bundles set and variant selection without Object.hasOwn', async () => {
     const root = await fixture()
     try {
