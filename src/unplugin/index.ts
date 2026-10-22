@@ -28,14 +28,15 @@ export type Options = {
 
 const excludedPattern = /\.(?:d|test|test-d|bench|bench-d)\.[cm]?[jt]sx?$/
 const sourcePattern = /\.[cm]?[jt]sx?$/
+// The `.css` suffix lets the bundler's stylesheet rules process the loaded source.
+const stylesheetId = '\0zyzz.css'
+const stylesheetFilter = new RegExp(`^${stylesheetId.replaceAll('.', '\\.')}$`)
 
 const portable = createUnplugin<Options | undefined, false>(
   (options = {}, meta) => {
     // Webpack-compatible compilers emit assets before the emit hook that runs `buildEnd`.
     const compilerHooks =
-      meta.framework === 'webpack' ||
-      meta.framework === 'rspack' ||
-      meta.framework === 'rsbuild'
+      meta.framework === 'webpack' || meta.framework === 'rspack'
     const root = Path.resolve(options.root ?? process.cwd())
     const compiler = Graph.create()
     const packages = Contracts.create()
@@ -279,6 +280,7 @@ const portable = createUnplugin<Options | undefined, false>(
               links[specifier] = null
               if (
                 specifier === 'zyzz' ||
+                specifier === 'zyzz.css' ||
                 (specifier.startsWith('zyzz/') &&
                   specifier !== 'zyzz/default') ||
                 /^(?:[a-z][a-z\d+.-]*:|\/\/)/i.test(specifier) ||
@@ -581,7 +583,19 @@ const portable = createUnplugin<Options | undefined, false>(
           })
         },
       },
+      load: {
+        filter: { id: stylesheetFilter },
+        async handler() {
+          await pending
+          // Any source edit can change the combined stylesheet.
+          for (const file of files) this.addWatchFile(file)
+          return { code: css, map: cssMap }
+        },
+      },
       name: 'zyzz',
+      resolveId(id) {
+        if (id === 'zyzz.css') return stylesheetId
+      },
       rollup: {
         shouldTransformCachedModule() {
           return true
@@ -636,16 +650,15 @@ const portable = createUnplugin<Options | undefined, false>(
   },
 )
 
+/** Creates the Rspack plugin that `zyzz/rspeedy` registers in each environment. */
+export const rspack = portable.rspack
+
 /** Bundler factories. Vite retains its native CSS delivery and environment-specific HMR. */
 export const zyzz = {
   /** Creates an esbuild plugin that emits stylesheets and watches source directories. */
   esbuild: portable.esbuild,
   /** Creates a Rollup plugin with dependency-aware cached transforms. */
   rollup: portable.rollup,
-  /** Creates an Rsbuild plugin that registers the Rspack plugin. */
-  rsbuild: portable.rsbuild,
-  /** Creates an Rspack plugin that compiles before language loaders. */
-  rspack: portable.rspack,
   /** Creates the existing Vite plugin with automatic CSS delivery and HMR. */
   vite: Vite.zyzz,
   /** Creates a Webpack plugin that compiles before language loaders. */

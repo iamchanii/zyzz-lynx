@@ -1,6 +1,4 @@
 /** Checks the public bundler factories and their separate Vite options. @module */
-import type { RsbuildPlugin } from '@rsbuild/core'
-import type { RspackPluginInstance } from '@rspack/core'
 import type { Plugin as EsbuildPlugin } from 'esbuild'
 import type { Plugin as RollupPlugin } from 'rollup'
 import type { Plugin as VitePlugin } from 'vite'
@@ -14,10 +12,6 @@ describe('zyzz', () => {
       zyzz.esbuild({ root: 'src', reset: true }),
     ).toEqualTypeOf<EsbuildPlugin>()
     expectTypeOf(zyzz.rollup({ reset: true })).toEqualTypeOf<RollupPlugin>()
-    expectTypeOf(zyzz.rsbuild({ reset: true })).toEqualTypeOf<RsbuildPlugin>()
-    expectTypeOf(
-      zyzz.rspack({ reset: true }),
-    ).toEqualTypeOf<RspackPluginInstance>()
     expectTypeOf(zyzz.vite({ reset: true })).toEqualTypeOf<VitePlugin>()
     expectTypeOf(
       zyzz.webpack({ reset: true }),
