@@ -38,6 +38,8 @@ catalog:
   '@pandacss/dev': '2.0.0'
   '@pandacss/preset-base': '2.0.0'
   '@pandacss/transformer': '2.0.0'
+  '@rsbuild/core': '^2.2.9'
+  '@rspack/core': '^2.2.9'
   '@shikijs/monaco': '^4.4.3'
   '@shikijs/transformers': '^4.4.3'
   '@shikijs/twoslash': '^4.4.3'

@@ -302,7 +302,7 @@ namespace styles {
 
 </FrameworkSetup.Target>
 
-<FrameworkSetup.Target value="other-bundlers" title="Other Bundlers" icon="rollup" description="Use Rollup, Webpack, or esbuild adapters to emit CSS alongside JavaScript.">
+<FrameworkSetup.Target value="other-bundlers" title="Other Bundlers" icon="rollup" description="Use Rollup, Rsbuild, Rspack, Webpack, or esbuild adapters to emit CSS alongside JavaScript.">
 
 <Steps start={2}>
 
@@ -314,7 +314,7 @@ Add the matching unplugin adapter to the existing bundler configuration. Retain 
 import { zyzz } from 'zyzz/unplugin'
 
 const plugins = [zyzz.rollup()]
-// Use zyzz.webpack() or zyzz.esbuild() for those bundlers.
+// Use zyzz.rsbuild(), zyzz.rspack(), zyzz.webpack(), or zyzz.esbuild() for those bundlers.
 ```
 
 Load the emitted stylesheet and initialization script from the application document. Adjust paths to the deployment base.

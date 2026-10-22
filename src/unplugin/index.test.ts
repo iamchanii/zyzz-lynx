@@ -1,4 +1,6 @@
 /** Exercises portable adapters with real builds, incremental compilation, and browser rendering. @module */
+import * as Rsbuild from '@rsbuild/core'
+import * as Rspack from '@rspack/core'
 import * as Esbuild from 'esbuild'
 import * as Fs from 'node:fs/promises'
 import * as Path from 'node:path'
@@ -14,6 +16,8 @@ import { describe, expect, test, vi } from 'vite-plus/test'
 import Webpack from 'webpack'
 import { zyzz as esbuild } from 'zyzz/esbuild'
 import { zyzz as rollup } from 'zyzz/rollup'
+import { zyzz as rsbuild } from 'zyzz/rsbuild'
+import { zyzz as rspack } from 'zyzz/rspack'
 import { zyzz } from 'zyzz/unplugin'
 import { zyzz as webpack } from 'zyzz/webpack'
 
@@ -71,7 +75,13 @@ const runtime = Path.resolve('dist/runtime/index.js')
 
 describe('zyzz', () => {
   for (const reset of [false, true])
-    for (const bundler of ['esbuild', 'rollup', 'webpack'] as const) {
+    for (const bundler of [
+      'esbuild',
+      'rollup',
+      'rsbuild',
+      'rspack',
+      'webpack',
+    ] as const) {
       test(`${bundler} emits matching JavaScript, shared CSS, and source maps (reset: ${reset})`, async () => {
         const root = await fixture()
         try {
@@ -116,6 +126,54 @@ describe('zyzz', () => {
             } finally {
               await build.close()
             }
+          } else if (bundler === 'rsbuild') {
+            const instance = await Rsbuild.createRsbuild({
+              cwd: root,
+              rsbuildConfig: {
+                logLevel: 'silent',
+                output: {
+                  distPath: { js: '', root: 'dist' },
+                  filename: { js: 'app.js' },
+                  minify: false,
+                },
+                performance: { chunkSplit: { strategy: 'all-in-one' } },
+                plugins: [rsbuild({ root, reset })],
+                resolve: { alias: { 'zyzz/runtime': runtime } },
+                source: { entry: { app: './main.js' } },
+                tools: {
+                  htmlPlugin: false,
+                  rspack: { output: { library: { name: 'App', type: 'var' } } },
+                },
+              },
+            })
+            const result = await instance.build()
+            await result.close()
+          } else if (bundler === 'rspack') {
+            const compiler = Rspack.rspack({
+              context: root,
+              entry: './main.js',
+              mode: 'development',
+              output: {
+                path: Path.join(root, 'dist'),
+                filename: 'app.js',
+                library: { name: 'App', type: 'var' },
+              },
+              plugins: [rspack({ root, reset })],
+              resolve: { alias: { 'zyzz/runtime': runtime } },
+            })
+            try {
+              await new Promise<void>((resolve, reject) =>
+                compiler.run((error, stats) =>
+                  error || stats?.hasErrors()
+                    ? reject(error ?? new Error(stats?.toString('errors-only')))
+                    : resolve(),
+                ),
+              )
+            } finally {
+              await new Promise<void>((resolve, reject) =>
+                compiler.close((error) => (error ? reject(error) : resolve())),
+              )
+            }
           } else {
             const compiler = Webpack({
               context: root,
@@ -148,7 +206,8 @@ describe('zyzz', () => {
           await Responsive.verify({
             code:
               (await Fs.readFile(Path.join(root, 'dist/app.js'), 'utf8')) +
-              ';var Fixture=App;',
+              // Rspack bundles end with a `sourceMappingURL` line comment.
+              '\n;var Fixture=App;',
             css: await Fs.readFile(Path.join(root, 'dist/zyzz.css'), 'utf8'),
           })
           const { boxSizing, ...styles } = rendered

@@ -45,6 +45,8 @@
     "@pandacss/dev": "catalog:",
     "@pandacss/preset-base": "catalog:",
     "@pandacss/transformer": "catalog:",
+    "@rsbuild/core": "catalog:",
+    "@rspack/core": "catalog:",
     "@stylexjs/babel-plugin": "catalog:",
     "@stylexjs/stylex": "catalog:",
     "@tamagui/core": "catalog:",
@@ -256,6 +258,16 @@
       "src": "./src/rollup/index.ts",
       "types": "./dist/rollup/index.d.ts",
       "default": "./dist/rollup/index.js"
+    },
+    "./rsbuild": {
+      "src": "./src/rsbuild/index.ts",
+      "types": "./dist/rsbuild/index.d.ts",
+      "default": "./dist/rsbuild/index.js"
+    },
+    "./rspack": {
+      "src": "./src/rspack/index.ts",
+      "types": "./dist/rspack/index.d.ts",
+      "default": "./dist/rspack/index.js"
     },
     "./runtime": {
       "src": "./src/runtime/index.ts",

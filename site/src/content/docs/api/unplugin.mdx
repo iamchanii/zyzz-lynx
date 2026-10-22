@@ -1,8 +1,8 @@
 # Unplugin
 
-Compile styles with esbuild, Rollup, or Webpack and emit CSS beside the bundle.
+Compile styles with esbuild, Rollup, Rsbuild, Rspack, or Webpack and emit CSS beside the bundle.
 
-The `zyzz` object from `zyzz/unplugin` holds one plugin factory per bundler. The esbuild, Rollup, and Webpack factories compile the source root, rewrite authoring calls, and emit a complete stylesheet into the output directory. [Getting Started](/docs/introduction/getting-started?framework=other-bundlers) covers the setup.
+The `zyzz` object from `zyzz/unplugin` holds one plugin factory per bundler. The esbuild, Rollup, Rsbuild, Rspack, and Webpack factories compile the source root, rewrite authoring calls, and emit a complete stylesheet into the output directory. [Getting Started](/docs/introduction/getting-started?framework=other-bundlers) covers the setup.
 
 ```ts title="build.ts"
 import { build } from 'esbuild'
@@ -24,6 +24,8 @@ await build({
 // One factory per bundler
 zyzz.esbuild(options?)
 zyzz.rollup(options?)
+zyzz.rsbuild(options?)
+zyzz.rspack(options?)
 zyzz.webpack(options?)
 zyzz.vite(options?)
 ```
@@ -83,7 +85,7 @@ Keep other generated output outside the root. Dependencies are not compiled from
 
 ### plugin
 
-- **Type:** `EsbuildPlugin | RollupPlugin | WebpackPluginInstance{:ts}`
+- **Type:** `EsbuildPlugin | RollupPlugin | RsbuildPlugin | RspackPluginInstance | WebpackPluginInstance{:ts}`
 
 A plugin for the factory's bundler that emits these files into its output directory:
 
@@ -131,6 +133,43 @@ export default {
   output: { dir: 'dist', format: 'es' },
   // [!code hl:2]
   // Runs before the project's source transforms
+  plugins: [zyzz({ root: 'src' })],
+}
+```
+
+## Rsbuild
+
+`zyzz.rsbuild` is also exported as `zyzz` from `zyzz/rsbuild`. It registers the Rspack plugin through `modifyRspackConfig`. The generated HTML does not reference the emitted files, so add them with `html.tags`.
+
+```ts title="rsbuild.config.ts"
+import { defineConfig } from '@rsbuild/core'
+import { zyzz } from 'zyzz/rsbuild'
+
+export default defineConfig({
+  // [!code hl:2]
+  // Compiles before the project's loaders run
+  plugins: [zyzz({ root: 'src' })],
+  html: {
+    // Loads the emitted script and stylesheet from the output root
+    tags: [
+      { tag: 'script', attrs: { src: '/zyzz.js' }, head: true },
+      { tag: 'link', attrs: { rel: 'stylesheet', href: '/zyzz.css' } },
+    ],
+  },
+})
+```
+
+## Rspack
+
+`zyzz.rspack` is also exported as `zyzz` from `zyzz/rspack`. Like the Webpack plugin, it runs as a pre-loader ahead of the project's loaders and resolves imports through Rspack.
+
+```ts title="rspack.config.ts"
+import { zyzz } from 'zyzz/rspack'
+
+export default {
+  entry: './src/main.js',
+  // [!code hl:2]
+  // Compiles before the project's loaders run
   plugins: [zyzz({ root: 'src' })],
 }
 ```

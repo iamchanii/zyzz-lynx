@@ -31,6 +31,11 @@ const sourcePattern = /\.[cm]?[jt]sx?$/
 
 const portable = createUnplugin<Options | undefined, false>(
   (options = {}, meta) => {
+    // Webpack-compatible compilers emit assets before the emit hook that runs `buildEnd`.
+    const compilerHooks =
+      meta.framework === 'webpack' ||
+      meta.framework === 'rspack' ||
+      meta.framework === 'rsbuild'
     const root = Path.resolve(options.root ?? process.cwd())
     const compiler = Graph.create()
     const packages = Contracts.create()
@@ -93,12 +98,11 @@ const portable = createUnplugin<Options | undefined, false>(
     }
 
     return {
-      buildEnd:
-        meta.framework === 'webpack'
-          ? undefined
-          : function () {
-              emit(this)
-            },
+      buildEnd: compilerHooks
+        ? undefined
+        : function () {
+            emit(this)
+          },
       async buildStart() {
         pending = (async () => {
           graph = undefined
@@ -181,7 +185,10 @@ const portable = createUnplugin<Options | undefined, false>(
                 )
               return result.external ? undefined : result.path
             }
-            if (native?.framework === 'webpack') {
+            if (
+              native?.framework === 'webpack' ||
+              native?.framework === 'rspack'
+            ) {
               const resolver = native.compiler.resolverFactory.get('normal', {
                 dependencyType: 'esm',
               })
@@ -533,7 +540,7 @@ const portable = createUnplugin<Options | undefined, false>(
           ).join('\n')
           snapshot.retain(files, modules)
           graph = result
-          if (meta.framework === 'webpack') emit(this)
+          if (compilerHooks) emit(this)
           if (meta.framework === 'rollup')
             for (const file of [...files, ...directories])
               this.addWatchFile(file)
@@ -595,7 +602,10 @@ const portable = createUnplugin<Options | undefined, false>(
           for (const file of files) this.addWatchFile(file)
           const native = this.getNativeBuildContext?.()
           for (const directory of directories) {
-            if (native?.framework === 'webpack')
+            if (
+              native?.framework === 'webpack' ||
+              native?.framework === 'rspack'
+            )
               native.loaderContext?.addContextDependency(directory)
             else if (meta.framework === 'rollup') this.addWatchFile(directory)
           }
@@ -632,6 +642,10 @@ export const zyzz = {
   esbuild: portable.esbuild,
   /** Creates a Rollup plugin with dependency-aware cached transforms. */
   rollup: portable.rollup,
+  /** Creates an Rsbuild plugin that registers the Rspack plugin. */
+  rsbuild: portable.rsbuild,
+  /** Creates an Rspack plugin that compiles before language loaders. */
+  rspack: portable.rspack,
   /** Creates the existing Vite plugin with automatic CSS delivery and HMR. */
   vite: Vite.zyzz,
   /** Creates a Webpack plugin that compiles before language loaders. */
