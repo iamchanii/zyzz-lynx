@@ -1,5 +1,12 @@
 # zyzz
 
+## 0.0.42
+
+### Patch Changes
+
+- d665c67: Folded class-selection recipe applications spread onto a host element into a constant class list or one selector call that reads a table of complete class lists, so a render no longer concatenated classes or wrote a module-scope temporary.
+- 7a8817f: Fixed `zyzz/rspeedy` watch builds that stopped rebuilding after a compile error, such as `Source.ExtractError`. The error is now reported as a compilation error, and the scanned sources stay watched, so fixing the source triggers a rebuild.
+
 ## 0.0.41
 
 ### Patch Changes
