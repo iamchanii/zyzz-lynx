@@ -1,16 +1,5 @@
 name: Binding
 on:
-  pull_request:
-    paths:
-      - .cargo/**
-      - .github/workflows/binding.yml
-      - Cargo.lock
-      - Cargo.toml
-      - crates/binding/**
-      - rust-toolchain.toml
-      - scripts/build-binding.ts
-      - scripts/check-binding.ts
-      - scripts/train-binding.ts
   workflow_call:
   workflow_dispatch:
 concurrency:
