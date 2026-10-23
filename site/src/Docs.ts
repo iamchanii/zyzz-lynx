@@ -208,6 +208,7 @@ export const groups: readonly { pages: readonly Item[]; title: string }[] = [
           { path: 'api/vite', title: 'Vite' },
           { path: 'api/next', title: 'Next.js' },
           { path: 'api/metro', title: 'Metro' },
+          { path: 'api/rspeedy', title: 'Rspeedy' },
           { path: 'api/unplugin', title: 'Unplugin' },
           { path: 'api/babel', title: 'Babel' },
         ],

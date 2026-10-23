@@ -13,6 +13,38 @@
   <a href="#overview">Overview</a> · <a href="#agent-prompt">Agent Prompt</a> · <a href="#philosophy">Philosophy</a> · <a href="#features">Features</a> · <a href="#documentation">Documentation</a> · <a href="https://zyzz.style/docs/guides/styling">Guides</a> · <a href="https://zyzz.style/docs/api/core">API Reference</a>
 </p>
 
+> [!WARNING]
+> This repository is an experimental fork of [wevm/zyzz](https://github.com/wevm/zyzz) for using Zyzz in [Lynx](https://lynxjs.org) applications. It is published as `zyzz-lynx`, adds the `zyzz/rspeedy` plugin, and may diverge from or lag behind upstream.
+
+## Lynx
+
+Install `zyzz-lynx` under the `zyzz` alias. The compiler recognizes authoring imports from `zyzz`, so application code keeps `import { style } from 'zyzz'`.
+
+```sh
+# Installs zyzz-lynx as node_modules/zyzz
+pnpm add zyzz@npm:zyzz-lynx
+```
+
+Add the plugin to the Rspeedy configuration, then import `zyzz.css` once from the application entry so the compiled styles reach the Lynx bundle.
+
+```ts
+// lynx.config.ts
+import { defineConfig } from '@lynx-js/rspeedy'
+import { pluginReactLynx } from '@lynx-js/react-rsbuild-plugin'
+import { zyzz } from 'zyzz/rspeedy'
+
+export default defineConfig({
+  plugins: [pluginReactLynx(), zyzz({ root: 'src' })],
+})
+```
+
+```tsx
+// src/index.tsx
+import 'zyzz.css'
+```
+
+[Rspeedy](site/src/content/docs/api/rspeedy.mdx) documents the plugin options and limits.
+
 ## Overview
 
 ```tsx

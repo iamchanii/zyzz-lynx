@@ -46,9 +46,10 @@ export function create(
       !input ||
       typeof input !== 'object' ||
       Array.isArray(input) ||
-      (!Object.hasOwn(input, key) && defaultSet === undefined) ||
+      (!Object.prototype.hasOwnProperty.call(input, key) &&
+        defaultSet === undefined) ||
       typeof selected !== 'string' ||
-      !Object.hasOwn(catalog, selected!) ||
+      !Object.prototype.hasOwnProperty.call(catalog, selected!) ||
       Object.keys(input).some(
         (field) => field !== key && field !== 'colorScheme',
       ) ||

@@ -27,6 +27,7 @@
       "zyzz/react-native/reanimated": ["./src/react-native/reanimated.ts"],
       "zyzz/react-native/react": ["./src/react-native/react.ts"],
       "zyzz/rollup": ["./src/rollup/index.ts"],
+      "zyzz/rspeedy": ["./src/rspeedy/index.ts"],
       "zyzz/runtime": ["./src/runtime/index.ts"],
       "zyzz/unplugin": ["./src/unplugin/index.ts"],
       "zyzz/vite": ["./src/vite/index.ts"],

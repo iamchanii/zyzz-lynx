@@ -1789,8 +1789,16 @@ impl<'p, 'a> Build<'p, 'a> {
 
                         let name = export_name(exported);
 
+                        // A namespace carrying style definitions stays a link, since one export
+                        // cannot be both a link and a literal.
                         if let Some(link) = namespace(&name) {
                             forwarded.insert(name.as_str(), link);
+                        } else if let Some(value) = match &input {
+                            Input::Library(library) => literals::namespace(&library.literals),
+                            Input::Module(module) => literals::namespace(&module.literals),
+                            Input::Runtime => None,
+                        } {
+                            forwarded_literals.insert(name.as_str(), value);
                         }
 
                         explicit.insert(name);

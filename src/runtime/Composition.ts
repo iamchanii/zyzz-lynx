@@ -74,7 +74,10 @@ export function create(options: create.Options) {
         for (const name of entry.className.split(/\s+/))
           if (name && !input.classes.has(name)) (external ??= []).push(name)
       for (const name in entry)
-        if (name.startsWith('data-') && Object.hasOwn(entry, name)) {
+        if (
+          name.startsWith('data-') &&
+          Object.prototype.hasOwnProperty.call(entry, name)
+        ) {
           result[name] = entry[name as `data-${string}`]
           attributes = true
         }
@@ -82,7 +85,7 @@ export function create(options: create.Options) {
       if (inline) {
         style ??= {}
         for (const name in inline) {
-          if (!Object.hasOwn(inline, name)) continue
+          if (!Object.prototype.hasOwnProperty.call(inline, name)) continue
           // Reinsert overwritten keys so inline shorthand/longhand ordering follows arguments.
           delete style[name]
           style[name] = inline[name as keyof typeof inline]

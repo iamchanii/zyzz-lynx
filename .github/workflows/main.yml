@@ -36,7 +36,7 @@ jobs:
         run: |
           pending=$(find .changeset -name '*.md' ! -name README.md | head -n 1)
           version=$(node -p "require('./package.json').version")
-          if [ -z "$pending" ] && [ -z "$(npm view "zyzz@$version" version 2>/dev/null)" ]; then
+          if [ -z "$pending" ] && [ -z "$(npm view "zyzz-lynx@$version" version 2>/dev/null)" ]; then
             echo publish=true >> "$GITHUB_OUTPUT"
           fi
 

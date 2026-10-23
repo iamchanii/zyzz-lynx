@@ -152,6 +152,7 @@ const sidebarIcons: Record<string, typeof BookOpenIcon> = {
   'api/react-native/useVars': VariableIcon,
   'api/react-native/values': ListIcon,
   'api/react-native/withStyles': BoxesIcon,
+  'api/rspeedy': SmartphoneIcon,
   'api/runtime': BookOpenIcon,
   'api/runtime/namespaces/Appearance': SunMoonIcon,
   'api/runtime/namespaces/Composition': CombineIcon,

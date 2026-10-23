@@ -28,9 +28,15 @@ export type Options = {
 
 const excludedPattern = /\.(?:d|test|test-d|bench|bench-d)\.[cm]?[jt]sx?$/
 const sourcePattern = /\.[cm]?[jt]sx?$/
+// The `.css` suffix lets the bundler's stylesheet rules process the loaded source.
+const stylesheetId = '\0zyzz.css'
+const stylesheetFilter = new RegExp(`^${stylesheetId.replaceAll('.', '\\.')}$`)
 
 const portable = createUnplugin<Options | undefined, false>(
   (options = {}, meta) => {
+    // Webpack-compatible compilers emit assets before the emit hook that runs `buildEnd`.
+    const compilerHooks =
+      meta.framework === 'webpack' || meta.framework === 'rspack'
     const root = Path.resolve(options.root ?? process.cwd())
     const compiler = Graph.create()
     const packages = Contracts.create()
@@ -57,6 +63,9 @@ const portable = createUnplugin<Options | undefined, false>(
           fileName,
           source: Uint8Array.from(source),
         })
+      // Rspeedy bundles the stylesheet through `zyzz.css`, and Lynx pages have
+      // no document for the selection script to restore.
+      if (meta.framework === 'rspack') return
       context.emitFile({
         type: 'asset',
         fileName: 'zyzz.css',
@@ -93,12 +102,11 @@ const portable = createUnplugin<Options | undefined, false>(
     }
 
     return {
-      buildEnd:
-        meta.framework === 'webpack'
-          ? undefined
-          : function () {
-              emit(this)
-            },
+      buildEnd: compilerHooks
+        ? undefined
+        : function () {
+            emit(this)
+          },
       async buildStart() {
         pending = (async () => {
           graph = undefined
@@ -181,7 +189,10 @@ const portable = createUnplugin<Options | undefined, false>(
                 )
               return result.external ? undefined : result.path
             }
-            if (native?.framework === 'webpack') {
+            if (
+              native?.framework === 'webpack' ||
+              native?.framework === 'rspack'
+            ) {
               const resolver = native.compiler.resolverFactory.get('normal', {
                 dependencyType: 'esm',
               })
@@ -272,6 +283,7 @@ const portable = createUnplugin<Options | undefined, false>(
               links[specifier] = null
               if (
                 specifier === 'zyzz' ||
+                specifier === 'zyzz.css' ||
                 (specifier.startsWith('zyzz/') &&
                   specifier !== 'zyzz/default') ||
                 /^(?:[a-z][a-z\d+.-]*:|\/\/)/i.test(specifier) ||
@@ -533,7 +545,7 @@ const portable = createUnplugin<Options | undefined, false>(
           ).join('\n')
           snapshot.retain(files, modules)
           graph = result
-          if (meta.framework === 'webpack') emit(this)
+          if (compilerHooks) emit(this)
           if (meta.framework === 'rollup')
             for (const file of [...files, ...directories])
               this.addWatchFile(file)
@@ -574,7 +586,19 @@ const portable = createUnplugin<Options | undefined, false>(
           })
         },
       },
+      load: {
+        filter: { id: stylesheetFilter },
+        async handler() {
+          await pending
+          // Any source edit can change the combined stylesheet.
+          for (const file of files) this.addWatchFile(file)
+          return { code: css, map: cssMap }
+        },
+      },
       name: 'zyzz',
+      resolveId(id) {
+        if (id === 'zyzz.css') return stylesheetId
+      },
       rollup: {
         shouldTransformCachedModule() {
           return true
@@ -595,7 +619,10 @@ const portable = createUnplugin<Options | undefined, false>(
           for (const file of files) this.addWatchFile(file)
           const native = this.getNativeBuildContext?.()
           for (const directory of directories) {
-            if (native?.framework === 'webpack')
+            if (
+              native?.framework === 'webpack' ||
+              native?.framework === 'rspack'
+            )
               native.loaderContext?.addContextDependency(directory)
             else if (meta.framework === 'rollup') this.addWatchFile(directory)
           }
@@ -625,6 +652,9 @@ const portable = createUnplugin<Options | undefined, false>(
     }
   },
 )
+
+/** Creates the Rspack plugin that `zyzz/rspeedy` registers in each environment. */
+export const rspack = portable.rspack
 
 /** Bundler factories. Vite retains its native CSS delivery and environment-specific HMR. */
 export const zyzz = {

@@ -1,0 +1,125 @@
+# Rspeedy
+
+Compile styles in Lynx applications built with Rspeedy.
+
+The `zyzz` function from `zyzz/rspeedy` returns an Rsbuild plugin for the Rspeedy `plugins` list. It compiles the project, rewrites authoring calls, and serves the combined stylesheet as the `zyzz.css` module. Importing that module from the entry adds the styles to the Lynx bundle.
+
+```ts title="lynx.config.ts"
+import { defineConfig } from '@lynx-js/rspeedy'
+import { pluginReactLynx } from '@lynx-js/react-rsbuild-plugin'
+import { zyzz } from 'zyzz/rspeedy'
+
+export default defineConfig({
+  // [!code hl:2]
+  // Compiles before the ReactLynx transforms run
+  plugins: [pluginReactLynx(), zyzz({ root: 'src' })],
+})
+```
+
+## Installation
+
+The package is published as `zyzz-lynx`. Install it under the `zyzz` alias, since the compiler recognizes authoring imports from `zyzz`.
+
+```sh
+# Keeps `import { style } from 'zyzz'` in application code
+pnpm add zyzz@npm:zyzz-lynx
+```
+
+## Stylesheet
+
+Import `zyzz.css` once from the application entry. The module contains shared contributions, then module styles with dependencies first, and Rspeedy compiles it with the rest of the entry's CSS.
+
+```tsx title="src/index.tsx"
+// [!code hl:2]
+// Adds the compiled styles to the Lynx bundle
+import 'zyzz.css'
+import { root } from '@lynx-js/react'
+import { App } from './App'
+
+root.render(<App />)
+```
+
+Each environment compiles separately, so `lynx` and `web` environments receive their own stylesheet. Watch rebuilds recompile the stylesheet after any source edit.
+
+## Signature
+
+```ts
+// Returns an Rsbuild plugin
+zyzz(options?)
+```
+
+## Parameters
+
+### options.compiler
+
+- **Type:** `boolean{:ts}`
+- **Default:** `true{:ts}`
+
+Rewrites authoring calls into compiled props. With `false`, the stylesheet is still produced but the authored calls stay, so identity-bearing declarations need explicit identities.
+
+```ts title="lynx.config.ts"
+import { zyzz } from 'zyzz/rspeedy'
+
+// [!code hl:2]
+// Keeps authored calls in the bundle
+const plugin = zyzz({ compiler: false })
+```
+
+### options.reset
+
+- **Type:** `boolean{:ts}`
+- **Default:** `false{:ts}`
+
+Adds the packaged [reset](/docs/guides/reset) to `zyzz.css`, in a `reset` layer ordered before authored layers. The reset selects HTML elements, which Lynx pages do not render.
+
+```ts title="lynx.config.ts"
+import { zyzz } from 'zyzz/rspeedy'
+
+// [!code hl:2]
+// Prepends the reset layer to zyzz.css
+const plugin = zyzz({ reset: true })
+```
+
+### options.root
+
+- **Type:** `string{:ts}`
+- **Default:** the Rspeedy project root
+
+The source directory to compile. Every module under it contributes CSS, including unimported global styles. Hidden directories, `node_modules`, `dist`, `build`, `coverage`, tests, fixtures, and declaration, test, and benchmark modules are skipped.
+
+```ts title="lynx.config.ts"
+import { zyzz } from 'zyzz/rspeedy'
+
+// [!code hl:2]
+// Leaves lynx.config.ts and other project files uncompiled
+const plugin = zyzz({ root: 'src' })
+```
+
+## Returns
+
+### plugin
+
+- **Type:** `RsbuildPlugin{:ts}`
+
+A plugin that registers the Zyzz Rspack plugin in each environment and resolves `zyzz.css`.
+
+```ts title="lynx.config.ts"
+import { defineConfig } from '@lynx-js/rspeedy'
+import { zyzz } from 'zyzz/rspeedy'
+
+export default defineConfig({
+  // [!code hl:2]
+  // Accepted wherever Rspeedy takes Rsbuild plugins
+  plugins: [zyzz()],
+})
+```
+
+## Errors
+
+Builds fail on unsupported authoring, unresolved dependencies, and source changed by a transform that ran first. Rspeedy resolves imports with its own extensions, so an import such as `./App.js` must name a file that exists.
+
+```tsx title="src/index.tsx"
+// [!code hl:2]
+// Resolves App.tsx through Rspeedy's extension list
+import { App } from './App'
+```

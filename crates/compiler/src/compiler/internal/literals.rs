@@ -105,6 +105,30 @@ fn append(output: &mut String, expression: &Expression<'_>, depth: usize) -> Opt
     Some(())
 }
 
+/// Serializes a module's literal exports as the object an `export * as` namespace re-export
+/// publishes, keeping export order. Returns `None` when the module exports no literals.
+pub(crate) fn namespace(literals: &Record<Arc<str>>) -> Option<Arc<str>> {
+    if literals.is_empty() {
+        return None;
+    }
+
+    let mut output = String::from("{");
+
+    for (index, (name, value)) in literals.iter().enumerate() {
+        if index > 0 {
+            output.push(',');
+        }
+
+        js::write_string(&mut output, name);
+        output.push(':');
+        output.push_str(value);
+    }
+
+    output.push('}');
+
+    Some(Arc::from(output))
+}
+
 /// Collects local literal exports in source order with one binding pass.
 pub(crate) fn exports<'a>(
     allocator: &'a Allocator,

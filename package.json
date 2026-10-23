@@ -40,11 +40,16 @@
     "@babel/core": "catalog:",
     "@base-ui/react": "catalog:",
     "@changesets/cli": "catalog:",
+    "@lynx-js/react": "catalog:",
+    "@lynx-js/react-rsbuild-plugin": "catalog:",
+    "@lynx-js/rspeedy": "catalog:",
     "@mdn/browser-compat-data": "catalog:",
     "@napi-rs/cli": "catalog:",
     "@pandacss/dev": "catalog:",
     "@pandacss/preset-base": "catalog:",
     "@pandacss/transformer": "catalog:",
+    "@rsbuild/core": "catalog:",
+    "@rspack/core": "catalog:",
     "@stylexjs/babel-plugin": "catalog:",
     "@stylexjs/stylex": "catalog:",
     "@tamagui/core": "catalog:",
@@ -84,11 +89,12 @@
     "vite": "catalog:",
     "vite-plus": "catalog:",
     "webpack": "catalog:",
-    "zile": "catalog:"
+    "zile": "catalog:",
+    "zyzz": "workspace:zyzz-lynx@*"
   },
   "packageManager": "pnpm@11.19.0",
   "[!start-pkg]": "",
-  "name": "zyzz",
+  "name": "zyzz-lynx",
   "version": "0.0.41",
   "license": "MIT",
   "description": "Modern, universal, simple styling library for the Web and React Native",
@@ -106,7 +112,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/wevm/zyzz.git"
+    "url": "git+https://github.com/iamchanii/zyzz-lynx.git"
   },
   "type": "module",
   "bin": {
@@ -256,6 +262,11 @@
       "src": "./src/rollup/index.ts",
       "types": "./dist/rollup/index.d.ts",
       "default": "./dist/rollup/index.js"
+    },
+    "./rspeedy": {
+      "src": "./src/rspeedy/index.ts",
+      "types": "./dist/rspeedy/index.d.ts",
+      "default": "./dist/rspeedy/index.js"
     },
     "./runtime": {
       "src": "./src/runtime/index.ts",

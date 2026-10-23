@@ -89,7 +89,7 @@ export function create(options: create.Options) {
           ]),
         )
       : undefined,
-    fallback: Object.hasOwn(options.defaults, axis)
+    fallback: Object.prototype.hasOwnProperty.call(options.defaults, axis)
       ? options.defaults[axis]
       : undefined,
   }))
@@ -102,7 +102,7 @@ export function create(options: create.Options) {
       Record<`data-${string}`, string>
 
     for (const entry of axes) {
-      const selected = Object.hasOwn(input, entry.axis)
+      const selected = Object.prototype.hasOwnProperty.call(input, entry.axis)
         ? input[entry.axis]
         : undefined
       const value = (selected === undefined ? entry.fallback : selected) as

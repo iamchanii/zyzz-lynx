@@ -3492,7 +3492,7 @@ export const button=variants({base:{display:'flex'},variants:{active:{false:{opa
         export const base=(1 as unknown as import('zyzz').style.ReturnType)
         export const outer=(1 as unknown as import('zyzz').style.ReturnType)
         export const inline=/*#__PURE__*/__zyzzProps.create({className:"z_l0kPgl2"})
-        export const button=(((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className,style=input.style,vars=input.vars,inline=vars?{...vars,...style}:style,className=external?"z_l0kPgl3 z_l0kPgl4 z_l0kPgl5 z_l0kPgl6"+" "+external:"z_l0kPgl3 z_l0kPgl4 z_l0kPgl5 z_l0kPgl6",result:Record<string,unknown>=inline?{className,style:inline}:{className};let value;value=Object.hasOwn(input,"active")?input["active"]:void 0;if(value!==null&&value!==void 0)result["data-active"]=String(value);value=Object.hasOwn(input,"tone")?input["tone"]:void 0;if(value===void 0)value="quiet";if(value!==null&&value!==void 0)result["data-tone"]=String(value);return result}) as unknown as import('zyzz').variants.ReturnType<{variants:{"active":{"false":{};"true":{}};"tone":{"loud":{};"quiet":{}}}}>)
+        export const button=(((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className,style=input.style,vars=input.vars,inline=vars?{...vars,...style}:style,className=external?"z_l0kPgl3 z_l0kPgl4 z_l0kPgl5 z_l0kPgl6"+" "+external:"z_l0kPgl3 z_l0kPgl4 z_l0kPgl5 z_l0kPgl6",result:Record<string,unknown>=inline?{className,style:inline}:{className};let value;value=Object.prototype.hasOwnProperty.call(input,"active")?input["active"]:void 0;if(value!==null&&value!==void 0)result["data-active"]=String(value);value=Object.prototype.hasOwnProperty.call(input,"tone")?input["tone"]:void 0;if(value===void 0)value="quiet";if(value!==null&&value!==void 0)result["data-tone"]=String(value);return result}) as unknown as import('zyzz').variants.ReturnType<{variants:{"active":{"false":{};"true":{}};"tone":{"loud":{};"quiet":{}}}}>)
         }"
       `)
 
@@ -3654,9 +3654,9 @@ export const bar=style((values:{width:\`\${number}px\`})=>({width:values.width})
           source: source.replace('active, tone })', `active, ${value} })`),
         })
 
-        expect(kept.code.includes('Object.hasOwn')).toMatchInlineSnapshot(
-          `true`,
-        )
+        expect(
+          kept.code.includes('Object.prototype.hasOwnProperty.call(input'),
+        ).toMatchInlineSnapshot(`true`)
       }
     })
 
@@ -4400,9 +4400,9 @@ namespace styles {
         <p>{order.join(' ')}</p>
         </>
         namespace styles {
-          export const chip = (((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className,style=input.style,vars=input.vars,inline=vars?{...vars,...style}:style;let value,className="z_l0kPgl0";value=Object.hasOwn(input,"on")?input["on"]:void 0;if(value!==null&&value!==void 0){value=String(value);className+=value==="true"?" zv4meQUdh61":""}value=Object.hasOwn(input,"size")?input["size"]:void 0;if(value!==null&&value!==void 0){value=String(value);className+=value==="large"?" zv4meQUdh62":value==="small"?" zv4meQUdh63":""}value=Object.hasOwn(input,"tone")?input["tone"]:void 0;if(value===void 0)value="red";if(value!==null&&value!==void 0){value=String(value);className+=value==="blue"?" zv4meQUdh64":value==="red"?" zv4meQUdh65":""}if(external)className+=" "+external;return inline?{className,style:inline}:{className}}) as unknown as import('zyzz').variants.ReturnType<{selection:'class';variants:{"on":{"false":{};"true":{}};"size":{"large":{};"small":{}};"tone":{"blue":{};"red":{}}}}>)
+          export const chip = (((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className,style=input.style,vars=input.vars,inline=vars?{...vars,...style}:style;let value,className="z_l0kPgl0";value=Object.prototype.hasOwnProperty.call(input,"on")?input["on"]:void 0;if(value!==null&&value!==void 0){value=String(value);className+=value==="true"?" zv4meQUdh61":""}value=Object.prototype.hasOwnProperty.call(input,"size")?input["size"]:void 0;if(value!==null&&value!==void 0){value=String(value);className+=value==="large"?" zv4meQUdh62":value==="small"?" zv4meQUdh63":""}value=Object.prototype.hasOwnProperty.call(input,"tone")?input["tone"]:void 0;if(value===void 0)value="red";if(value!==null&&value!==void 0){value=String(value);className+=value==="blue"?" zv4meQUdh64":value==="red"?" zv4meQUdh65":""}if(external)className+=" "+external;return inline?{className,style:inline}:{className}}) as unknown as import('zyzz').variants.ReturnType<{selection:'class';variants:{"on":{"false":{};"true":{}};"size":{"large":{};"small":{}};"tone":{"blue":{};"red":{}}}}>)
 
-          export const flag = (((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className,style=input.style,vars=input.vars,inline=vars?{...vars,...style}:style,className=external?"z_l0kPgl1"+" "+external:"z_l0kPgl1",result:Record<string,unknown>=inline?{className,style:inline}:{className};let value;value=Object.hasOwn(input,"on")?input["on"]:void 0;if(value!==null&&value!==void 0)result["data-on"]=String(value);value=Object.hasOwn(input,"tone")?input["tone"]:void 0;if(value===void 0)value="red";if(value!==null&&value!==void 0)result["data-tone"]=String(value);return result}) as unknown as import('zyzz').variants.ReturnType<{variants:{"on":{"false":{};"true":{}};"tone":{"blue":{};"false":{};"red":{}}}}>)
+          export const flag = (((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className,style=input.style,vars=input.vars,inline=vars?{...vars,...style}:style,className=external?"z_l0kPgl1"+" "+external:"z_l0kPgl1",result:Record<string,unknown>=inline?{className,style:inline}:{className};let value;value=Object.prototype.hasOwnProperty.call(input,"on")?input["on"]:void 0;if(value!==null&&value!==void 0)result["data-on"]=String(value);value=Object.prototype.hasOwnProperty.call(input,"tone")?input["tone"]:void 0;if(value===void 0)value="red";if(value!==null&&value!==void 0)result["data-tone"]=String(value);return result}) as unknown as import('zyzz').variants.ReturnType<{variants:{"on":{"false":{};"true":{}};"tone":{"blue":{};"false":{};"red":{}}}}>)
 
           export declare const wide: import('zyzz').variants.ReturnType<{selection:'class';variants:{"a":{"w":{};"x":{};"y":{}};"b":{"w":{};"x":{};"z":{}};"c":{"w":{};"x":{};"y":{}};"d":{"w":{};"x":{};"y":{}}}}>
         }"
@@ -4653,32 +4653,32 @@ namespace styles {
 
       expect(output.code.slice(output.code.indexOf('export const App')))
         .toMatchInlineSnapshot(`
-        "export const App = () => <main>
-        <Chip ref={ref}>ref</Chip>
-        <Chip {...{ tone: 'blue' }}>spread</Chip>
-        <Chip id="id">unknown prop</Chip>
-        <Chip children="attribute" />
-        <Chip tone="blue" key="key" className="x">middle key</Chip>
-        <Chip tone="a&amp;b">entity</Chip>
-        <Bare className="x" />
-        <Bare>children</Bare>
-        <Called tone="blue">called</Called>
-        <Loose tone="blue">loose</Loose>
-        <Templated tone="blue">template</Templated>
-        <Whole tone="blue">whole</Whole>
-        <Scoped tone="blue">scoped</Scoped>
-        <Labeled tone="blue">labeled</Labeled>
-        <Styled tone="blue">styled</Styled>
-        <Stated tone="blue">statements</Stated>
-        <Defaulted tone="blue">default</Defaulted>
-        <Rest tone="blue">rest</Rest>
-        <Nested tone="blue">nested</Nested>
-        <Replaced tone="blue">let</Replaced>
-        </main>
-        namespace styles {
-          export const chip = (((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className,style=input.style,vars=input.vars,inline=vars?{...vars,...style}:style;let value,className="z_l0kPgl0 z_l0kPgl1 z_l0kPgl2";value=Object.hasOwn(input,"tone")?input["tone"]:void 0;if(value!==null&&value!==void 0){value=String(value);className+=value==="blue"?" zv4meQUdh60":value==="red"?" zv4meQUdh61":""}if(external)className+=" "+external;return inline?{className,style:inline}:{className}}) as unknown as import('zyzz').variants.ReturnType<{selection:'class';variants:{"tone":{"blue":{};"red":{}}}}>)
-        }"
-      `)
+          "export const App = () => <main>
+          <Chip ref={ref}>ref</Chip>
+          <Chip {...{ tone: 'blue' }}>spread</Chip>
+          <Chip id="id">unknown prop</Chip>
+          <Chip children="attribute" />
+          <Chip tone="blue" key="key" className="x">middle key</Chip>
+          <Chip tone="a&amp;b">entity</Chip>
+          <Bare className="x" />
+          <Bare>children</Bare>
+          <Called tone="blue">called</Called>
+          <Loose tone="blue">loose</Loose>
+          <Templated tone="blue">template</Templated>
+          <Whole tone="blue">whole</Whole>
+          <Scoped tone="blue">scoped</Scoped>
+          <Labeled tone="blue">labeled</Labeled>
+          <Styled tone="blue">styled</Styled>
+          <Stated tone="blue">statements</Stated>
+          <Defaulted tone="blue">default</Defaulted>
+          <Rest tone="blue">rest</Rest>
+          <Nested tone="blue">nested</Nested>
+          <Replaced tone="blue">let</Replaced>
+          </main>
+          namespace styles {
+            export const chip = (((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className,style=input.style,vars=input.vars,inline=vars?{...vars,...style}:style;let value,className="z_l0kPgl0 z_l0kPgl1 z_l0kPgl2";value=Object.prototype.hasOwnProperty.call(input,"tone")?input["tone"]:void 0;if(value!==null&&value!==void 0){value=String(value);className+=value==="blue"?" zv4meQUdh60":value==="red"?" zv4meQUdh61":""}if(external)className+=" "+external;return inline?{className,style:inline}:{className}}) as unknown as import('zyzz').variants.ReturnType<{selection:'class';variants:{"tone":{"blue":{};"red":{}}}}>)
+          }"
+        `)
     })
 
     test('keeps reading selection components declared after the function that renders them', () => {
@@ -4712,7 +4712,7 @@ namespace styles {
         const Late = (props: P) => <span {...styles.chip({ className: props.className, tone: props.tone })}>{props.children}</span>
         export const after = () => <span className={"z_mespvT0 z_mespvT1 z_mespvT2 zvajgFh3sB0"}>after</span>
         namespace styles {
-          export const chip = (((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className,style=input.style,vars=input.vars,inline=vars?{...vars,...style}:style;let value,className="z_mespvT0 z_mespvT1 z_mespvT2";value=Object.hasOwn(input,"tone")?input["tone"]:void 0;if(value!==null&&value!==void 0){value=String(value);className+=value==="blue"?" zvajgFh3sB0":value==="red"?" zvajgFh3sB1":""}if(external)className+=" "+external;return inline?{className,style:inline}:{className}}) as unknown as import('zyzz').variants.ReturnType<{selection:'class';variants:{"tone":{"blue":{};"red":{}}}}>)
+          export const chip = (((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className,style=input.style,vars=input.vars,inline=vars?{...vars,...style}:style;let value,className="z_mespvT0 z_mespvT1 z_mespvT2";value=Object.prototype.hasOwnProperty.call(input,"tone")?input["tone"]:void 0;if(value!==null&&value!==void 0){value=String(value);className+=value==="blue"?" zvajgFh3sB0":value==="red"?" zvajgFh3sB1":""}if(external)className+=" "+external;return inline?{className,style:inline}:{className}}) as unknown as import('zyzz').variants.ReturnType<{selection:'class';variants:{"tone":{"blue":{};"red":{}}}}>)
         }"
       `)
     })
@@ -4744,7 +4744,7 @@ namespace styles {
         // A synchronous render before the namespace initializes still reaches the recipe.
         App()
         namespace styles {
-          export const chip = (((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className,style=input.style,vars=input.vars,inline=vars?{...vars,...style}:style;let value,className="z_Emit600 z_Emit601";value=Object.hasOwn(input,"tone")?input["tone"]:void 0;if(value!==null&&value!==void 0){value=String(value);className+=value==="blue"?" zv4TfDB8ee0":""}if(external)className+=" "+external;return inline?{className,style:inline}:{className}}) as unknown as import('zyzz').variants.ReturnType<{selection:'class';variants:{"tone":{"blue":{}}}}>)
+          export const chip = (((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className,style=input.style,vars=input.vars,inline=vars?{...vars,...style}:style;let value,className="z_Emit600 z_Emit601";value=Object.prototype.hasOwnProperty.call(input,"tone")?input["tone"]:void 0;if(value!==null&&value!==void 0){value=String(value);className+=value==="blue"?" zv4TfDB8ee0":""}if(external)className+=" "+external;return inline?{className,style:inline}:{className}}) as unknown as import('zyzz').variants.ReturnType<{selection:'class';variants:{"tone":{"blue":{}}}}>)
         }"
       `)
     })
