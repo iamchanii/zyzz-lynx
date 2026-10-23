@@ -60,7 +60,7 @@ jobs:
       # uninstalled on hosts their dependencies do not support.
       - if: ${{ !endsWith(matrix.target, '-musl') }}
         name: Install dependencies
-        run: pnpm install --frozen-lockfile --filter zyzz
+        run: pnpm install --frozen-lockfile --filter zyzz-lynx
       - if: ${{ !endsWith(matrix.target, '-musl') }}
         name: Cache Rust builds
         uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
@@ -87,7 +87,7 @@ jobs:
             rustup-init -y --default-toolchain none --profile minimal
             . "$HOME/.cargo/env"
             corepack enable
-            pnpm install --frozen-lockfile --filter zyzz
+            pnpm install --frozen-lockfile --filter zyzz-lynx
             node scripts/build-binding.ts --target ${{ matrix.target }}
             node scripts/check-binding.ts --target ${{ matrix.target }}
           '
