@@ -1,5 +1,16 @@
 # zyzz
 
+## 0.0.41
+
+### Patch Changes
+
+- 0430ada: Folded wrapper components whose element carries a constant `cx` call, a constant imported application, or a constant `className`, and components whose element spreads one dynamic style call filled from their props, in production builds. A use site of such a component renders the host element directly with its class list and inline style, and a folded field that is never empty dropped its `unset` fallback.
+- c964d71: Styles compile literal constants imported from packages that do not depend on Zyzz, such as `vars.color.bg.layerDefault` from `@seed-design/lynx-css/vars`, when every module the import reaches only declares and re-exports constants. `export * as name from` re-exports now publish their literal exports as an object.
+- 9a8a39a: Added the `zyzz/rspeedy` plugin for Lynx applications built with Rspeedy. It compiles project sources in each Rspeedy environment and serves the combined stylesheet as the `zyzz.css` module, so the entry adds the styles to the Lynx bundle with `import 'zyzz.css'`. Rspeedy builds emit no separate `zyzz.css` or `zyzz.js` files.
+  
+  The package is published as `zyzz-lynx`. Install it under the `zyzz` alias with `pnpm add zyzz@npm:zyzz-lynx`, so authoring imports keep the `zyzz` specifier.
+- f718ed0: Web runtime selection and composition, and compiled variant selectors, check own properties with `Object.prototype.hasOwnProperty.call` instead of `Object.hasOwn`, so Lynx JavaScript engines without `Object.hasOwn` load pages that use `vars()` and `variants()`.
+
 ## 0.0.40
 
 ### Patch Changes
