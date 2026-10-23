@@ -223,4 +223,58 @@ describe('zyzz', () => {
       await Fs.rm(root, { force: true, recursive: true })
     }
   }, 60_000)
+
+  test('rebuilds after a style error is fixed in watch mode', async () => {
+    const root = await fixture()
+    const file = Path.join(root, 'src/App.tsx')
+    const valid = await Fs.readFile(file, 'utf8')
+    await Fs.writeFile(file, valid.replace("'8px'", "String(8) + 'px'"))
+
+    const rspeedy = await create(root)
+    let built: (errors: readonly string[]) => void = () => {}
+    rspeedy.onAfterBuild((context) => {
+      built(
+        (context.stats?.toJson({ all: false, errors: true }).errors ?? []).map(
+          (error) => error.message,
+        ),
+      )
+    })
+    const next = () =>
+      new Promise<readonly string[]>((resolve, reject) => {
+        const timeout = setTimeout(
+          () => reject(new Error('Rspeedy did not rebuild.')),
+          20_000,
+        )
+        built = (errors) => {
+          clearTimeout(timeout)
+          resolve(errors)
+        }
+      })
+
+    const initial = next()
+    const result = await rspeedy.build({ watch: true })
+    try {
+      expect(
+        (await initial).some((message) =>
+          message.includes('Expected a literal string or number'),
+        ),
+      ).toMatchInlineSnapshot(`true`)
+
+      const rebuilt = next()
+      await Fs.writeFile(file, valid)
+
+      expect(await rebuilt).toMatchInlineSnapshot(`[]`)
+      expect((await template(root)).css).toMatchInlineSnapshot(`
+        [
+          ".z_i6Fywm0 { background-color: #06c }",
+          ".z_i6Fywm1 { padding: 8px }",
+          ".z_i6Fywm2 { color: #fff }",
+          ".z_i6Fywm3 { font-size: 20px }",
+        ]
+      `)
+    } finally {
+      await result.close()
+      await Fs.rm(root, { force: true, recursive: true })
+    }
+  }, 60_000)
 })

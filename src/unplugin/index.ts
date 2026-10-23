@@ -108,7 +108,7 @@ const portable = createUnplugin<Options | undefined, false>(
             emit(this)
           },
       async buildStart() {
-        pending = (async () => {
+        const build = (async () => {
           graph = undefined
           files = new Set()
           directories = new Set()
@@ -550,7 +550,23 @@ const portable = createUnplugin<Options | undefined, false>(
             for (const file of [...files, ...directories])
               this.addWatchFile(file)
         })()
-        await pending
+        // Loaders compile untransformed sources after an Rspack failure, so they must not rethrow it.
+        pending = meta.framework === 'rspack' ? build.catch(() => {}) : build
+
+        try {
+          await build
+        } catch (error) {
+          const native = this.getNativeBuildContext?.()
+          if (native?.framework !== 'rspack') throw error
+
+          // A rejected make hook leaves the compilation without dependencies,
+          // so the watcher would never observe the fix.
+          for (const file of files)
+            native.compilation.fileDependencies.add(file)
+          for (const directory of directories)
+            native.compilation.contextDependencies.add(directory)
+          native.compilation.errors.push(error as Error)
+        }
       },
       enforce: 'pre',
       esbuild: {
