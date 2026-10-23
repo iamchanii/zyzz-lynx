@@ -47,7 +47,7 @@ import { Primary } from './primary.tsx'
 import { Left } from './left.tsx'
 const Local = (props: { className?: string | undefined; children?: unknown }) => <Ghost {...styles.local({ className: props.className })}>{props.children}</Ghost>
 export const App = () => <main><Primary>{1}</Primary><Left>left</Left><Local>local</Local></main>
-// The folded element would read a parameter instead of the import that keeps its module.
+// A settled import needs no read, so a parameter that shadows it leaves the fold intact.
 export const Shadowed = (Ghost: unknown) => <Local>{String(Ghost)}</Local>
 namespace styles {
   export const local = style({ paddingLeft: '6px' })
@@ -2881,19 +2881,19 @@ namespace styles {
       "
       import { Props as __zyzzProps } from 'zyzz/runtime';
 
-      import { Ghost } from './ghost.tsx'
-      import { Primary } from './primary.tsx'
+      import './ghost.tsx'
+      import './primary.tsx'
       import { Left } from './left.tsx'
-      const Local = (props: { className?: string | undefined; children?: unknown }) => <button className={__zyzzProps.merge((Ghost&&"z_0gnfN20 z_0gnfN21 z_0gnfN22 z_C1lRjj0 z_C1lRjj1 z_HXfo7a0"),props.className)}>{props.children}</button>
-      export const App = () => <main><button className={Primary&&"z_0gnfN20 z_0gnfN21 z_0gnfN22 z_C1lRjj0 z_C1lRjj1 z_zXpW6o0 z_zXpW6o1"}>{1}</button><Left>left</Left><button className={Ghost&&"z_0gnfN20 z_0gnfN21 z_0gnfN22 z_C1lRjj0 z_C1lRjj1 z_HXfo7a0"}>local</button></main>
-      // The folded element would read a parameter instead of the import that keeps its module.
-      export const Shadowed = (Ghost: unknown) => <Local>{String(Ghost)}</Local>
+      const Local = (props: { className?: string | undefined; children?: unknown }) => <button className={__zyzzProps.merge("z_0gnfN20 z_0gnfN21 z_0gnfN22 z_C1lRjj0 z_C1lRjj1 z_HXfo7a0",props.className)}>{props.children}</button>
+      export const App = () => <main><button className={"z_0gnfN20 z_0gnfN21 z_0gnfN22 z_C1lRjj0 z_C1lRjj1 z_zXpW6o0 z_zXpW6o1"}>{1}</button><Left>left</Left><button className={"z_0gnfN20 z_0gnfN21 z_0gnfN22 z_C1lRjj0 z_C1lRjj1 z_HXfo7a0"}>local</button></main>
+      // A settled import needs no read, so a parameter that shadows it leaves the fold intact.
+      export const Shadowed = (Ghost: unknown) => <button className={"z_0gnfN20 z_0gnfN21 z_0gnfN22 z_C1lRjj0 z_C1lRjj1 z_HXfo7a0"}>{String(Ghost)}</button>
       "
     `)
     expect(output.modules['primary.tsx']!.code).toMatchInlineSnapshot(`
       "
-      import { Ghost } from './ghost.tsx'
-      export const Primary = (props: { children?: unknown }) => <button className={(Ghost&&"z_0gnfN20 z_0gnfN21 z_0gnfN22 z_C1lRjj0 z_C1lRjj1 z_zXpW6o0 z_zXpW6o1")}>{props.children}</button>
+      import './ghost.tsx'
+      export const Primary = (props: { children?: unknown }) => <button className={"z_0gnfN20 z_0gnfN21 z_0gnfN22 z_C1lRjj0 z_C1lRjj1 z_zXpW6o0 z_zXpW6o1"}>{props.children}</button>
       "
     `)
     expect(output.modules['left.tsx']!.code).toMatchInlineSnapshot(`
@@ -2945,9 +2945,394 @@ namespace styles {
       ]
     `)
   })
+
+  test('folds imported applications and cx calls into className attributes', async () => {
+    const modules = {
+      'base.ts': `import { style } from 'zyzz'
+export const base = style({ borderLeft: '1px solid', color: 'rgb(255, 0, 0)', paddingLeft: '1px' })`,
+      'ghost.ts': `import { style } from 'zyzz'
+export const ghost = style({ paddingLeft: '2px' })
+export const primary = style({ color: 'rgb(0, 0, 255)' })`,
+      'index.tsx': `import { cx } from 'zyzz'
+import { base } from './base.ts'
+import * as ghosts from './ghost.ts'
+import { loop } from './loop.ts'
+export const App = () => <main>
+  <i {...cx(base(), ghosts.ghost())}>ladder</i>
+  {[true, false].map((on) => <i key={String(on)} {...cx(base(), on && ghosts.primary())}>{String(on)}</i>)}
+  <b {...ghosts.ghost()}>imported</b>
+  <b {...loop()}>cycle</b>
+  <b data-cycle="" {...cx(base(), loop())}>cycle cx</b>
+</main>
+// An unfolded read keeps the definition and its module's import.
+export const primary = ghosts.primary`,
+      // An import cycle through a component module can evaluate the importer first.
+      'loop.ts': `import { style } from 'zyzz'
+import './view.tsx'
+export const loop = style({ paddingLeft: '4px' })`,
+      'view.tsx': `import { App } from './index.tsx'
+export const View = () => <App />`,
+    }
+    const output = Graph.compile({ cssOutput: 'grouped', modules })
+
+    expect(output.modules['index.tsx']!.code).toMatchInlineSnapshot(`
+      "
+      const __zyzzComposition405=["z_HXfo7a3 z-style-edltVp-base z-style-rJX5XM-loop"];
+
+      import './base.ts'
+      import * as ghosts from './ghost.ts'
+      import './ghost.ts';
+      import { loop } from './loop.ts'
+      export const App = () => <main>
+        <i className={"z_HXfo7a0 z-style-edltVp-base z-style-K_6uJb-ghost"}>ladder</i>
+        {[true, false].map((on) => <i key={String(on)} className={(on)?"z_HXfo7a2 z-style-edltVp-base z-style-K_6uJb-primary":"z_HXfo7a1 z-style-edltVp-base"}>{String(on)}</i>)}
+        <b className={"z_K_6uJb0 z-style-K_6uJb-ghost"}>imported</b>
+        <b className={(loop?"z_rJX5XM0 z-style-rJX5XM-loop":loop().className)}>cycle</b>
+        <b data-cycle="" className={__zyzzComposition405[((loop as unknown)||loop(),0)]}>cycle cx</b>
+      </main>
+      // An unfolded read keeps the definition and its module's import.
+      export const primary = ghosts.primary"
+    `)
+    expect(output.modules['ghost.ts']!.code).toMatchInlineSnapshot(`
+      "
+      import { Props as __zyzzProps } from 'zyzz/runtime';
+
+      export const ghost = /*#__PURE__*/__zyzzProps.create({className:"z_K_6uJb0 z-style-K_6uJb-ghost"})
+      export const primary = /*#__PURE__*/__zyzzProps.create({className:"z_K_6uJb1 z-style-K_6uJb-primary"})"
+    `)
+
+    const rendered = await Wrappers.render({
+      css: Object.values(output.modules)
+        .map((module) => module.css)
+        .join('\n'),
+      entry: 'index.tsx',
+      modules: Object.fromEntries(
+        Object.entries(output.modules).map(([id, module]) => [id, module.code]),
+      ),
+    })
+
+    expect(rendered.elements).toMatchInlineSnapshot(`
+      [
+        {
+          "borderLeftWidth": "1px",
+          "className": "z_HXfo7a0 z-style-edltVp-base z-style-K_6uJb-ghost",
+          "color": "rgb(255, 0, 0)",
+          "paddingLeft": "2px",
+          "tag": "i",
+        },
+        {
+          "borderLeftWidth": "1px",
+          "className": "z_HXfo7a2 z-style-edltVp-base z-style-K_6uJb-primary",
+          "color": "rgb(0, 0, 255)",
+          "paddingLeft": "1px",
+          "tag": "i",
+        },
+        {
+          "borderLeftWidth": "1px",
+          "className": "z_HXfo7a1 z-style-edltVp-base",
+          "color": "rgb(255, 0, 0)",
+          "paddingLeft": "1px",
+          "tag": "i",
+        },
+        {
+          "borderLeftWidth": "0px",
+          "className": "z_K_6uJb0 z-style-K_6uJb-ghost",
+          "color": "rgb(0, 0, 0)",
+          "paddingLeft": "2px",
+          "tag": "b",
+        },
+        {
+          "borderLeftWidth": "0px",
+          "className": "z_rJX5XM0 z-style-rJX5XM-loop",
+          "color": "rgb(0, 0, 0)",
+          "paddingLeft": "4px",
+          "tag": "b",
+        },
+        {
+          "borderLeftWidth": "1px",
+          "className": "z_HXfo7a3 z-style-edltVp-base z-style-rJX5XM-loop",
+          "color": "rgb(255, 0, 0)",
+          "paddingLeft": "4px",
+          "tag": "b",
+        },
+      ]
+    `)
+  })
+
+  test('folds wrappers over imported cx calls and imported dynamic components', async () => {
+    const modules = {
+      'base.ts': `import { style } from 'zyzz'
+export const base = style({ borderLeft: '1px solid', color: 'rgb(255, 0, 0)', paddingLeft: '1px' })`,
+      'ghost.ts': `import { style } from 'zyzz'
+export const ghost = style({ paddingLeft: '2px' })`,
+      'primary.ts': `import { style } from 'zyzz'
+export const primary = style({ color: 'rgb(0, 0, 255)' })`,
+      'dot.tsx': `import { style } from 'zyzz'
+type P = { children?: unknown; size?: number }
+export const Dot = ({ size, children }: P) => <i {...styles.dot({ padding: \`\${size}px\` })}>{children}</i>
+namespace styles {
+  export const dot = style((values: { padding: \`\${number}px\` }) => ({ borderLeft: '3px solid', paddingLeft: values.padding }))
+}`,
+      // Each style comes from its own module, and cx merges them onto one element.
+      'button.tsx': `import { cx } from 'zyzz'
+import { base } from './base.ts'
+import { ghost } from './ghost.ts'
+import { primary } from './primary.ts'
+type P = { children?: unknown }
+export const Button = ({ children }: P) => <button {...cx(base(), ghost(), primary())}>{children}</button>`,
+      'index.tsx': `import { Button } from './button.tsx'
+import { Dot } from './dot.tsx'
+const Local = ({ children }: { children?: unknown }) => <Button>{children}</Button>
+export const App = () => <main>
+  <Local>local</Local>
+  {[4, 5].map((size) => <Dot size={size} key={size}>{size}</Dot>)}
+</main>`,
+    }
+    const output = Graph.compile({ cssOutput: 'grouped', modules })
+
+    expect(output.modules['button.tsx']!.code).toMatchInlineSnapshot(`
+      "
+      import './base.ts'
+      import './ghost.ts'
+      import './primary.ts'
+      type P = { children?: unknown }
+      export const Button = ({ children }: P) => <button className={"z_0gnfN20 z-style-edltVp-base z-style-K_6uJb-ghost z-style-2W2Knw-primary"}>{children}</button>"
+    `)
+    expect(output.modules['index.tsx']!.code).toMatchInlineSnapshot(`
+      "import './button.tsx'
+      import { Dot } from './dot.tsx'
+      const Local = ({ children }: { children?: unknown }) => <button className={"z_0gnfN20 z-style-edltVp-base z-style-K_6uJb-ghost z-style-2W2Knw-primary"}>{children}</button>
+      export const App = () => <main>
+        <button className={"z_0gnfN20 z-style-edltVp-base z-style-K_6uJb-ghost z-style-2W2Knw-primary"}>local</button>
+        {[4, 5].map((size) => <i className={Dot&&"z_CI0DZb0"} style={{"paddingLeft":(\`\${size}px\`)}} key={size}>{size}</i>)}
+      </main>"
+    `)
+
+    const rendered = await Wrappers.render({
+      css: Object.values(output.modules)
+        .map((module) => module.css)
+        .join('\n'),
+      entry: 'index.tsx',
+      modules: Object.fromEntries(
+        Object.entries(output.modules).map(([id, module]) => [id, module.code]),
+      ),
+    })
+
+    expect(rendered.markup).toMatchInlineSnapshot(
+      `"<main><button class="z_0gnfN20 z-style-edltVp-base z-style-K_6uJb-ghost z-style-2W2Knw-primary">local</button><i class="z_CI0DZb0" style="padding-left:4px">4</i><i class="z_CI0DZb0" style="padding-left:5px">5</i></main>"`,
+    )
+    expect(rendered.elements).toMatchInlineSnapshot(`
+      [
+        {
+          "borderLeftWidth": "1px",
+          "className": "z_0gnfN20 z-style-edltVp-base z-style-K_6uJb-ghost z-style-2W2Knw-primary",
+          "color": "rgb(0, 0, 255)",
+          "paddingLeft": "2px",
+          "tag": "button",
+        },
+        {
+          "borderLeftWidth": "3px",
+          "className": "z_CI0DZb0",
+          "color": "rgb(0, 0, 0)",
+          "paddingLeft": "4px",
+          "tag": "i",
+        },
+        {
+          "borderLeftWidth": "3px",
+          "className": "z_CI0DZb0",
+          "color": "rgb(0, 0, 0)",
+          "paddingLeft": "5px",
+          "tag": "i",
+        },
+      ]
+    `)
+  })
+
+  test('keeps import attributes on folded imports', () => {
+    const output = Graph.compile({
+      modules: {
+        'base.ts': `import { style } from 'zyzz'
+export const base = style({ color: 'red' })
+export const other = style({ color: 'blue' })`,
+        'index.tsx': `import { base } from './base.ts' with { kind: 'style' }
+import { other } from './base.ts' with { kind: 'style' }
+export const App = () => <main><i {...base()} /><b {...other()} /></main>
+export const read = other`,
+      },
+    })
+
+    expect(output.modules['index.tsx']!.code).toMatchInlineSnapshot(`
+      "import './base.ts' with { kind: 'style' }
+      import { other } from './base.ts' with { kind: 'style' }
+      import './base.ts' with { kind: 'style' };
+      export const App = () => <main><i className={"z_edltVp0 z-style-edltVp-base"} /><b className={"z_edltVp1 z-style-edltVp-other"} /></main>
+      export const read = other"
+    `)
+  })
+
+  test('renders one merged class per folded wrapper chain in grouped output', async () => {
+    const modules = {
+      'index.tsx': `import { style } from 'zyzz'
+type Props = { className?: string | undefined; children?: unknown }
+const Base = (props: Props) => <b {...styles.base({ className: props.className })}>{props.children}</b>
+const Ghost = (props: Props) => <Base {...styles.ghost({ className: props.className })}>{props.children}</Base>
+const Primary = (props: Props) => <Ghost {...styles.primary({ className: props.className })}>{props.children}</Ghost>
+const Partial = (props: Props) => <Base {...styles.partial({ className: props.className })}>{props.children}</Base>
+const Sibling = (props: Props) => <b {...styles.sibling({ className: props.className })}>{props.children}</b>
+const Enhanced = (props: Props) => <Sibling {...styles.ghost({ className: props.className })}>{props.children}</Sibling>
+export const App = () => <main><Primary>primary</Primary><Ghost className="external">ghost</Ghost><Partial>partial</Partial><Sibling>sibling</Sibling><Enhanced>enhanced</Enhanced></main>
+namespace styles {
+  export const base = style({ borderLeft: '1px solid', color: 'rgb(255, 0, 0)', paddingLeft: '1px', '@media (min-width: 1px)': { paddingLeft: '7px' } })
+  export const ghost = style({ borderLeft: '2px solid', paddingLeft: '2px' })
+  export const primary = style({ color: 'rgb(0, 0, 255)', paddingLeft: '3px' })
+  // A shorthand only partly overrides the query block, so this chain keeps its classes.
+  export const partial = style({ padding: '4px' })
+  // A sibling selector reaches elements outside the chain, so this chain keeps its classes too.
+  export const sibling = style({ paddingLeft: '5px', selectors: { '& + &': { paddingLeft: '9px' } } })
+}`,
+    }
+    const render = (cssOutput: 'atomic' | 'grouped') => {
+      const output = Graph.compile({ cssOutput, modules })
+
+      return Wrappers.render({
+        css: output.modules['index.tsx']!.css,
+        entry: 'index.tsx',
+        modules: { 'index.tsx': output.modules['index.tsx']!.code },
+      })
+    }
+    const grouped = Graph.compile({ cssOutput: 'grouped', modules })
+
+    expect(grouped.modules['index.tsx']!.css).toMatchInlineSnapshot(`
+      ".z_HXfo7a0{border-left:1px solid;color:rgb(255, 0, 0);padding-left:1px;@media (min-width: 1px){padding-left:7px;}}
+      .z_HXfo7a1{border-left:2px solid;padding-left:2px;}
+      .z_HXfo7a2{color:rgb(0, 0, 255);padding-left:3px;}
+      .z_HXfo7a3{padding:4px;}
+      .z_HXfo7a4{padding-left:5px;& + &{padding-left:9px;}}
+      .z_HXfo7a5{border-left:2px solid;color:rgb(0, 0, 255);padding-left:3px;}
+      .z_HXfo7a6{color:rgb(255, 0, 0);border-left:2px solid;padding-left:2px;}"
+    `)
+
+    const rendered = await render('grouped')
+
+    expect(rendered.markup).toMatchInlineSnapshot(
+      `"<main><b class="z_HXfo7a5">primary</b><b class="z_HXfo7a6 external">ghost</b><b class="z_HXfo7a0 z_HXfo7a3">partial</b><b class="z_HXfo7a4">sibling</b><b class="z_HXfo7a4 z_HXfo7a1">enhanced</b></main>"`,
+    )
+    expect(rendered.elements).toMatchInlineSnapshot(`
+      [
+        {
+          "borderLeftWidth": "2px",
+          "className": "z_HXfo7a5",
+          "color": "rgb(0, 0, 255)",
+          "paddingLeft": "3px",
+          "tag": "b",
+        },
+        {
+          "borderLeftWidth": "2px",
+          "className": "z_HXfo7a6 external",
+          "color": "rgb(255, 0, 0)",
+          "paddingLeft": "2px",
+          "tag": "b",
+        },
+        {
+          "borderLeftWidth": "1px",
+          "className": "z_HXfo7a0 z_HXfo7a3",
+          "color": "rgb(255, 0, 0)",
+          "paddingLeft": "4px",
+          "tag": "b",
+        },
+        {
+          "borderLeftWidth": "0px",
+          "className": "z_HXfo7a4",
+          "color": "rgb(0, 0, 0)",
+          "paddingLeft": "5px",
+          "tag": "b",
+        },
+        {
+          "borderLeftWidth": "2px",
+          "className": "z_HXfo7a4 z_HXfo7a1",
+          "color": "rgb(0, 0, 0)",
+          "paddingLeft": "9px",
+          "tag": "b",
+        },
+      ]
+    `)
+
+    const atomic = await render('atomic')
+
+    // Atomic output keeps every class and resolves to the same values.
+    expect(atomic.elements).toMatchInlineSnapshot(`
+      [
+        {
+          "borderLeftWidth": "2px",
+          "className": "z_HXfo7a0 z_HXfo7a1 z_HXfo7a2 z_HXfo7a3 z_HXfo7a4 z_HXfo7a5 z_HXfo7a6 z_HXfo7a7",
+          "color": "rgb(0, 0, 255)",
+          "paddingLeft": "3px",
+          "tag": "b",
+        },
+        {
+          "borderLeftWidth": "2px",
+          "className": "z_HXfo7a0 z_HXfo7a1 z_HXfo7a2 z_HXfo7a3 z_HXfo7a4 z_HXfo7a5 external",
+          "color": "rgb(255, 0, 0)",
+          "paddingLeft": "2px",
+          "tag": "b",
+        },
+        {
+          "borderLeftWidth": "1px",
+          "className": "z_HXfo7a0 z_HXfo7a1 z_HXfo7a2 z_HXfo7a3 z_HXfo7a8",
+          "color": "rgb(255, 0, 0)",
+          "paddingLeft": "4px",
+          "tag": "b",
+        },
+        {
+          "borderLeftWidth": "0px",
+          "className": "z_HXfo7a9 z_HXfo7aa",
+          "color": "rgb(0, 0, 0)",
+          "paddingLeft": "5px",
+          "tag": "b",
+        },
+        {
+          "borderLeftWidth": "2px",
+          "className": "z_HXfo7a9 z_HXfo7aa z_HXfo7a4 z_HXfo7a5",
+          "color": "rgb(0, 0, 0)",
+          "paddingLeft": "9px",
+          "tag": "b",
+        },
+      ]
+    `)
+  })
 })
 
 describe('create', () => {
+  test('refolds imported applications after their definition changes', () => {
+    const compiler = Graph.create()
+    const modules = {
+      'base.ts': `import { style } from 'zyzz'
+export const base = style({ color: 'red' })`,
+      'index.tsx': `import { base } from './base.ts'
+export const App = () => <i {...base()} />`,
+    }
+
+    expect(compiler.compile({ modules }).modules['index.tsx']!.code)
+      .toMatchInlineSnapshot(`
+      "import './base.ts'
+      export const App = () => <i className={"z_edltVp0 z-style-edltVp-base"} />"
+    `)
+
+    const edited = compiler.compile({
+      modules: {
+        ...modules,
+        'base.ts': `import { style } from 'zyzz'
+export const other = style({ color: 'blue' })
+export const base = style({ color: 'red' })`,
+      },
+    })
+
+    expect(edited.modules['index.tsx']!.code).toMatchInlineSnapshot(`
+      "import './base.ts'
+      export const App = () => <i className={"z_edltVp1 z-style-edltVp-base"} />"
+    `)
+  })
+
   test('folds default-exported function wrappers', () => {
     const output = Graph.compile({
       modules: {
@@ -2964,8 +3349,8 @@ namespace styles {
     })
 
     expect(output.modules['app.tsx']!.code).toMatchInlineSnapshot(`
-      "import Button from './button.tsx'
-      export const App = () => <button className={Button&&"z_0gnfN20"}>app</button>"
+      "import './button.tsx'
+      export const App = () => <button className={"z_0gnfN20"}>app</button>"
     `)
   })
 
