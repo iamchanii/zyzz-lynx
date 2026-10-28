@@ -31,6 +31,10 @@ const sourcePattern = /\.[cm]?[jt]sx?$/
 // The `.css` suffix lets the bundler's stylesheet rules process the loaded source.
 const stylesheetId = '\0zyzz.css'
 const stylesheetFilter = new RegExp(`^${stylesheetId.replaceAll('.', '\\.')}$`)
+// Unplugin places Rspack virtual modules under `node_modules/.virtual`, where
+// split-chunk vendor groups would move the stylesheet into its own chunk.
+const rspackStylesheet = '.zyzz/zyzz.css'
+const rspackStylesheetFilter = /[/\\]\.zyzz[/\\]zyzz\.css$/
 
 const portable = createUnplugin<Options | undefined, false>(
   (options = {}, meta) => {
@@ -603,7 +607,7 @@ const portable = createUnplugin<Options | undefined, false>(
         },
       },
       load: {
-        filter: { id: stylesheetFilter },
+        filter: { id: [stylesheetFilter, rspackStylesheetFilter] },
         async handler() {
           await pending
           // Any source edit can change the combined stylesheet.
@@ -613,7 +617,20 @@ const portable = createUnplugin<Options | undefined, false>(
       },
       name: 'zyzz',
       resolveId(id) {
-        if (id === 'zyzz.css') return stylesheetId
+        if (id === 'zyzz.css' && meta.framework !== 'rspack')
+          return stylesheetId
+      },
+      rspack(compiler) {
+        const stylesheet = Path.resolve(compiler.context, rspackStylesheet)
+        new compiler.rspack.experiments.VirtualModulesPlugin({
+          [stylesheet]: '',
+        }).apply(compiler)
+        // Unplugin would encode the resolved path back under `node_modules/.virtual`.
+        compiler.hooks.compilation.tap('zyzz', (_compilation, parameters) => {
+          parameters.normalModuleFactory.hooks.resolve.tap('zyzz', (data) => {
+            if (data.request === 'zyzz.css') data.request = stylesheet
+          })
+        })
       },
       rollup: {
         shouldTransformCachedModule() {

@@ -1,6 +1,7 @@
 /** Builds ReactLynx applications with Rspeedy and inspects the encoded Lynx stylesheet. @module */
 import { pluginReactLynx } from '@lynx-js/react-rsbuild-plugin'
 import { createRspeedy } from '@lynx-js/rspeedy'
+import type { Config } from '@lynx-js/rspeedy'
 import * as Fs from 'node:fs/promises'
 import * as Path from 'node:path'
 import { describe, expect, test } from 'vite-plus/test'
@@ -38,7 +39,7 @@ async function fixture() {
   return root
 }
 
-async function create(root: string) {
+async function create(root: string, config: Config = {}) {
   return createRspeedy({
     cwd: root,
     loadEnv: false,
@@ -47,8 +48,22 @@ async function create(root: string) {
       mode: 'development',
       plugins: [pluginReactLynx(), zyzz()],
       source: { entry: { main: './src/index.tsx' } },
+      ...config,
     },
   })
+}
+
+async function files(directory: string): Promise<readonly string[]> {
+  const entries = await Fs.readdir(directory, {
+    recursive: true,
+    withFileTypes: true,
+  })
+  return entries
+    .filter((entry) => entry.isFile())
+    .map((entry) =>
+      Path.relative(directory, Path.join(entry.parentPath, entry.name)),
+    )
+    .sort()
 }
 
 async function template(root: string) {
@@ -96,6 +111,35 @@ describe('zyzz', () => {
           file.startsWith('zyzz'),
         ),
       ).toMatchInlineSnapshot(`[]`)
+    } finally {
+      await Fs.rm(root, { force: true, recursive: true })
+    }
+  }, 60_000)
+
+  test('keeps the zyzz.css module out of split-by-module vendor chunks', async () => {
+    const root = await fixture()
+    try {
+      const result = await (
+        await create(root, {
+          performance: { chunkSplit: { strategy: 'split-by-module' } },
+        })
+      ).build()
+      await result.close()
+
+      // Split chunks become separate requests in Lynx and carry no source map.
+      expect(
+        (await files(Path.join(root, 'dist'))).filter((file) =>
+          /virtual|zyzz/.test(file),
+        ),
+      ).toMatchInlineSnapshot(`[]`)
+      expect((await template(root)).css).toMatchInlineSnapshot(`
+        [
+          ".z_i6Fywm0 { background-color: #06c }",
+          ".z_i6Fywm1 { padding: 8px }",
+          ".z_i6Fywm2 { color: #fff }",
+          ".z_i6Fywm3 { font-size: 20px }",
+        ]
+      `)
     } finally {
       await Fs.rm(root, { force: true, recursive: true })
     }
