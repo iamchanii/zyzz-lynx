@@ -32,7 +32,8 @@ const sourcePattern = /\.[cm]?[jt]sx?$/
 const stylesheetId = '\0zyzz.css'
 const stylesheetFilter = new RegExp(`^${stylesheetId.replaceAll('.', '\\.')}$`)
 // Unplugin places Rspack virtual modules under `node_modules/.virtual`, where
-// split-chunk vendor groups would move the stylesheet into its own chunk.
+// split-chunk vendor groups would move the stylesheet into its own chunk. No
+// file exists at this path.
 const rspackStylesheet = '.zyzz/zyzz.css'
 const rspackStylesheetFilter = /[/\\]\.zyzz[/\\]zyzz\.css$/
 
@@ -622,13 +623,14 @@ const portable = createUnplugin<Options | undefined, false>(
       },
       rspack(compiler) {
         const stylesheet = Path.resolve(compiler.context, rspackStylesheet)
-        new compiler.rspack.experiments.VirtualModulesPlugin({
-          [stylesheet]: '',
-        }).apply(compiler)
-        // Unplugin would encode the resolved path back under `node_modules/.virtual`.
+        // The match resource names the module for rules and split-chunk tests,
+        // and the load hook replaces the source read from this existing file.
+        // A virtual file outside `node_modules` would be watched as missing and
+        // rebuild once after the watcher starts.
         compiler.hooks.compilation.tap('zyzz', (_compilation, parameters) => {
           parameters.normalModuleFactory.hooks.resolve.tap('zyzz', (data) => {
-            if (data.request === 'zyzz.css') data.request = stylesheet
+            if (data.request === 'zyzz.css')
+              data.request = `${stylesheet}!=!${import.meta.filename}`
           })
         })
       },

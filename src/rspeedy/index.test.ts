@@ -145,6 +145,35 @@ describe('zyzz', () => {
     }
   }, 60_000)
 
+  test('watches only existing files for the zyzz.css module', async () => {
+    const root = await fixture()
+    try {
+      const rspeedy = await create(root)
+      let dependencies: readonly string[] = []
+      rspeedy.onAfterBuild((context) => {
+        if (context.stats && 'compilation' in context.stats)
+          dependencies = [...context.stats.compilation.fileDependencies]
+      })
+      const result = await rspeedy.build()
+      await result.close()
+
+      // The watcher ignores `node_modules` and reports any other missing
+      // dependency as removed, which rebuilds once after it starts.
+      const missing = await Promise.all(
+        dependencies
+          .filter((file) => !/[/\\]node_modules[/\\]/.test(file))
+          .map(async (file) =>
+            (await Fs.stat(file).catch(() => undefined))
+              ? undefined
+              : Path.relative(root, file),
+          ),
+      )
+      expect(missing.filter(Boolean)).toMatchInlineSnapshot(`[]`)
+    } finally {
+      await Fs.rm(root, { force: true, recursive: true })
+    }
+  }, 60_000)
+
   test('compiles literal constants from packages without a Zyzz dependency', async () => {
     const root = await fixture()
     try {
