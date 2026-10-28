@@ -2,6 +2,7 @@
 
 use std::sync::Arc;
 
+use crate::internal::recipe::Matches;
 use crate::js::Record;
 
 /// A scalar payload value.
@@ -29,6 +30,12 @@ pub struct Payload {
 pub struct Definition {
     /// Choices of each axis.
     pub axes: Record<Vec<Arc<str>>>,
+    /// Whether applications return the class list string instead of props.
+    pub class_list: bool,
+    /// Compound matches whose classes applications add themselves, in compound order, when
+    /// the target selects compounds with one class each. The class of a compound follows every
+    /// choice class in position order.
+    pub compounds: Option<Vec<Matches>>,
     /// Condition names, for conditional recipes.
     pub conditions: Option<Vec<Arc<str>>>,
     /// Default payload values by axis and field.

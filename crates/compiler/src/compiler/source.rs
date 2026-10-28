@@ -150,6 +150,8 @@ pub struct Call<'a> {
     pub dynamic_recipe: Option<recipe::Definition>,
     /// Exclusive offset of the complete call.
     pub end: u32,
+    /// Choice and compound rules of a Lynx recipe, each compiled as one flat rule of its class.
+    pub flat_rules: Option<Vec<FlatRule>>,
     /// Stable selector identity.
     pub identity: Option<Arc<str>>,
     /// Fields of a callback definition whose type admits a CSS-wide keyword.
@@ -188,6 +190,15 @@ pub struct Call<'a> {
     pub typography_queries: Option<FxHashMap<u32, u32>>,
     /// Authored scalar input type text.
     pub values_type: Option<Arc<str>>,
+}
+
+/// One rule of a Lynx recipe, emitted under its own class instead of nested in the recipe's rule.
+#[derive(Clone, Debug, PartialEq)]
+pub struct FlatRule {
+    /// The choice or compound class that selects the rule, which applications add.
+    pub class: Arc<str>,
+    /// The rule's validated declarations.
+    pub style: style::Definition,
 }
 
 /// The stable category of a source diagnostic.
@@ -279,6 +290,9 @@ pub struct StaticThemeReference {
 /// The target whose authoring semantics extraction applies.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum Target {
+    /// Lynx: the web authoring contract, compiled for a template encoder that keeps only flat
+    /// class rules. Recipes select with classes and emit one rule per choice and compound.
+    Lynx,
     /// React Native: applications keep native props composition.
     Native,
     /// The web.
@@ -2698,6 +2712,7 @@ pub fn extract<'a>(allocator: &'a Allocator, options: &Options<'_, 'a>) -> Resul
                 object,
                 recipes::Options {
                     identity: &definition_id,
+                    lynx: options.target == Target::Lynx,
                     payloads: recipe_payloads::Options {
                         allocator,
                         allowed: &static_calls,
@@ -2828,20 +2843,32 @@ pub fn extract<'a>(allocator: &'a Allocator, options: &Options<'_, 'a>) -> Resul
                 })
         });
         let mut target_recipe = None;
+        let mut flat_rules = None;
         let mut failed = false;
 
         if let Some((kind, recipe)) = retained {
+            let flat = expanded.as_ref().and_then(|expanded| expanded.flat.as_deref());
             let mut rules = Vec::with_capacity(recipe.rules.len());
+            let mut flattened = Vec::new();
 
             for (position, rule) in recipe.rules.iter().enumerate() {
                 let values = converter.object(rule.value, &[]);
                 let rule_name: Arc<str> = Arc::from(format!("{name}-{position}"));
 
                 match converter.define(values, &rule_name) {
-                    Ok(value) => rules.push(recipe::Rule {
-                        matches: rule.matches.clone(),
-                        value,
-                    }),
+                    Ok(value) => {
+                        if let Some(class) = flat.and_then(|flat| flat.get(position)?.as_ref()) {
+                            flattened.push(FlatRule {
+                                class: Arc::clone(class),
+                                style: value.clone(),
+                            });
+                        }
+
+                        rules.push(recipe::Rule {
+                            matches: rule.matches.clone(),
+                            value,
+                        });
+                    }
                     Err(Error::Style(diagnostics)) => {
                         invalid_literals(converter.reporter, diagnostics, call.span);
                         failed = true;
@@ -2849,6 +2876,10 @@ pub fn extract<'a>(allocator: &'a Allocator, options: &Options<'_, 'a>) -> Resul
                     }
                     Err(error) => return Err(error),
                 }
+            }
+
+            if flat.is_some() {
+                flat_rules = Some(flattened);
             }
 
             target_recipe = Some((
@@ -2920,6 +2951,7 @@ pub fn extract<'a>(allocator: &'a Allocator, options: &Options<'_, 'a>) -> Resul
             css_namespace,
             dynamic_recipe,
             end: call.span.end,
+            flat_rules,
             identity: selectors.identities.get(&call.span.start).cloned(),
             keywords: dynamic
                 .as_ref()

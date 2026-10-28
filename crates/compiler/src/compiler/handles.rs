@@ -227,6 +227,16 @@ fn decode(
         }
         Some(_) => return Err(malformed("native")),
     };
+    let lynx = match field("target").and_then(Value::as_str) {
+        None | Some("web") => false,
+        Some("lynx") => true,
+        Some(_) => return Err(malformed("target")),
+    };
+
+    if lynx && native.is_some() {
+        return Err(malformed("target"));
+    }
+
     let options = graph::Options {
         complete: field("complete")
             .and_then(Value::as_bool)
@@ -247,6 +257,7 @@ fn decode(
         imports,
         invalid_css_output: css_output == Some(None),
         lean: field("lean").and_then(Value::as_bool).unwrap_or_default(),
+        lynx,
         modules: strings(
             field("modules"),
             "modules",

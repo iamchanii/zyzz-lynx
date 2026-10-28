@@ -443,15 +443,32 @@ fn write_class_selector(
     // that the join below removes.
     let listed = class_name.len() > 2 && class_name.starts_with('"');
     let initial = if listed { class_name } else { "\"\"" };
+    // A class list carries no inline overrides.
+    let inline = if recipe.class_list {
+        ""
+    } else {
+        ",style=input.style,vars=input.vars,inline=vars?{...vars,...style}:style"
+    };
 
     let _ = write!(
         output,
-        "((input{parameter}={{}})=>{{const external=input.className,style=input.style,vars=input.vars,inline=vars?{{...vars,...style}}:style;let value,className={initial};"
+        "((input{parameter}={{}})=>{{const external=input.className{inline};let value,className={initial}"
     );
+
+    // Compound matches read the selected choice of each axis after every axis is read.
+    let compounds = recipe.compounds.as_deref().unwrap_or_default();
+
+    if !compounds.is_empty() {
+        for index in 0..recipe.axes.len() {
+            let _ = write!(output, ",s{index}");
+        }
+    }
+
+    output.push(';');
 
     let positions = recipes::Positions::new(&recipe.axes);
 
-    for (axis, choices) in recipe.axes.iter() {
+    for (index, (axis, choices)) in recipe.axes.iter().enumerate() {
         let mut key = String::new();
 
         js::write_string(&mut key, axis);
@@ -467,7 +484,13 @@ fn write_class_selector(
         }
 
         // `String` matches the attribute value an attribute recipe would write.
-        output.push_str("if(value!==null&&value!==void 0){value=String(value);className+=");
+        output.push_str("if(value!==null&&value!==void 0){value=String(value);");
+
+        if !compounds.is_empty() {
+            let _ = write!(output, "s{index}=value;");
+        }
+
+        output.push_str("className+=");
 
         let silent = recipe
             .silent
@@ -494,6 +517,47 @@ fn write_class_selector(
         output.push_str("\"\"}");
     }
 
+    // A compound's class follows every choice class in position order, as `Recipe.create` adds it.
+    let total: usize = recipe.axes.values().map(Vec::len).sum();
+
+    for (index, matches) in compounds.iter().enumerate() {
+        output.push_str("if(");
+
+        for (position, (axis, choices)) in matches.iter().enumerate() {
+            let Some(slot) = recipe.axes.keys().position(|name| name == axis) else {
+                continue;
+            };
+
+            if position > 0 {
+                output.push_str("&&");
+            }
+
+            if choices.len() > 1 {
+                output.push('(');
+            }
+
+            for (alternative, choice) in choices.iter().enumerate() {
+                if alternative > 0 {
+                    output.push_str("||");
+                }
+
+                let _ = write!(output, "s{slot}===");
+                js::write_string(output, choice);
+            }
+
+            if choices.len() > 1 {
+                output.push(')');
+            }
+        }
+
+        output.push_str(")className+=");
+        js::write_string(
+            output,
+            &format!(" {}", recipes::class(prefix, total + index, None)),
+        );
+        output.push(';');
+    }
+
     if listed {
         output.push_str("if(external)className+=\" \"+external;");
     } else {
@@ -503,7 +567,11 @@ fn write_class_selector(
         );
     }
 
-    output.push_str("return inline?{className,style:inline}:{className}})");
+    output.push_str(if recipe.class_list {
+        "return className})"
+    } else {
+        "return inline?{className,style:inline}:{className}})"
+    });
 }
 
 /// `JSON.stringify({ ...recipe, html })`, in the key order `Recipes.expand` builds.
@@ -620,10 +688,10 @@ fn recipe_type(call: &Call<'_>, recipe: &runtime::Definition, html: bool) -> Str
         _ => String::new(),
     };
     let output = if html { ",\"html\"" } else { "" };
-    let selection = if recipe.prefix.is_some() {
-        "selection:'class';"
-    } else {
-        ""
+    let selection = match (&recipe.prefix, recipe.class_list) {
+        (Some(_), true) => "selection:'className';",
+        (Some(_), false) => "selection:'class';",
+        (None, _) => "",
     };
 
     format!(
@@ -891,6 +959,11 @@ fn recipe_classes<'a>(
     recipe: &runtime::Definition,
 ) -> Option<ClassFields<'a>> {
     recipe.prefix.as_ref()?;
+
+    // A class list is no props object to spread, and compound classes need the selector.
+    if recipe.class_list || recipe.compounds.is_some() {
+        return None;
+    }
 
     let mut fields: ClassFields<'a> = SmallVec::new();
 
@@ -1637,14 +1710,17 @@ pub fn compile<'a>(
             || !extracted.theme_scripts.is_empty()
             || !extracted.theme_selections.is_empty(),
     );
+    let dead = if portable || options.development {
+        FxHashSet::default()
+    } else {
+        local_applications
+            .as_ref()
+            .map(applications::Applications::dead)
+            .unwrap_or_default()
+    };
     let mut styles: Vec<Arc<NamedStyle>> = if portable || options.development {
         extracted.styles.styles.clone()
     } else {
-        let dead = local_applications
-            .as_ref()
-            .map(applications::Applications::dead)
-            .unwrap_or_default();
-
         if dead.is_empty() && standalone.is_empty() {
             extracted.styles.styles.clone()
         } else {
@@ -1740,10 +1816,39 @@ pub fn compile<'a>(
         .iter()
         .map(|(name, theme)| (Arc::clone(name), Scope::Definition(theme.metadata.clone())))
         .collect();
-    let names: css::Names = portable_names
+    let mut names: css::Names = portable_names
         .iter()
         .map(|(name, class)| (Arc::clone(name), Arc::clone(class)))
         .collect();
+    // Lynx recipe rules print under their choice or compound class, as explicit names do. A
+    // rule with nested at-rules stays atomic, so the at-rules wrap the class rule instead of
+    // nesting inside it, which the Lynx template encoder would drop.
+    let mut flat_styles: Vec<(Arc<str>, &Call<'a>)> = Vec::new();
+
+    for call in &extracted.calls {
+        let Some(flat_rules) = call.flat_rules.as_ref().filter(|_| !dead.contains(&call.name))
+        else {
+            continue;
+        };
+
+        for rule in flat_rules {
+            for style in &rule.style.styles {
+                let css_output = if style.rules.is_none() {
+                    CssOutput::Grouped
+                } else {
+                    CssOutput::Atomic
+                };
+
+                styles.push(Arc::new(NamedStyle {
+                    css_output: Some(css_output),
+                    ..(**style).clone()
+                }));
+                names.insert(Arc::clone(&style.name), Arc::clone(&rule.class));
+                flat_styles.push((Arc::clone(&style.name), call));
+            }
+        }
+    }
+
     if options.invalid_css_output {
         return Err(css::invalid_output(vec![Arc::from("cssOutput")]));
     }
@@ -1756,7 +1861,7 @@ pub fn compile<'a>(
         deferred_scopes: options.deferred_scopes,
         development: options.development,
         labels: labels.as_deref(),
-        names: portable.then_some(&names),
+        names: (portable || !flat_styles.is_empty()).then_some(&names),
         schemes,
         scope: None,
         shared: options.shared,
@@ -1773,6 +1878,16 @@ pub fn compile<'a>(
 
         css::compile(&css_options, Some(&mut units))?
     };
+    // Flat rule classes reach the element through selection, never through a class list.
+    for (name, _) in &flat_styles {
+        emitted.classes.shift_remove(name);
+    }
+
+    let flat_owners: Vec<(Arc<str>, &Call<'a>)> = flat_styles
+        .iter()
+        .filter_map(|(name, call)| Some((Arc::clone(names.get(name)?), *call)))
+        .collect();
+
     // A level's identity classes stay on the element, so only its generated classes combine.
     let generated: FxHashMap<&str, String> = chains
         .iter()
@@ -1795,6 +1910,7 @@ pub fn compile<'a>(
     let generator = Generator {
         chains: &chains,
         classes,
+        flat: &flat_owners,
         shadowed,
         owners: options.owners,
         settled: options.settled,
@@ -1883,6 +1999,8 @@ pub fn compile<'a>(
                 let recipe = call.recipe.as_ref().filter(|recipe| {
                     recipe.conditions.as_ref().is_none_or(Vec::is_empty)
                         && recipe.payloads.as_ref().is_none_or(Vec::is_empty)
+                        && !recipe.class_list
+                        && recipe.compounds.is_none()
                 })?;
                 let classes = generator.classes.get(&call.name)?;
 
@@ -2858,6 +2976,8 @@ struct Generator<'g, 'a> {
     /// Merged styles of folded wrapper chains.
     chains: &'g [Chain],
     classes: IndexMap<Arc<str>, String, FxBuildHasher>,
+    /// Lynx recipe rules printed under their own class, with the recipe call that owns each.
+    flat: &'g [(Arc<str>, &'g Call<'a>)],
     /// Whether a module binding renames `Object` or `String`, which specialized selectors read.
     shadowed: bool,
     owners: Option<&'g Owners>,
@@ -3524,6 +3644,24 @@ impl<'a> Generator<'_, 'a> {
                             silent.iter().map(|(axis, choices)| (&**axis, choices)),
                             |output, choices| write_strings(output, choices),
                         );
+                    }
+
+                    if let Some(compounds) = &recipe.compounds {
+                        selection.push_str(",\"compounds\":[");
+
+                        for (index, matches) in compounds.iter().enumerate() {
+                            if index > 0 {
+                                selection.push(',');
+                            }
+
+                            crate::internal::recipe::write_matches(&mut selection, matches);
+                        }
+
+                        selection.push(']');
+                    }
+
+                    if recipe.class_list {
+                        selection.push_str(",\"classList\":true");
                     }
 
                     if let Some(conditions) = &recipe.conditions {
@@ -4405,6 +4543,11 @@ impl<'a> Generator<'_, 'a> {
                 ))
             })
             .collect();
+        let flat_owners: FxHashMap<&str, &Call<'a>> = self
+            .flat
+            .iter()
+            .map(|(class, call)| (&**class, *call))
+            .collect();
         let mut theme_owners: FxHashMap<&str, (u32, &str)> = FxHashMap::default();
 
         for call in &extracted.theme_calls {
@@ -4612,7 +4755,11 @@ impl<'a> Generator<'_, 'a> {
                 continue;
             }
 
-            if let Some(call) = chain_owners.get(&*name) {
+            if let Some(call) = chain_owners
+                .get(&*name)
+                .copied()
+                .or_else(|| flat_owners.get(&*name).copied())
+            {
                 map.add_mapping(&Mapping {
                     generated: generated(0, line),
                     name: Some(&call.name),

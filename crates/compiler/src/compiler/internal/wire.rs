@@ -542,6 +542,30 @@ impl<'o> Encoder<'o> {
         );
         optional(
             &mut object,
+            "compounds",
+            recipe.compounds.as_ref().map(|compounds| {
+                Value::Array(
+                    compounds
+                        .iter()
+                        .map(|matches| {
+                            Value::Array(
+                                matches
+                                    .iter()
+                                    .map(|(axis, choices)| json!([&**axis, strings(choices.iter())]))
+                                    .collect(),
+                            )
+                        })
+                        .collect(),
+                )
+            }),
+        );
+
+        if recipe.class_list {
+            object.insert("classList".into(), Value::Bool(true));
+        }
+
+        optional(
+            &mut object,
             "silent",
             recipe.silent.as_ref().map(|silent| {
                 pairs(
