@@ -41,6 +41,30 @@ root.render(<App />)
 
 Each environment compiles separately, so `lynx` and `web` environments receive their own stylesheet. Watch rebuilds recompile the stylesheet after any source edit.
 
+## Loader Order
+
+The plugin rewrites each module before any other loader, including `enforce: 'pre'` loaders from other plugins or `tools.rspack`. Those loaders receive the compiled module.
+
+```ts title="lynx.config.ts"
+import { defineConfig } from '@lynx-js/rspeedy'
+import { zyzz } from 'zyzz/rspeedy'
+
+export default defineConfig({
+  plugins: [zyzz()],
+  tools: {
+    rspack: {
+      module: {
+        // [!code hl:2]
+        // Runs after Zyzz despite the pre stage
+        rules: [
+          { enforce: 'pre', test: /\.tsx?$/, use: ['./scripts/loader.ts'] },
+        ],
+      },
+    },
+  },
+})
+```
+
 ## Signature
 
 ```ts
