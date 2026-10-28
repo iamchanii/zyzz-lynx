@@ -41,6 +41,45 @@ root.render(<App />)
 
 Each environment compiles separately, so `lynx` and `web` environments receive their own stylesheet. Watch rebuilds recompile the stylesheet after any source edit.
 
+## Variants
+
+The Lynx template encoder drops nested rules, `:where()`, and attribute selectors, so the plugin compiles every environment for the `lynx` target. Recipes select with classes by default, and each choice and compound becomes one rule under its own class, which the application adds. `selection: 'className'` returns that class list for a `className` prop.
+
+```tsx title="src/Badge.tsx"
+import { variants } from 'zyzz'
+
+export function Badge(props: { tone: 'neutral' | 'success' }) {
+  // [!code hl:2]
+  // Renders "z_… zv…1" and the compound class when both choices match
+  return (
+    <text className={styles.badge({ size: 'large', tone: props.tone })}>
+      Paid
+    </text>
+  )
+}
+
+namespace styles {
+  export const badge = variants({
+    base: { padding: '2px' },
+    // Emits .zv…4 { opacity: 0.5 }, selected by the application, not .zv…0.zv…3
+    compoundVariants: [
+      { style: { opacity: 0.5 }, when: { size: 'large', tone: 'success' } },
+    ],
+    selection: 'className',
+    variants: {
+      size: { large: { height: '40px' }, small: { height: '20px' } },
+      tone: { neutral: { color: '#000' }, success: { color: '#0a0' } },
+    },
+  })
+}
+```
+
+Every emitted rule selects one class, so a compound keeps the specificity of a choice, and a later definition or `cx` argument still overrides it by order. A `cx` composition copies the recipe rules under its own prefix and renames the choice classes, so argument order holds as on the web. An at-rule inside a choice wraps the class rule instead of nesting in it.
+
+- **`selection: 'attribute'`:** A compile error, since Lynx matches no attribute selector. Spreads of the default class selection return `className` and `style` props.
+- **`conditions`:** A compile error. Nest `@media` queries inside the choice styles instead.
+- **Dynamic choices:** Supported with spreads, which carry the bound variables in `style`, and rejected by `selection: 'className'`.
+
 ## Loader Order
 
 The plugin rewrites each module before any other loader, including `enforce: 'pre'` loaders from other plugins or `tools.rspack`. Those loaders receive the compiled module.

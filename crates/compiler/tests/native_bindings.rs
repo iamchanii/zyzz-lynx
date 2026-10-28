@@ -310,6 +310,7 @@ mod prepare {
                 "nested",
                 Vec::new(),
                 Some(vec![Rule {
+                    class: None,
                     condition: Some("@media (width > 1px)".into()),
                     style: Arc::new(NamedStyle {
                         declarations: vec![declaration("opacity", Value::Number(1.0))],

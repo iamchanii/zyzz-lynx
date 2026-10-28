@@ -28,7 +28,7 @@ use crate::compiler::internal::recipes;
 use crate::compiler::internal::scope::{self, Kind, Mode};
 use crate::compiler::internal::statics::key_literal;
 use crate::compiler::internal::themes::{Link, Output, ScopeApplication};
-use crate::compiler::source::{Call, ImportedApplication, KnownInput, RuntimeInput};
+use crate::compiler::source::{Call, ImportedApplication, KnownInput, Rename, RuntimeInput};
 use crate::error::{Error, Result};
 use crate::internal::identity;
 use crate::internal::token::{Composition, CssOutput};
@@ -463,31 +463,71 @@ fn declarations(style: &NamedStyle) -> Vec<&Declaration> {
 }
 
 /// Rules that apply each selected style in order, inheriting its CSS output.
-fn rules(selected: &[Call<'_>], styles: &FxHashMap<Arc<str>, Arc<NamedStyle>>) -> Vec<Rule> {
-    selected
-        .iter()
-        .filter_map(|call| styles.get(&call.name))
-        .flat_map(|style| match &style.rules {
-            Some(rules) => rules
-                .iter()
-                .map(|rule| Rule {
-                    condition: rule.condition.clone(),
-                    style: if rule.style.css_output.is_some() || style.css_output.is_none() {
-                        Arc::clone(&rule.style)
-                    } else {
-                        Arc::new(NamedStyle {
-                            css_output: style.css_output,
-                            ..(*rule.style).clone()
-                        })
-                    },
-                })
-                .collect::<Vec<_>>(),
-            None => vec![Rule {
+/// Renamed choice-class prefixes of one composed style, by input position.
+type Renames = Vec<Rename>;
+
+/// Copies the inputs' rules in argument order. A rule printed under its own choice or compound
+/// class is copied under a class of this composition, so the copy keeps its place among the
+/// other inputs' declarations, and the runtime renames the application's classes to match.
+fn rules(
+    name: &str,
+    selected: &[Call<'_>],
+    styles: &FxHashMap<Arc<str>, Arc<NamedStyle>>,
+) -> (Vec<Rule>, Renames) {
+    let mut output = Vec::new();
+    let mut renames: Renames = Vec::new();
+
+    for (position, call) in selected.iter().enumerate() {
+        let Some(style) = styles.get(&call.name) else {
+            continue;
+        };
+        let Some(rules) = &style.rules else {
+            output.push(Rule {
+                class: None,
                 condition: None,
                 style: Arc::clone(style),
-            }],
-        })
-        .collect()
+            });
+            continue;
+        };
+
+        for rule in rules {
+            let class = rule.class.as_deref().map(|class| {
+                // A choice class is its recipe prefix, `zv` and an 8-character hash, then the
+                // choice position.
+                let split = class.len().min(10);
+                let (from, rest) = class.split_at(split);
+                let to = if let Some((_, _, to)) = renames
+                    .iter()
+                    .find(|(input, source, _)| *input == position && **source == *from)
+                {
+                    Arc::clone(to)
+                } else {
+                    let to: Arc<str> =
+                        Arc::from(recipes::prefix(&format!("{name}:{position}:{from}")));
+
+                    renames.push((position, Arc::from(from), Arc::clone(&to)));
+                    to
+                };
+
+                Arc::from(format!("{to}{rest}"))
+            });
+
+            output.push(Rule {
+                class,
+                condition: rule.condition.clone(),
+                style: if rule.style.css_output.is_some() || style.css_output.is_none() {
+                    Arc::clone(&rule.style)
+                } else {
+                    Arc::new(NamedStyle {
+                        css_output: style.css_output,
+                        ..(*rule.style).clone()
+                    })
+                },
+            });
+        }
+    }
+
+    (output, renames)
 }
 
 /// The style of a set of applications. Plain applications of styles whose configuration groups
@@ -497,8 +537,8 @@ fn composed(
     name: &Arc<str>,
     selected: &[Call<'_>],
     styles: &FxHashMap<Arc<str>, Arc<NamedStyle>>,
-) -> Arc<NamedStyle> {
-    let rules = rules(selected, styles);
+) -> (Arc<NamedStyle>, Renames) {
+    let (rules, renames) = rules(name, selected, styles);
     let composition = independent(selected, styles);
     // A nested composition merges only when it merged itself, so recipes and bindings never do.
     let plain = selected.iter().all(|call| {
@@ -512,24 +552,30 @@ fn composed(
     });
 
     if plain && let Some(merged) = combination::merge(name, &rules, None) {
-        return Arc::new(NamedStyle {
-            composition,
-            css_output: Some(CssOutput::Grouped),
-            declarations: Vec::new(),
-            name: Arc::clone(name),
-            rules: Some(merged),
-            targets: None,
-        });
+        return (
+            Arc::new(NamedStyle {
+                composition,
+                css_output: Some(CssOutput::Grouped),
+                declarations: Vec::new(),
+                name: Arc::clone(name),
+                rules: Some(merged),
+                targets: None,
+            }),
+            renames,
+        );
     }
 
-    Arc::new(NamedStyle {
-        composition,
-        css_output: Some(CssOutput::Atomic),
-        declarations: Vec::new(),
-        name: Arc::clone(name),
-        rules: Some(rules),
-        targets: None,
-    })
+    (
+        Arc::new(NamedStyle {
+            composition,
+            css_output: Some(CssOutput::Atomic),
+            declarations: Vec::new(),
+            name: Arc::clone(name),
+            rules: Some(rules),
+            targets: None,
+        }),
+        renames,
+    )
 }
 
 /// A composition of independent styles keeps their sharing contract.
@@ -1163,7 +1209,22 @@ fn compose<'o, 'a>(
         options.identity,
         options.offsets.utf16(node.span.start)
     ));
-    let style = composed(&name, &selected, styles);
+    let (style, renames) = composed(&name, &selected, styles);
+    // Renames address runtime inputs, which include placeholder arguments.
+    let input_positions: Vec<usize> = inputs
+        .iter()
+        .enumerate()
+        .filter(|(_, input)| !input.name.is_empty())
+        .map(|(index, _)| index)
+        .collect();
+    let addressed = |renames: Renames, positions: &[usize]| -> Option<Renames> {
+        (!renames.is_empty()).then(|| {
+            renames
+                .into_iter()
+                .filter_map(|(position, from, to)| Some((*positions.get(position)?, from, to)))
+                .collect()
+        })
+    };
     let identities: Vec<&str> = selected
         .iter()
         .filter_map(|call| call.identity.as_deref())
@@ -1196,6 +1257,7 @@ fn compose<'o, 'a>(
     let html = outputs.iter().any(Option::is_some);
     let mut call = Call {
         body: Some(synthesizer.body(node.span, &references)),
+        composition_renames: addressed(renames, &input_positions),
         css_name: Some(Arc::from(css_name)),
         end: node.span.end,
         identity: (!identities.is_empty()).then(|| Arc::from(identities.join(" "))),
@@ -1230,6 +1292,16 @@ fn compose<'o, 'a>(
         .collect();
 
     for mask in 0..(1_u32 << conditions) - 1 {
+        let included_positions: Vec<usize> = selected_inputs
+            .iter()
+            .enumerate()
+            .filter(|(_, input)| {
+                input
+                    .condition
+                    .is_none_or(|condition| mask & (1 << condition) != 0)
+            })
+            .filter_map(|(position, _)| input_positions.get(position).copied())
+            .collect();
         let included: Vec<Call<'a>> = selected
             .iter()
             .zip(&selected_inputs)
@@ -1265,8 +1337,9 @@ fn compose<'o, 'a>(
             case.portable_inputs = Some(inputs);
         }
 
-        let style = composed(&case_name, &included, styles);
+        let (style, renames) = composed(&case_name, &included, styles);
 
+        case.composition_renames = addressed(renames, &included_positions);
         names.push(case_name);
         cases.push((case, style));
     }

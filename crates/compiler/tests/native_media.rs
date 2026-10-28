@@ -60,6 +60,7 @@ fn declaration(property: &str, value: Value) -> Declaration {
 
 fn rule(condition: Option<&str>, declarations: Vec<Declaration>) -> Rule {
     Rule {
+        class: None,
         condition: condition.map(Into::into),
         style: Arc::new(NamedStyle {
             declarations,

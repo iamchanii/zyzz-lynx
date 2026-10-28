@@ -250,6 +250,7 @@ fn recipe(source: &str, module_id: &str) -> Value {
                 argument,
                 recipes::Options {
                     identity: "id",
+                    lynx: false,
                     payloads: recipe_payloads::Options {
                         allocator: &allocator,
                         allowed: &allowed,

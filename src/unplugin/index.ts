@@ -24,6 +24,12 @@ export type Options = {
   readonly reset?: boolean | undefined
   /** Source directory scanned for modules and global contributions. Defaults to the working directory. */
   readonly root?: string | undefined
+  /**
+   * Web output target. `'lynx'` compiles for the Lynx template encoder, which keeps only flat
+   * class rules, so recipes select with classes and emit one rule per choice and compound.
+   * Defaults to `'web'`.
+   */
+  readonly target?: 'lynx' | 'web' | undefined
 }
 
 const excludedPattern = /\.(?:d|test|test-d|bench|bench-d)\.[cm]?[jt]sx?$/
@@ -314,6 +320,7 @@ const portable = createUnplugin<Options | undefined, false>(
             contracts,
             imports,
             modules,
+            target: options.target,
           })
           const copied = new Map<string, string>()
           const owners = new Map<string, string>()

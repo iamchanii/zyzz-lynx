@@ -704,6 +704,7 @@ impl Compiler<'_, '_> {
                                     .into_iter()
                                     .flatten()
                                     .map(|style| Rule {
+                                        class: None,
                                         condition: None,
                                         style: Arc::clone(style),
                                     })

@@ -114,10 +114,19 @@ type Suggestions<
 }
 
 type Keys<value> = value extends unknown ? keyof value : never
-/** How applied props carry selections: `data-*` attributes, or one class per choice. */
-type Selection = 'attribute' | 'class'
+/**
+ * How applications carry selections: `data-*` attributes, one class per choice, or one class
+ * per choice returned as the class list itself.
+ */
+type Selection = 'attribute' | 'class' | 'className'
+/** Recipes whose applications return the class list string. */
+type ClassList<definition> = definition extends {
+  readonly selection: 'className'
+}
+  ? true
+  : false
 type Attributes<definition> = definition extends {
-  readonly selection: 'class'
+  readonly selection: 'class' | 'className'
 }
   ? {}
   : {
@@ -131,7 +140,9 @@ type Selections<axes> = {
 type Input<definition, output extends style.Output> = Selections<
   Axes<definition>
 > &
-  style.Options<output> &
+  (ClassList<definition> extends true
+    ? Pick<style.Options, 'className'>
+    : style.Options<output>) &
   (keyof Conditions<definition> extends never
     ? {}
     : {
@@ -173,21 +184,28 @@ type Checked<
             | `zyzz-condition-${string}`
             ? never
             : {
-                readonly [choice in keyof definition[key][axis]]: CheckedChoice<
+                readonly [choice in keyof definition[key][axis]]: [
+                  ClassList<definition>,
                   definition[key][axis][choice],
-                  tokens,
-                  layers,
-                  mappings
-                >
+                ] extends [true, (...args: never[]) => unknown]
+                  ? never
+                  : CheckedChoice<
+                      definition[key][axis][choice],
+                      tokens,
+                      layers,
+                      mappings
+                    >
               }
         }
       : key extends 'conditions'
-        ? {
-            readonly [name in keyof definition[key]]: Extract<
-              Condition.Keys<tokens>,
-              `@${'media' | 'supports'}${' ' | '(' | '/' | '\t' | '\n' | '\r' | '\f'}${string}`
-            >
-          }
+        ? ClassList<definition> extends true
+          ? never
+          : {
+              readonly [name in keyof definition[key]]: Extract<
+                Condition.Keys<tokens>,
+                `@${'media' | 'supports'}${' ' | '(' | '/' | '\t' | '\n' | '\r' | '\f'}${string}`
+              >
+            }
         : key extends 'defaultVariants'
           ? Selections<Axes<definition>> &
               Record<
@@ -232,8 +250,11 @@ type Checked<
 /**
  * Declares base styles, variant axes, defaults, and ordered compounds.
  * `selection: 'class'` selects each choice with its own class instead of a `data-*` attribute.
+ * `selection: 'className'` also selects with classes, and applications return the class list
+ * string for a `className` prop, without conditions, dynamic choices, or inline overrides.
  * @param definition - Static recipe for one element.
- * @returns A callable selecting precompiled styles and returning one props object.
+ * @returns A callable selecting precompiled styles and returning one props object, or the class
+ * list for `selection: 'className'`.
  * @throws {Error} When uncompiled authoring omits an explicit identity.
  */
 export function variants<const definition extends Record<string, unknown>>(
@@ -266,13 +287,16 @@ export declare namespace variants {
   /**
    * Callable selection; omitted values use defaults and null suppresses them.
    * Props carry `data-*` selection attributes unless the definition selects with classes.
+   * `selection: 'className'` returns the class list string instead of props.
    */
   type ReturnType<definition, output extends style.Output = 'react'> = <
     const input extends Input<definition, output> = Input<definition, output>,
   >(
     input?: input &
       Record<Exclude<Keys<input>, keyof Input<definition, output>>, never>,
-  ) => style.Props<output> & Attributes<definition>
+  ) => ClassList<definition> extends true
+    ? string
+    : style.Props<output> & Attributes<definition>
 
   /** Missing source transformation diagnostic. */
   type ErrorType = Error

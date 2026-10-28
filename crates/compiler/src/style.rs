@@ -65,6 +65,9 @@ pub struct Declaration {
 /// A nested block under an optional condition.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Rule {
+    /// A class the block prints under instead of the owning style's classes, which applications
+    /// add themselves. Lynx recipes print each choice and compound this way.
+    pub class: Option<Arc<str>>,
     /// Normalized condition: a selector containing `&` or an at-rule prelude.
     pub condition: Option<Arc<str>>,
     /// The block's declarations and nested rules.
@@ -600,7 +603,11 @@ fn define_with(styles: &Data, context: &Context<'_>) -> Result<Definition> {
                         }
                     };
 
-                    Ok(Rule { condition, style })
+                    Ok(Rule {
+                        class: None,
+                        condition,
+                        style,
+                    })
                 })();
 
                 match result {
@@ -712,6 +719,7 @@ fn layered(style: &Arc<NamedStyle>, layer: &str) -> Arc<NamedStyle> {
             .collect(),
         None if style.declarations.is_empty() => Vec::new(),
         None => vec![Rule {
+            class: None,
             condition: Some(format!("@layer {layer}").into()),
             style: Arc::new(body.clone()),
         }],

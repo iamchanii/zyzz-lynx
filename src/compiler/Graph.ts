@@ -56,6 +56,7 @@ function encode(options: compile.Options) {
     references: options[ClassName.references],
     reset: options.reset,
     shared: options[ThemeRules.shared],
+    target: options.target,
   }
 }
 
@@ -101,6 +102,13 @@ export declare namespace compile {
     readonly modules: Readonly<Record<string, string>>
     /** Optional reset stylesheet supplied by the host, ordered before authored layers. */
     readonly reset?: string | undefined
+    /**
+     * Web output target. `'lynx'` compiles for the Lynx template encoder, which keeps only flat
+     * class rules: recipes select with classes by default, reject attribute selection and
+     * conditions, and emit each choice and compound as its own class rule whose class the
+     * application adds. Cannot be combined with `native`. Defaults to `'web'`.
+     */
+    readonly target?: 'lynx' | 'web' | undefined
   }
 
   /** Compiled modules and their direct source dependencies. */

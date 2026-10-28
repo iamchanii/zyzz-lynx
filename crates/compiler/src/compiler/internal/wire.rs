@@ -375,7 +375,12 @@ impl<'o> Encoder<'o> {
         if let Some(rules) = &style.rules {
             let rules: Vec<Value> = rules
                 .iter()
-                .map(|rule| json!([rule.condition.as_deref(), self.style(&rule.style)]))
+                .map(|rule| match &rule.class {
+                    Some(class) => {
+                        json!([rule.condition.as_deref(), self.style(&rule.style), &**class])
+                    }
+                    None => json!([rule.condition.as_deref(), self.style(&rule.style)]),
+                })
                 .collect();
 
             object.insert("rules".into(), Value::Array(rules));
@@ -551,7 +556,9 @@ impl<'o> Encoder<'o> {
                             Value::Array(
                                 matches
                                     .iter()
-                                    .map(|(axis, choices)| json!([&**axis, strings(choices.iter())]))
+                                    .map(|(axis, choices)| {
+                                        json!([&**axis, strings(choices.iter())])
+                                    })
                                     .collect(),
                             )
                         })
@@ -1408,7 +1415,7 @@ fn error_name(error: &Error) -> &'static str {
 
 /// Runs `Source.extract` on JSON input and returns its JSON result.
 ///
-/// Input: `{ "moduleId": string, "source": string, "target"?: "native" | "web",
+/// Input: `{ "moduleId": string, "source": string, "target"?: "lynx" | "native" | "web",
 /// "compiler"?: bool }`.
 pub fn extract(input: &str) -> String {
     let parsed: Value = match serde_json::from_str(input) {
@@ -1429,10 +1436,10 @@ pub fn extract(input: &str) -> String {
         module_id: text("moduleId"),
         parsed: None,
         source,
-        target: if text("target") == "native" {
-            Target::Native
-        } else {
-            Target::Web
+        target: match text("target") {
+            "lynx" => Target::Lynx,
+            "native" => Target::Native,
+            _ => Target::Web,
         },
     };
 

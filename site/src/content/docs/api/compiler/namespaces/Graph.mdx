@@ -106,6 +106,18 @@ A native output context with the same fields as [`Native.compile`](/docs/api/com
 Graph.compile({ modules, native: { colorScheme: 'light', platform: 'ios' } })
 ```
 
+### options.target
+
+- **Type:** `'lynx' | 'web'{:ts}`
+- **Default:** `'web'{:ts}`
+
+The web output target. `'lynx'` compiles for the Lynx template encoder, which keeps only flat class rules: recipes select with classes by default, reject `selection: 'attribute'` and `conditions`, and emit each choice and compound as one rule under a class the application adds. The option cannot be combined with `native`.
+
+```ts /target: 'lynx'/
+// Emits .zv…0 { height: 40px } instead of a nested :where() rule
+Graph.compile({ modules, target: 'lynx' })
+```
+
 ### options.reset
 
 - **Type:** `string{:ts}`

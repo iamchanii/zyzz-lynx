@@ -198,9 +198,13 @@ import { style } from 'zyzz'
 export function Card() {
   return (
     <section {...styles.card()} className="external">
-      // @error: zyzz(no-conflicting-props): Pass 'className' into the Zyzz style call to merge styling props.
-      <span {...styles.label()} {...styles.selected()}>Selected</span>
-      // @error: zyzz(no-conflicting-props): Compose Zyzz applications with cx() instead of overwriting them with multiple JSX spreads.
+      // @error: zyzz(no-conflicting-props): Pass 'className' into the Zyzz
+      style call to merge styling props.
+      <span {...styles.label()} {...styles.selected()}>
+        Selected
+      </span>
+      // @error: zyzz(no-conflicting-props): Compose Zyzz applications with cx()
+      instead of overwriting them with multiple JSX spreads.
     </section>
   )
 }

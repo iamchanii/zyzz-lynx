@@ -117,6 +117,7 @@ pub fn compile(recipe: &recipe::Definition, options: &style_sheet::Options) -> R
             })
             .flat_map(|rule| rule.value.styles.iter())
             .map(|style| Rule {
+                class: None,
                 condition: None,
                 style: Arc::clone(style),
             })

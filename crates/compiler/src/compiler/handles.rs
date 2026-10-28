@@ -951,7 +951,11 @@ pub fn transform(input: &Value, separate: Option<&str>) -> Result<String> {
             module_id,
             parsed: Some(&parsed),
             source,
-            target: crate::compiler::source::Target::Web,
+            target: if field("target").and_then(Value::as_str) == Some("lynx") {
+                crate::compiler::source::Target::Lynx
+            } else {
+                crate::compiler::source::Target::Web
+            },
         },
     )?;
     let output = transform::compile(

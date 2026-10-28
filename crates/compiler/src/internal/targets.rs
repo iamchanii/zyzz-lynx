@@ -82,6 +82,7 @@ pub fn web(style: &Arc<NamedStyle>) -> Arc<NamedStyle> {
         rules
             .iter()
             .map(|rule| Rule {
+                class: rule.class.clone(),
                 condition: rule.condition.clone(),
                 style: web(&rule.style),
             })
@@ -104,10 +105,12 @@ pub fn web(style: &Arc<NamedStyle>) -> Arc<NamedStyle> {
         declarations: Vec::new(),
         rules: Some(vec![
             Rule {
+                class: None,
                 condition: None,
                 style: Arc::clone(&shared),
             },
             Rule {
+                class: None,
                 condition: None,
                 style: web(branch),
             },

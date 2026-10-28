@@ -521,6 +521,7 @@ impl<'a> Decoder<'a> {
                         .map(Into::into);
 
                     output.push(Rule {
+                        class: None,
                         condition,
                         style: self.named_style(field(rule, "style")?)?,
                     });

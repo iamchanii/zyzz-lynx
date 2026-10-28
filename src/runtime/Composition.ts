@@ -53,6 +53,8 @@ export function create(options: create.Options) {
     } & Record<string, unknown> = { className }
     let attributes = false
     let external: string[] | undefined
+    // The input each external class came from, for renaming after ownership resolves.
+    let sources: number[] | undefined
     let style: Record<string, string | number | undefined> | undefined
     for (let index = 0; index < entries.length; index++) {
       const entry = entries[index]
@@ -65,14 +67,20 @@ export function create(options: create.Options) {
       if (style && input.slots)
         for (const slot of input.slots) delete style[slot]
       const prefixes = input.prefixes
-      if (external && prefixes)
-        external = external.filter(
+      if (external && prefixes) {
+        const kept = external.map(
           (name) => !prefixes.some((prefix) => name.startsWith(prefix)),
         )
+        external = external.filter((_, position) => kept[position])
+        sources = sources?.filter((_, position) => kept[position])
+      }
       // An application's own class list adds nothing beyond the composition class.
       if (entry.className !== input.className)
         for (const name of entry.className.split(/\s+/))
-          if (name && !input.classes.has(name)) (external ??= []).push(name)
+          if (name && !input.classes.has(name)) {
+            ;(external ??= []).push(name)
+            ;(sources ??= []).push(index)
+          }
       for (const name in entry)
         if (
           name.startsWith('data-') &&
@@ -92,6 +100,13 @@ export function create(options: create.Options) {
         }
       }
     }
+    // Composed copies of a recipe's class rules print under the composition's own prefix.
+    if (external && sources)
+      external = external.map((name, position) => {
+        const renames = inputs[sources![position]!]!.renames?.[mask]
+        const rename = renames?.find(([from]) => name.startsWith(from))
+        return rename ? rename[1] + name.slice(rename[0].length) : name
+      })
     result.className = external
       ? [className, ...external].filter(Boolean).join(' ')
       : className || ''
@@ -120,6 +135,13 @@ export declare namespace create {
       readonly condition?: number | undefined
       /** Choice-class prefixes replaced together for repeated applications. */
       readonly prefixes?: readonly string[] | undefined
+      /**
+       * Choice-class prefix renames per presence alternative, as `[from, to]` pairs, for
+       * compositions that copy a recipe's class rules under their own prefix.
+       */
+      readonly renames?:
+        | readonly (readonly (readonly [string, string])[])[]
+        | undefined
       /** Private callback slots replaced together for repeated applications. */
       readonly slots?: readonly string[] | undefined
     }[]

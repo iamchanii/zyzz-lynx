@@ -1068,7 +1068,11 @@ pub fn expand<'s, 'a>(
                     continue;
                 }
 
-                flat.push(Some(Arc::from(class(prefix, total + compounds.len(), None))));
+                flat.push(Some(Arc::from(class(
+                    prefix,
+                    total + compounds.len(),
+                    None,
+                ))));
                 compounds.push(rule.matches.clone());
             }
 

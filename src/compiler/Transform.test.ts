@@ -4763,6 +4763,369 @@ namespace styles {
   })
 })
 
+describe('lynx', () => {
+  describe('compile', () => {
+    const source = `import { cx, style, variants } from 'zyzz'
+type P = { children?: unknown; className?: string | undefined; on?: unknown; size?: unknown; tone?: unknown }
+const Chip = (props: P) => <span {...styles.chip({ className: props.className, on: props.on === true, size: props.size, tone: props.tone })}>{props.children}</span>
+export const App = () => <>
+<main>
+<span {...styles.chip()}>default</span>
+<span {...styles.chip({ on: true, tone: 'blue' })}>compound</span>
+<span className={styles.badge({ size: 'large', tone: 'blue' })}>badge</span>
+<span className={styles.badge({ size: 'small', tone: null, className: 'extra' })}>null</span>
+<span {...cx(styles.chip({ on: true, tone: 'blue' }), styles.override())}>override</span>
+<span {...cx(styles.override(), styles.chip({ on: true, tone: 'blue' }))}>reversed</span>
+<span {...cx(styles.chip({ on: true, tone: 'blue' }), flag && styles.override())}>conditional</span>
+<Chip on size="small">component</Chip>
+</main>
+</>
+const flag = Math.random() >= 0
+namespace styles {
+  export const chip = variants({
+    base: { color: 'rgb(0, 0, 0)' },
+    compoundVariants: [{ style: { borderLeft: '4px solid' }, when: { on: true, tone: 'blue' } }],
+    defaultVariants: { tone: 'red' },
+    variants: {
+      on: { false: {}, true: { paddingLeft: '2px' } },
+      size: { large: { paddingLeft: '8px' }, small: { paddingLeft: '4px' } },
+      tone: { blue: { color: 'rgb(0, 0, 255)' }, red: { color: 'rgb(255, 0, 0)' } },
+    },
+  })
+
+  export const badge = variants({
+    base: { paddingLeft: '1px' },
+    compoundVariants: [{ style: { color: 'rgb(0, 128, 0)' }, when: { size: ['large', 'small'], tone: 'blue' } }],
+    selection: 'className',
+    variants: {
+      size: { large: { paddingLeft: '8px', '@media (width >= 1px)': { borderLeft: '2px solid' } }, small: { paddingLeft: '4px' } },
+      tone: { blue: { color: 'rgb(0, 0, 255)' }, red: {} },
+    },
+  })
+
+  export const override = style({ borderLeft: '1px solid' })
+}`
+
+    test('emits one flat class rule per choice and compound, which applications select', async () => {
+      const output = Transform.compile({
+        moduleId: 'App.tsx',
+        source,
+        target: 'lynx',
+      })
+
+      // Every rule is one class deep, in recipe order, with at-rules outside the class.
+      expect(output.css).toMatchInlineSnapshot(`
+        ".z_l0kPgl0{color:rgb(0, 0, 0);}
+        .zv4meQUdh61{padding-left:2px;}
+        .zv4meQUdh62{padding-left:8px;}
+        .zv4meQUdh63{padding-left:4px;}
+        .zv4meQUdh64{color:rgb(0, 0, 255);}
+        .zv4meQUdh65{color:rgb(255, 0, 0);}
+        .zv4meQUdh66{border-left:4px solid;}
+        .z_l0kPgl1{padding-left:1px;}
+        .zv9WvyhNQ-0{padding-left:8px;}
+        @media (width >= 1px){.zv9WvyhNQ-0{border-left:2px solid;}}
+        .zv9WvyhNQ-1{padding-left:4px;}
+        .zv9WvyhNQ-2{color:rgb(0, 0, 255);}
+        .zv9WvyhNQ-4{color:rgb(0, 128, 0);}
+        .z_l0kPgl2{border-left:1px solid;}
+        .z_l0kPgl3{color:rgb(0, 0, 0);}
+        .zvbsqHUbNY1{padding-left:2px;}
+        .zvbsqHUbNY2{padding-left:8px;}
+        .zvbsqHUbNY3{padding-left:4px;}
+        .zvbsqHUbNY4{color:rgb(0, 0, 255);}
+        .zvbsqHUbNY5{color:rgb(255, 0, 0);}
+        .zvbsqHUbNY6{border-left:4px solid;}
+        .z_l0kPgl4{border-left:1px solid;}
+        .z_l0kPgl5{border-left:1px solid;}
+        .z_l0kPgl6{color:rgb(0, 0, 0);}
+        .zv14w9Ddz71{padding-left:2px;}
+        .zv14w9Ddz72{padding-left:8px;}
+        .zv14w9Ddz73{padding-left:4px;}
+        .zv14w9Ddz74{color:rgb(0, 0, 255);}
+        .zv14w9Ddz75{color:rgb(255, 0, 0);}
+        .zv14w9Ddz76{border-left:4px solid;}
+        .z_l0kPgl7{color:rgb(0, 0, 0);}
+        .zv6pa7USHW1{padding-left:2px;}
+        .zv6pa7USHW2{padding-left:8px;}
+        .zv6pa7USHW3{padding-left:4px;}
+        .zv6pa7USHW4{color:rgb(0, 0, 255);}
+        .zv6pa7USHW5{color:rgb(255, 0, 0);}
+        .zv6pa7USHW6{border-left:4px solid;}
+        .z_l0kPgl8{color:rgb(0, 0, 0);}
+        .zv5ZO1lHfQ1{padding-left:2px;}
+        .zv5ZO1lHfQ2{padding-left:8px;}
+        .zv5ZO1lHfQ3{padding-left:4px;}
+        .zv5ZO1lHfQ4{color:rgb(0, 0, 255);}
+        .zv5ZO1lHfQ5{color:rgb(255, 0, 0);}
+        .zv5ZO1lHfQ6{border-left:4px solid;}
+        .z_l0kPgl9{border-left:1px solid;}"
+      `)
+      expect(output.classes).toMatchInlineSnapshot(`
+        {
+          "composition-1k0bfdx1r9hbnf-641": "z_l0kPgl3 z_l0kPgl4",
+          "composition-1k0bfdx1r9hbnf-731": "z_l0kPgl5 z_l0kPgl6",
+          "composition-1k0bfdx1r9hbnf-821": "z_l0kPgl8 z_l0kPgl9",
+          "composition-1k0bfdx1r9hbnf-821-0": "z_l0kPgl7",
+          "style-1k0bfdx1r9hbnf-1036": "z_l0kPgl0",
+          "style-1k0bfdx1r9hbnf-1490": "z_l0kPgl1",
+          "style-1k0bfdx1r9hbnf-1924": "z_l0kPgl2",
+        }
+      `)
+      expect(output.code).toMatchInlineSnapshot(`
+        "
+        const __zyzzComposition641=/*#__PURE__*/__zyzzComposition.create({"className":"z_l0kPgl3 z_l0kPgl4","inputs":[{"className":"z_l0kPgl0","renames":[[["zv4meQUdh6","zvbsqHUbNY"]]],"prefixes":["zv4meQUdh6"]},{}]});
+        const __zyzzComposition731=/*#__PURE__*/__zyzzComposition.create({"className":"z_l0kPgl5 z_l0kPgl6","inputs":[{},{"className":"z_l0kPgl0","renames":[[["zv4meQUdh6","zv14w9Ddz7"]]],"prefixes":["zv4meQUdh6"]}]});
+        const __zyzzComposition821=/*#__PURE__*/__zyzzComposition.create({"cases":["z_l0kPgl7","z_l0kPgl8 z_l0kPgl9"],"inputs":[{"className":"z_l0kPgl0","renames":[[["zv4meQUdh6","zv6pa7USHW"]],[["zv4meQUdh6","zv5ZO1lHfQ"]]],"prefixes":["zv4meQUdh6"]},{"condition":0}]});
+
+        import { Composition as __zyzzComposition, Props as __zyzzProps } from 'zyzz/runtime';
+
+        type P = { children?: unknown; className?: string | undefined; on?: unknown; size?: unknown; tone?: unknown }
+        const Chip = (props: P) => <span {...styles.chip({ className: props.className, on: props.on === true, size: props.size, tone: props.tone })}>{props.children}</span>
+        export const App = () => <>
+        <main>
+        <span {...styles.chip()}>default</span>
+        <span {...styles.chip({ on: true, tone: 'blue' })}>compound</span>
+        <span className={styles.badge({ size: 'large', tone: 'blue' })}>badge</span>
+        <span className={styles.badge({ size: 'small', tone: null, className: 'extra' })}>null</span>
+        <span {...__zyzzComposition641(styles.chip({ on: true, tone: 'blue' }),((styles.override as unknown)||styles.override(),!0))}>override</span>
+        <span {...__zyzzComposition731(((styles.override as unknown)||styles.override(),!0),styles.chip({ on: true, tone: 'blue' }))}>reversed</span>
+        <span {...__zyzzComposition821(styles.chip({ on: true, tone: 'blue' }),(flag)&&((styles.override as unknown)||styles.override(),!0))}>conditional</span>
+        <Chip on size="small">component</Chip>
+        </main>
+        </>
+        const flag = Math.random() >= 0
+        namespace styles {
+          export const chip = (((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className,style=input.style,vars=input.vars,inline=vars?{...vars,...style}:style;let value,className="z_l0kPgl0",s0,s1,s2;value=Object.prototype.hasOwnProperty.call(input,"on")?input["on"]:void 0;if(value!==null&&value!==void 0){value=String(value);s0=value;className+=value==="true"?" zv4meQUdh61":""}value=Object.prototype.hasOwnProperty.call(input,"size")?input["size"]:void 0;if(value!==null&&value!==void 0){value=String(value);s1=value;className+=value==="large"?" zv4meQUdh62":value==="small"?" zv4meQUdh63":""}value=Object.prototype.hasOwnProperty.call(input,"tone")?input["tone"]:void 0;if(value===void 0)value="red";if(value!==null&&value!==void 0){value=String(value);s2=value;className+=value==="blue"?" zv4meQUdh64":value==="red"?" zv4meQUdh65":""}if(s0==="true"&&s2==="blue")className+=" zv4meQUdh66";if(external)className+=" "+external;return inline?{className,style:inline}:{className}}) as unknown as import('zyzz').variants.ReturnType<{selection:'class';variants:{"on":{"false":{};"true":{}};"size":{"large":{};"small":{}};"tone":{"blue":{};"red":{}}}}>)
+
+          export const badge = (((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className;let value,className="z_l0kPgl1",s0,s1;value=Object.prototype.hasOwnProperty.call(input,"size")?input["size"]:void 0;if(value!==null&&value!==void 0){value=String(value);s0=value;className+=value==="large"?" zv9WvyhNQ-0":value==="small"?" zv9WvyhNQ-1":""}value=Object.prototype.hasOwnProperty.call(input,"tone")?input["tone"]:void 0;if(value!==null&&value!==void 0){value=String(value);s1=value;className+=value==="blue"?" zv9WvyhNQ-2":""}if((s0==="large"||s0==="small")&&s1==="blue")className+=" zv9WvyhNQ-4";if(external)className+=" "+external;return className}) as unknown as import('zyzz').variants.ReturnType<{selection:'className';variants:{"size":{"large":{};"small":{}};"tone":{"blue":{};"red":{}}}}>)
+
+          export const override = /*#__PURE__*/__zyzzProps.create({className:"z_l0kPgl2"})
+        }"
+      `)
+
+      const rendered = await Wrappers.render({
+        css: output.css,
+        entry: 'App.tsx',
+        modules: { 'App.tsx': output.code },
+      })
+
+      // A compound keeps one-class specificity, so the later override still wins by order.
+      expect(rendered.elements).toMatchInlineSnapshot(`
+        [
+          {
+            "borderLeftWidth": "0px",
+            "className": "z_l0kPgl0 zv4meQUdh65",
+            "color": "rgb(255, 0, 0)",
+            "paddingLeft": "0px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "4px",
+            "className": "z_l0kPgl0 zv4meQUdh61 zv4meQUdh64 zv4meQUdh66",
+            "color": "rgb(0, 0, 255)",
+            "paddingLeft": "2px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "2px",
+            "className": "z_l0kPgl1 zv9WvyhNQ-0 zv9WvyhNQ-2 zv9WvyhNQ-4",
+            "color": "rgb(0, 128, 0)",
+            "paddingLeft": "8px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "0px",
+            "className": "z_l0kPgl1 zv9WvyhNQ-1 extra",
+            "color": "rgb(0, 0, 0)",
+            "paddingLeft": "4px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "1px",
+            "className": "z_l0kPgl3 z_l0kPgl4 zvbsqHUbNY1 zvbsqHUbNY4 zvbsqHUbNY6",
+            "color": "rgb(0, 0, 255)",
+            "paddingLeft": "2px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "4px",
+            "className": "z_l0kPgl5 z_l0kPgl6 zv14w9Ddz71 zv14w9Ddz74 zv14w9Ddz76",
+            "color": "rgb(0, 0, 255)",
+            "paddingLeft": "2px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "1px",
+            "className": "z_l0kPgl8 z_l0kPgl9 zv5ZO1lHfQ1 zv5ZO1lHfQ4 zv5ZO1lHfQ6",
+            "color": "rgb(0, 0, 255)",
+            "paddingLeft": "2px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "0px",
+            "className": "z_l0kPgl0 zv4meQUdh61 zv4meQUdh63 zv4meQUdh65",
+            "color": "rgb(255, 0, 0)",
+            "paddingLeft": "4px",
+            "tag": "span",
+          },
+        ]
+      `)
+    })
+
+    test('keeps grouped recipe output flat', () => {
+      const output = Transform.compile({
+        cssOutput: 'grouped',
+        moduleId: 'App.tsx',
+        source,
+        target: 'lynx',
+      })
+
+      expect(output.css).toMatchInlineSnapshot(`
+        ".z_l0kPgl0{color:rgb(0, 0, 0);}
+        .zv4meQUdh61{padding-left:2px;}
+        .zv4meQUdh62{padding-left:8px;}
+        .zv4meQUdh63{padding-left:4px;}
+        .zv4meQUdh64{color:rgb(0, 0, 255);}
+        .zv4meQUdh65{color:rgb(255, 0, 0);}
+        .zv4meQUdh66{border-left:4px solid;}
+        .z_l0kPgl1{padding-left:1px;}
+        .zv9WvyhNQ-0{padding-left:8px;}
+        @media (width >= 1px){.zv9WvyhNQ-0{border-left:2px solid;}}
+        .zv9WvyhNQ-1{padding-left:4px;}
+        .zv9WvyhNQ-2{color:rgb(0, 0, 255);}
+        .zv9WvyhNQ-4{color:rgb(0, 128, 0);}
+        .z_l0kPgl2{border-left:1px solid;}
+        .z_l0kPgl3{color:rgb(0, 0, 0);}
+        .zvbsqHUbNY1{padding-left:2px;}
+        .zvbsqHUbNY2{padding-left:8px;}
+        .zvbsqHUbNY3{padding-left:4px;}
+        .zvbsqHUbNY4{color:rgb(0, 0, 255);}
+        .zvbsqHUbNY5{color:rgb(255, 0, 0);}
+        .zvbsqHUbNY6{border-left:4px solid;}
+        .z_l0kPgl4{border-left:1px solid;}
+        .z_l0kPgl5{border-left:1px solid;}
+        .z_l0kPgl6{color:rgb(0, 0, 0);}
+        .zv14w9Ddz71{padding-left:2px;}
+        .zv14w9Ddz72{padding-left:8px;}
+        .zv14w9Ddz73{padding-left:4px;}
+        .zv14w9Ddz74{color:rgb(0, 0, 255);}
+        .zv14w9Ddz75{color:rgb(255, 0, 0);}
+        .zv14w9Ddz76{border-left:4px solid;}
+        .z_l0kPgl7{color:rgb(0, 0, 0);}
+        .zv6pa7USHW1{padding-left:2px;}
+        .zv6pa7USHW2{padding-left:8px;}
+        .zv6pa7USHW3{padding-left:4px;}
+        .zv6pa7USHW4{color:rgb(0, 0, 255);}
+        .zv6pa7USHW5{color:rgb(255, 0, 0);}
+        .zv6pa7USHW6{border-left:4px solid;}
+        .z_l0kPgl8{color:rgb(0, 0, 0);}
+        .zv5ZO1lHfQ1{padding-left:2px;}
+        .zv5ZO1lHfQ2{padding-left:8px;}
+        .zv5ZO1lHfQ3{padding-left:4px;}
+        .zv5ZO1lHfQ4{color:rgb(0, 0, 255);}
+        .zv5ZO1lHfQ5{color:rgb(255, 0, 0);}
+        .zv5ZO1lHfQ6{border-left:4px solid;}
+        .z_l0kPgl9{border-left:1px solid;}"
+      `)
+    })
+
+    test('keeps the web output nested and attribute-selected', () => {
+      const output = Transform.compile({ moduleId: 'App.tsx', source })
+
+      expect(output.css).toMatchInlineSnapshot(`
+        ".z_l0kPgl0{color:rgb(0, 0, 0);}
+        .z_l0kPgl1{&:where([data-on="true"]){padding-left:2px;}}
+        .z_l0kPgl2{&:where([data-size="large"]){padding-left:8px;}}
+        .z_l0kPgl3{&:where([data-size="small"]){padding-left:4px;}}
+        .z_l0kPgl4{&:where([data-tone="blue"]){color:rgb(0, 0, 255);}}
+        .z_l0kPgl5{&:where([data-tone="red"]){color:rgb(255, 0, 0);}}
+        .z_l0kPgl6{&:where([data-on="true"]):where([data-tone="blue"]):where(*, .__zyzz-compound-0){border-left:4px solid;}}
+        .z_l0kPgl7{padding-left:1px;}
+        .z_l0kPgl8{&:where(.zv9WvyhNQ-0){padding-left:8px;}}
+        @media (width >= 1px){.z_l0kPgl9{&:where(.zv9WvyhNQ-0){border-left:2px solid;}}}
+        .z_l0kPgla{&:where(.zv9WvyhNQ-1){padding-left:4px;}}
+        .z_l0kPglb{&:where(.zv9WvyhNQ-2){color:rgb(0, 0, 255);}}
+        .z_l0kPglc{&:where(.zv9WvyhNQ-0,.zv9WvyhNQ-1):where(.zv9WvyhNQ-2):where(*, .__zyzz-compound-0){color:rgb(0, 128, 0);}}
+        .z_l0kPgld{border-left:1px solid;}
+        .z_l0kPgle{color:rgb(0, 0, 0);}
+        .z_l0kPglf{&:where([data-on="true"]){padding-left:2px;}}
+        .z_l0kPglg{&:where([data-size="large"]){padding-left:8px;}}
+        .z_l0kPglh{&:where([data-size="small"]){padding-left:4px;}}
+        .z_l0kPgli{&:where([data-tone="blue"]){color:rgb(0, 0, 255);}}
+        .z_l0kPglj{&:where([data-tone="red"]){color:rgb(255, 0, 0);}}
+        .z_l0kPglk{&:where([data-on="true"]):where([data-tone="blue"]):where(*, .__zyzz-compound-0){border-left:4px solid;}}
+        .z_l0kPgll{border-left:1px solid;}
+        .z_l0kPglm{border-left:1px solid;}
+        .z_l0kPgln{&:where([data-on="true"]):where([data-tone="blue"]):where(*, .__zyzz-compound-0){border-left:4px solid;}}
+        .z_l0kPglo{&:where([data-on="true"]):where([data-tone="blue"]):where(*, .__zyzz-compound-0){border-left:4px solid;}}
+        .z_l0kPglp{&:where([data-on="true"]):where([data-tone="blue"]):where(*, .__zyzz-compound-0){border-left:4px solid;}}
+        .z_l0kPglq{border-left:1px solid;}"
+      `)
+      expect(output.classes).toMatchInlineSnapshot(`
+        {
+          "composition-1k0bfdx1r9hbnf-641": "z_l0kPgle z_l0kPglf z_l0kPglg z_l0kPglh z_l0kPgli z_l0kPglj z_l0kPglk z_l0kPgll",
+          "composition-1k0bfdx1r9hbnf-731": "z_l0kPglm z_l0kPgle z_l0kPgli z_l0kPglj z_l0kPglf z_l0kPglg z_l0kPglh z_l0kPgln",
+          "composition-1k0bfdx1r9hbnf-821": "z_l0kPgle z_l0kPgli z_l0kPglj z_l0kPglf z_l0kPglg z_l0kPglh z_l0kPglp z_l0kPglq",
+          "composition-1k0bfdx1r9hbnf-821-0": "z_l0kPgle z_l0kPgli z_l0kPglj z_l0kPglf z_l0kPglg z_l0kPglh z_l0kPglo",
+          "style-1k0bfdx1r9hbnf-1036": "z_l0kPgl0 z_l0kPgl1 z_l0kPgl2 z_l0kPgl3 z_l0kPgl4 z_l0kPgl5 z_l0kPgl6",
+          "style-1k0bfdx1r9hbnf-1490": "z_l0kPgl7 z_l0kPgl8 z_l0kPgl9 z_l0kPgla z_l0kPglb z_l0kPglc",
+          "style-1k0bfdx1r9hbnf-1924": "z_l0kPgld",
+        }
+      `)
+    })
+
+    test('rejects attribute selection and conditions', () => {
+      const compile = (definition: string) =>
+        Transform.compile({
+          moduleId: 'App.tsx',
+          source: `import { variants } from 'zyzz'\nexport const badge = variants(${definition})`,
+          target: 'lynx',
+        })
+
+      expect(() =>
+        compile(
+          `{ selection: 'attribute', variants: { tone: { red: { color: 'red' } } } }`,
+        ),
+      ).toThrowErrorMatchingInlineSnapshot(
+        `[Source.ExtractError: App.tsx:75: Lynx recipes select with classes, not attributes. Remove selection: 'attribute'.]`,
+      )
+      expect(() =>
+        compile(
+          `{ conditions: { wide: '@media (width >= 600px)' }, variants: { tone: { red: { color: 'red' } } } }`,
+        ),
+      ).toThrowErrorMatchingInlineSnapshot(
+        `[Source.ExtractError: App.tsx:64: Lynx recipes do not support conditions. Nest at-rules inside the choice styles instead.]`,
+      )
+    })
+
+    test('rejects conditions and dynamic choices for className selection on every target', () => {
+      const compile = (definition: string, target?: 'lynx') =>
+        Transform.compile({
+          moduleId: 'App.tsx',
+          source: `import { variants } from 'zyzz'\nexport const badge = variants(${definition})`,
+          ...(target ? { target } : {}),
+        })
+
+      expect(() =>
+        compile(
+          `{ conditions: { wide: '@media (width >= 600px)' }, selection: 'className', variants: { tone: { red: { color: 'red' } } } }`,
+        ),
+      ).toThrowErrorMatchingInlineSnapshot(
+        `[Source.ExtractError: App.tsx:64: className selection does not support conditions.]`,
+      )
+      expect(() =>
+        compile(
+          `{ selection: 'className', variants: { size: { custom: (values: { width: string }) => ({ width: values.width }) } } }`,
+          'lynx',
+        ),
+      ).toThrowErrorMatchingInlineSnapshot(
+        `[Source.ExtractError: App.tsx:108: className selection does not support dynamic choices.]`,
+      )
+    })
+  })
+})
+
 describe('dynamics', () => {
   describe('compile', () => {
     const source = `import { style } from 'zyzz'

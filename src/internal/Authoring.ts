@@ -195,7 +195,18 @@ export function variants(
   )
   const conditions = Object.keys((input.conditions ?? {}) as object)
   const defaults = (input.defaultVariants ?? {}) as Record<string, unknown>
-  const prefix = input.selection === 'class' ? Identity.recipe(id) : undefined
+  // `className` selects like `class`, and applications return the class list itself.
+  const classList = input.selection === 'className'
+  if (classList && conditions.length)
+    throw new Style.InvalidError([
+      {
+        code: 'invalid_structure',
+        message: 'className selection does not support conditions.',
+        path: ['conditions'],
+      },
+    ])
+  const prefix =
+    input.selection === 'class' || classList ? Identity.recipe(id) : undefined
   const props = Props.create({ className })
   const starts = Recipe.offsets(
     Object.fromEntries(
@@ -278,6 +289,18 @@ export function variants(
           result[`data-zyzz-condition-${index}-${axis}`] =
             value === null ? 'n' : `s${value}`
       }
+    }
+    // A class list carries neither payload bindings nor inline overrides.
+    if (classList) {
+      if (Object.keys(bindings).length)
+        throw new Style.InvalidError([
+          {
+            code: 'invalid_structure',
+            message: 'className selection does not support dynamic choices.',
+            path: ['variants'],
+          },
+        ])
+      return result.className
     }
     if (Object.keys(bindings).length)
       result.style = { ...result.style, ...bindings }

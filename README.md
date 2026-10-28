@@ -43,6 +43,26 @@ export default defineConfig({
 import 'zyzz.css'
 ```
 
+Lynx keeps only flat class rules, so the plugin compiles for the `lynx` target: recipes select with classes, each choice and compound becomes one rule under its own class, and `selection: 'className'` returns the class list for a `className` prop.
+
+```tsx
+// src/Badge.tsx
+import { variants } from 'zyzz'
+
+export function Badge(props: { tone: 'neutral' | 'success' }) {
+  return <text className={styles.badge({ tone: props.tone })}>Paid</text>
+}
+
+namespace styles {
+  export const badge = variants({
+    selection: 'className',
+    variants: {
+      tone: { neutral: { color: '#333' }, success: { color: '#05612c' } },
+    },
+  })
+}
+```
+
 [Rspeedy](site/src/content/docs/api/rspeedy.mdx) documents the plugin options and limits.
 
 ## Overview

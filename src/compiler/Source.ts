@@ -249,8 +249,12 @@ export declare namespace extract {
 
   /** Source text supplied by an adapter. */
   type Options = {
-    /** Native extraction retains applications for native props composition. */
-    readonly target?: 'native' | 'web' | undefined
+    /**
+     * Output target. Native extraction retains applications for native props composition.
+     * Lynx extraction selects recipes with classes and keeps each choice and compound as its
+     * own flat class rule, which the Lynx template encoder keeps. Defaults to `'web'`.
+     */
+    readonly target?: 'lynx' | 'native' | 'web' | undefined
     /** Collect portable runtime identities when source rewriting is disabled. */
     readonly compiler?: boolean | undefined
     /** Portable identity including package and module path; no filesystem access occurs. */

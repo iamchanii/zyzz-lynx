@@ -1710,17 +1710,14 @@ pub fn compile<'a>(
             || !extracted.theme_scripts.is_empty()
             || !extracted.theme_selections.is_empty(),
     );
-    let dead = if portable || options.development {
-        FxHashSet::default()
-    } else {
-        local_applications
-            .as_ref()
-            .map(applications::Applications::dead)
-            .unwrap_or_default()
-    };
     let mut styles: Vec<Arc<NamedStyle>> = if portable || options.development {
         extracted.styles.styles.clone()
     } else {
+        let dead = local_applications
+            .as_ref()
+            .map(applications::Applications::dead)
+            .unwrap_or_default();
+
         if dead.is_empty() && standalone.is_empty() {
             extracted.styles.styles.clone()
         } else {
@@ -1816,39 +1813,10 @@ pub fn compile<'a>(
         .iter()
         .map(|(name, theme)| (Arc::clone(name), Scope::Definition(theme.metadata.clone())))
         .collect();
-    let mut names: css::Names = portable_names
+    let names: css::Names = portable_names
         .iter()
         .map(|(name, class)| (Arc::clone(name), Arc::clone(class)))
         .collect();
-    // Lynx recipe rules print under their choice or compound class, as explicit names do. A
-    // rule with nested at-rules stays atomic, so the at-rules wrap the class rule instead of
-    // nesting inside it, which the Lynx template encoder would drop.
-    let mut flat_styles: Vec<(Arc<str>, &Call<'a>)> = Vec::new();
-
-    for call in &extracted.calls {
-        let Some(flat_rules) = call.flat_rules.as_ref().filter(|_| !dead.contains(&call.name))
-        else {
-            continue;
-        };
-
-        for rule in flat_rules {
-            for style in &rule.style.styles {
-                let css_output = if style.rules.is_none() {
-                    CssOutput::Grouped
-                } else {
-                    CssOutput::Atomic
-                };
-
-                styles.push(Arc::new(NamedStyle {
-                    css_output: Some(css_output),
-                    ..(**style).clone()
-                }));
-                names.insert(Arc::clone(&style.name), Arc::clone(&rule.class));
-                flat_styles.push((Arc::clone(&style.name), call));
-            }
-        }
-    }
-
     if options.invalid_css_output {
         return Err(css::invalid_output(vec![Arc::from("cssOutput")]));
     }
@@ -1861,7 +1829,7 @@ pub fn compile<'a>(
         deferred_scopes: options.deferred_scopes,
         development: options.development,
         labels: labels.as_deref(),
-        names: (portable || !flat_styles.is_empty()).then_some(&names),
+        names: portable.then_some(&names),
         schemes,
         scope: None,
         shared: options.shared,
@@ -1878,16 +1846,6 @@ pub fn compile<'a>(
 
         css::compile(&css_options, Some(&mut units))?
     };
-    // Flat rule classes reach the element through selection, never through a class list.
-    for (name, _) in &flat_styles {
-        emitted.classes.shift_remove(name);
-    }
-
-    let flat_owners: Vec<(Arc<str>, &Call<'a>)> = flat_styles
-        .iter()
-        .filter_map(|(name, call)| Some((Arc::clone(names.get(name)?), *call)))
-        .collect();
-
     // A level's identity classes stay on the element, so only its generated classes combine.
     let generated: FxHashMap<&str, String> = chains
         .iter()
@@ -1910,7 +1868,6 @@ pub fn compile<'a>(
     let generator = Generator {
         chains: &chains,
         classes,
-        flat: &flat_owners,
         shadowed,
         owners: options.owners,
         settled: options.settled,
@@ -2805,6 +2762,7 @@ fn fold_chains(styles: &mut Vec<Arc<NamedStyle>>, options: &FoldChains<'_, '_>) 
             .iter()
             .filter_map(|level| by_name.get(level))
             .map(|style| Rule {
+                class: None,
                 condition: None,
                 style: Arc::clone(style),
             })
@@ -2976,8 +2934,6 @@ struct Generator<'g, 'a> {
     /// Merged styles of folded wrapper chains.
     chains: &'g [Chain],
     classes: IndexMap<Arc<str>, String, FxBuildHasher>,
-    /// Lynx recipe rules printed under their own class, with the recipe call that owns each.
-    flat: &'g [(Arc<str>, &'g Call<'a>)],
     /// Whether a module binding renames `Object` or `String`, which specialized selectors read.
     shadowed: bool,
     owners: Option<&'g Owners>,
@@ -3233,6 +3189,57 @@ impl<'a> Generator<'_, 'a> {
 
             if let Some(condition) = input.condition {
                 fields.push(format!("\"condition\":{condition}"));
+            }
+
+            // Each presence alternative copies a Lynx recipe's class rules under its own
+            // prefix, so the helper renames the application's choice classes per case.
+            let alternatives: Vec<&Call<'a>> = match &call.composition_cases {
+                Some(cases) => cases
+                    .iter()
+                    .filter_map(|name| self.extracted.calls.iter().find(|call| call.name == *name))
+                    .collect(),
+                None => vec![call],
+            };
+
+            if alternatives.iter().any(|alternative| {
+                alternative
+                    .composition_renames
+                    .iter()
+                    .flatten()
+                    .any(|(position, ..)| *position == index)
+            }) {
+                let mut field = String::from("\"renames\":[");
+
+                for (position, alternative) in alternatives.iter().enumerate() {
+                    if position > 0 {
+                        field.push(',');
+                    }
+
+                    field.push('[');
+
+                    for (count, (_, from, to)) in alternative
+                        .composition_renames
+                        .iter()
+                        .flatten()
+                        .filter(|(input, ..)| *input == index)
+                        .enumerate()
+                    {
+                        if count > 0 {
+                            field.push(',');
+                        }
+
+                        field.push('[');
+                        js::write_string(&mut field, from);
+                        field.push(',');
+                        js::write_string(&mut field, to);
+                        field.push(']');
+                    }
+
+                    field.push(']');
+                }
+
+                field.push(']');
+                fields.push(field);
             }
 
             for (key, values) in [
@@ -4490,6 +4497,13 @@ impl<'a> Generator<'_, 'a> {
 
             owners.reserve(emitted.rules.len());
 
+            let by_name: FxHashMap<&str, &NamedStyle> = extracted
+                .styles
+                .styles
+                .iter()
+                .map(|style| (&*style.name, &**style))
+                .collect();
+
             for call in &extracted.calls {
                 for name in split_spaces(
                     lists
@@ -4499,6 +4513,20 @@ impl<'a> Generator<'_, 'a> {
                 ) {
                     if !owners.contains_key(name) {
                         owners.insert(name, call);
+                    }
+                }
+
+                // Class rules print under classes outside the call's class list.
+                for rule in by_name
+                    .get(&*call.name)
+                    .and_then(|style| style.rules.as_deref())
+                    .into_iter()
+                    .flatten()
+                {
+                    if let Some(class) = &rule.class
+                        && !owners.contains_key(&**class)
+                    {
+                        owners.insert(class, call);
                     }
                 }
             }
@@ -4542,11 +4570,6 @@ impl<'a> Generator<'_, 'a> {
                     extracted.calls.iter().find(|call| call.name == *last)?,
                 ))
             })
-            .collect();
-        let flat_owners: FxHashMap<&str, &Call<'a>> = self
-            .flat
-            .iter()
-            .map(|(class, call)| (&**class, *call))
             .collect();
         let mut theme_owners: FxHashMap<&str, (u32, &str)> = FxHashMap::default();
 
@@ -4755,11 +4778,7 @@ impl<'a> Generator<'_, 'a> {
                 continue;
             }
 
-            if let Some(call) = chain_owners
-                .get(&*name)
-                .copied()
-                .or_else(|| flat_owners.get(&*name).copied())
-            {
+            if let Some(call) = chain_owners.get(&*name) {
                 map.add_mapping(&Mapping {
                     generated: generated(0, line),
                     name: Some(&call.name),

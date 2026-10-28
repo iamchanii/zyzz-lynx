@@ -139,6 +139,9 @@ pub struct Call<'a> {
     pub composition_case: bool,
     /// Names of precompiled presence alternatives in bitmask order.
     pub composition_cases: Option<Vec<Arc<str>>>,
+    /// Choice-class prefixes this composition renames, as (runtime input, from, to), when it
+    /// copies the class rules of a Lynx recipe under classes of its own.
+    pub composition_renames: Option<Vec<Rename>>,
     /// Starts of a compile-time composition's input applications that keep no guard, since
     /// they always follow their definition's initialization.
     pub composition_settled: Vec<u32>,
@@ -150,8 +153,6 @@ pub struct Call<'a> {
     pub dynamic_recipe: Option<recipe::Definition>,
     /// Exclusive offset of the complete call.
     pub end: u32,
-    /// Choice and compound rules of a Lynx recipe, each compiled as one flat rule of its class.
-    pub flat_rules: Option<Vec<FlatRule>>,
     /// Stable selector identity.
     pub identity: Option<Arc<str>>,
     /// Fields of a callback definition whose type admits a CSS-wide keyword.
@@ -192,14 +193,9 @@ pub struct Call<'a> {
     pub values_type: Option<Arc<str>>,
 }
 
-/// One rule of a Lynx recipe, emitted under its own class instead of nested in the recipe's rule.
-#[derive(Clone, Debug, PartialEq)]
-pub struct FlatRule {
-    /// The choice or compound class that selects the rule, which applications add.
-    pub class: Arc<str>,
-    /// The rule's validated declarations.
-    pub style: style::Definition,
-}
+/// A choice-class prefix a composition renames: the runtime input it applies to, the recipe's
+/// prefix, and the composition's prefix for that input.
+pub type Rename = (usize, Arc<str>, Arc<str>);
 
 /// The stable category of a source diagnostic.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -1951,6 +1947,7 @@ impl<'a> Converter<'_, '_, '_, 'a> {
                         parts
                             .into_iter()
                             .map(|style| style::Rule {
+                                class: None,
                                 condition: None,
                                 style,
                             })
@@ -2843,13 +2840,16 @@ pub fn extract<'a>(allocator: &'a Allocator, options: &Options<'_, 'a>) -> Resul
                 })
         });
         let mut target_recipe = None;
-        let mut flat_rules = None;
+        // The Lynx target prints each choice and compound under its own class, as a rule of
+        // the recipe's style that applications select.
+        let mut class_rules: Vec<style::Rule> = Vec::new();
         let mut failed = false;
 
         if let Some((kind, recipe)) = retained {
-            let flat = expanded.as_ref().and_then(|expanded| expanded.flat.as_deref());
+            let flat = expanded
+                .as_ref()
+                .and_then(|expanded| expanded.flat.as_deref());
             let mut rules = Vec::with_capacity(recipe.rules.len());
-            let mut flattened = Vec::new();
 
             for (position, rule) in recipe.rules.iter().enumerate() {
                 let values = converter.object(rule.value, &[]);
@@ -2858,10 +2858,20 @@ pub fn extract<'a>(allocator: &'a Allocator, options: &Options<'_, 'a>) -> Resul
                 match converter.define(values, &rule_name) {
                     Ok(value) => {
                         if let Some(class) = flat.and_then(|flat| flat.get(position)?.as_ref()) {
-                            flattened.push(FlatRule {
-                                class: Arc::clone(class),
-                                style: value.clone(),
-                            });
+                            class_rules.extend(value.styles.iter().map(|style| style::Rule {
+                                class: Some(Arc::clone(class)),
+                                condition: None,
+                                // At-rules wrap the class rule only in atomic output. Lynx
+                                // drops every nested block.
+                                style: Arc::new(NamedStyle {
+                                    css_output: Some(if style.rules.is_none() {
+                                        token::CssOutput::Grouped
+                                    } else {
+                                        token::CssOutput::Atomic
+                                    }),
+                                    ..(**style).clone()
+                                }),
+                            }));
                         }
 
                         rules.push(recipe::Rule {
@@ -2876,10 +2886,6 @@ pub fn extract<'a>(allocator: &'a Allocator, options: &Options<'_, 'a>) -> Resul
                     }
                     Err(error) => return Err(error),
                 }
-            }
-
-            if flat.is_some() {
-                flat_rules = Some(flattened);
             }
 
             target_recipe = Some((
@@ -2902,12 +2908,31 @@ pub fn extract<'a>(allocator: &'a Allocator, options: &Options<'_, 'a>) -> Resul
         let css_output = contract.and_then(|contract| contract.css_output);
 
         bodies.insert(call.span.start, body);
-        styles.extend(
-            definition
-                .styles
-                .iter()
-                .map(|style| with_contract(style, composition, css_output)),
-        );
+        styles.extend(definition.styles.iter().map(|style| {
+            if class_rules.is_empty() || style.name != name {
+                return with_contract(style, composition, css_output);
+            }
+
+            // The base keeps the configured output; the class rules follow it in order.
+            let base = style::Rule {
+                class: None,
+                condition: None,
+                style: with_contract(style, composition, css_output),
+            };
+
+            Arc::new(NamedStyle {
+                composition: style.composition.or(composition),
+                css_output: Some(token::CssOutput::Atomic),
+                declarations: Vec::new(),
+                name: Arc::clone(&style.name),
+                rules: Some(
+                    std::iter::once(base)
+                        .chain(class_rules.iter().cloned())
+                        .collect(),
+                ),
+                targets: None,
+            })
+        }));
 
         if failed {
             continue;
@@ -2951,7 +2976,6 @@ pub fn extract<'a>(allocator: &'a Allocator, options: &Options<'_, 'a>) -> Resul
             css_namespace,
             dynamic_recipe,
             end: call.span.end,
-            flat_rules,
             identity: selectors.identities.get(&call.span.start).cloned(),
             keywords: dynamic
                 .as_ref()

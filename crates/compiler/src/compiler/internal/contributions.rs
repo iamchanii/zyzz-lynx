@@ -1339,6 +1339,7 @@ fn global(input: &Data) -> std::result::Result<Arc<NamedStyle>, String> {
         };
 
         rules.push(Rule {
+            class: None,
             condition: Some(Arc::clone(selector)),
             style,
         });

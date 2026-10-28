@@ -28,11 +28,12 @@ const lanes = [
   'browser-next-webpack',
 ]
 const selected = process.env.ADAPTER_LANES?.split(',') ?? lanes
-if(selected.some(lane=>!lanes.includes(lane)) || new Set(selected).size!==selected.length)throw Error('Unknown or duplicate adapter lane')
-const results: Record<
-  string,
-  Array<{ timings: Record<string, number> }>
-> = {}
+if (
+  selected.some((lane) => !lanes.includes(lane)) ||
+  new Set(selected).size !== selected.length
+)
+  throw Error('Unknown or duplicate adapter lane')
+const results: Record<string, Array<{ timings: Record<string, number> }>> = {}
 const revision = (await exec('git', ['rev-parse', 'HEAD'])).stdout.trim()
 const output = process.env.ADAPTER_OUTPUT ?? 'bench/results/adapters.json'
 await Fs.mkdir('bench/results', { recursive: true })

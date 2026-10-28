@@ -125,6 +125,41 @@ describe('variants', () => {
     variants({ selection: 'classes', variants: { size: { sm: {} } } })
   })
 
+  test('returns the class list string for className selection', () => {
+    const badge = variants({
+      selection: 'className',
+      variants: { tone: { loud: { color: 'red' }, quiet: {} } },
+      defaultVariants: { tone: 'quiet' },
+      compoundVariants: [
+        { when: { tone: 'loud' }, style: { fontWeight: 700 } },
+      ],
+    })
+
+    expectTypeOf(badge()).toEqualTypeOf<string>()
+    expectTypeOf(
+      badge({ tone: 'loud', className: 'extra' }),
+    ).toEqualTypeOf<string>()
+    // @ts-expect-error A class list carries no inline style.
+    badge({ tone: 'loud', style: { opacity: 1 } })
+    // @ts-expect-error A class list carries no variable bindings.
+    badge({ vars: { '--x': 1 } })
+    variants({
+      // @ts-expect-error Conditional selections need props.
+      conditions: { wide: '@media (width >= 600px)' },
+      selection: 'className',
+      variants: { tone: { loud: {} } },
+    })
+    variants({
+      selection: 'className',
+      variants: {
+        size: {
+          // @ts-expect-error Dynamic choices bind inline variables.
+          custom: (values: { width: string }) => ({ width: values.width }),
+        },
+      },
+    })
+  })
+
   test('rejects invalid properties and recipe structure', () => {
     // @ts-expect-error Recipes have one element, without slots.
     variants({ slots: { root: {} } })

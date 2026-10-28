@@ -435,8 +435,11 @@ function create(contracts: readonly Token.Contract[], options: decode.Options) {
           name: input.name as string,
           declarations,
           rules: Object.freeze(
-            rules.map(([condition, child]) =>
+            rules.map(([condition, child, className]) =>
               Object.freeze({
+                ...(className !== undefined
+                  ? { class: className as string }
+                  : {}),
                 ...(condition !== null
                   ? { condition: condition as string }
                   : {}),
@@ -608,6 +611,17 @@ function create(contracts: readonly Token.Contract[], options: decode.Options) {
         ? { conditions: [...(input.conditions as string[])] }
         : {}),
       ...(input.prefix !== undefined ? { prefix: input.prefix as string } : {}),
+      ...(input.compounds !== undefined
+        ? {
+            compounds: (input.compounds as Pairs[]).map((matches) =>
+              matches.map(([axis, choices]) => [
+                axis,
+                [...(choices as string[])],
+              ]),
+            ),
+          }
+        : {}),
+      ...(input.classList === true ? { classList: true } : {}),
       ...(input.silent !== undefined
         ? {
             silent: lookup(input.silent, (choices) => [

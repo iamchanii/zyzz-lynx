@@ -75,6 +75,49 @@ namespace styles {
 }
 
 describe('compile', () => {
+  test('compiles the lynx target to flat class rules and rejects it beside native', () => {
+    const modules = {
+      'app/App.tsx': `import { variants } from 'zyzz'
+export const badge = variants({
+  base: { padding: '2px' },
+  compoundVariants: [{ style: { opacity: 0.5 }, when: { size: 'large', tone: 'success' } }],
+  variants: {
+    size: { large: { height: '40px' }, small: { height: '20px' } },
+    tone: { neutral: { color: 'black' }, success: { color: 'green' } },
+  },
+})`,
+    }
+
+    const output = Graph.compile({ modules, target: 'lynx' })
+
+    expect(output.modules['app/App.tsx']!.css).toMatchInlineSnapshot(`
+      ".z_5u3RWX0{padding:2px;}
+      .zvdm2R5c4H0{height:40px;}
+      .zvdm2R5c4H1{height:20px;}
+      .zvdm2R5c4H2{color:black;}
+      .zvdm2R5c4H3{color:green;}
+      .zvdm2R5c4H4{opacity:0.5;}"
+    `)
+    expect(Graph.compile({ modules }).modules['app/App.tsx']!.css)
+      .toMatchInlineSnapshot(`
+      ".z_5u3RWX0{padding:2px;}
+      .z_5u3RWX1{&:where([data-size="large"]){height:40px;}}
+      .z_5u3RWX2{&:where([data-size="small"]){height:20px;}}
+      .z_5u3RWX3{&:where([data-tone="neutral"]){color:black;}}
+      .z_5u3RWX4{&:where([data-tone="success"]){color:green;}}
+      .z_5u3RWX5{&:where([data-size="large"]):where([data-tone="success"]):where(*, .__zyzz-compound-0){opacity:0.5;}}"
+    `)
+    expect(() =>
+      Graph.compile({
+        modules,
+        native: { colorScheme: 'light' },
+        target: 'lynx',
+      }),
+    ).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Malformed graph input: target]`,
+    )
+  })
+
   test('retains literal token exports across packed configurations and re-exports', () => {
     const publisher = Graph.compile({
       modules: {
