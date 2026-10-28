@@ -870,7 +870,7 @@ export const nested=style({color:fields.foo.bar,vars:{[fields['foo-bar']]:'red',
     try {
       const library = Graph.compile({
         modules: {
-          'library.ts': `import {variants} from 'zyzz';export let count=0;export function increment(){count++};export default 'ordinary';export const card=variants({base:{opacity:0.2},variants:{size:{small:{fontSize:'12px'},large:{fontSize:'20px'}}},defaultVariants:{size:'small'}});export namespace styles {export const label='nested';export const button=variants({base:{opacity:0.7}});}`,
+          'library.ts': `import {variants} from 'zyzz';export let count=0;export function increment(){count++};export default 'ordinary';export const card=variants({ selection: 'attribute',base:{opacity:0.2},variants:{size:{small:{fontSize:'12px'},large:{fontSize:'20px'}}},defaultVariants:{size:'small'}});export namespace styles {export const label='nested';export const button=variants({ selection: 'attribute',base:{opacity:0.7}});}`,
         },
       })
       const output = Graph.compile({
@@ -1152,7 +1152,7 @@ ${web.modules['app.ts']!.code}`,
           },
         ]),
       )
-      const source = `import {Config} from 'zyzz';const {variants}=Config.create(${JSON.stringify(order === 'single' ? { vars: { color: { ink: { light: '#000000', dark: '#ffffff' } } } } : { defaultVars: 'base', vars: themes })});export const card=variants({base:{color:'ink'},variants:{size:{small:{fontSize:'12px'},large:{fontSize:'20px'}}},defaultVariants:{size:'small'},compoundVariants:[{when:{size:'large'},style:{targets:{ios:{opacity:0.7},android:{opacity:0.8}}}}]});`
+      const source = `import {Config} from 'zyzz';const {variants}=Config.create(${JSON.stringify(order === 'single' ? { vars: { color: { ink: { light: '#000000', dark: '#ffffff' } } } } : { defaultVars: 'base', vars: themes })});export const card=variants({ selection: 'attribute',base:{color:'ink'},variants:{size:{small:{fontSize:'12px'},large:{fontSize:'20px'}}},defaultVariants:{size:'small'},compoundVariants:[{when:{size:'large'},style:{targets:{ios:{opacity:0.7},android:{opacity:0.8}}}}]});`
       const library = Graph.compile({
         modules: { 'library/card.ts': source },
         ...(target === 'native'
@@ -1301,7 +1301,7 @@ ${web.modules['app.ts']!.code}`,
   test('rejects missing and malformed packed native recipes', () => {
     const library = Graph.compile({
       modules: {
-        'library.ts': `import {variants} from 'zyzz';export const card=variants({variants:{size:{small:{opacity:0.5}}}});`,
+        'library.ts': `import {variants} from 'zyzz';export const card=variants({ selection: 'attribute',variants:{size:{small:{opacity:0.5}}}});`,
       },
     })
     const raw = JSON.parse(library.contracts['library.ts']!)
@@ -1373,7 +1373,7 @@ ${web.modules['app.ts']!.code}`,
       'theme.ts':
         "import {Config} from 'zyzz';export const {style,variants}=Config.create({vars:{color:{ink:{light:'#000000',dark:'#ffffff'}}}});",
       'barrel.ts': `export {style,variants} from './theme.js';${composition}`,
-      'card.ts': `import {variants} from './barrel.js';export const card=variants({base:{color:'ink'},variants:{size:{small:{fontSize:'12px'},large:{fontSize:'20px'}}},defaultVariants:{size:'small'}});`,
+      'card.ts': `import {variants} from './barrel.js';export const card=variants({ selection: 'attribute',base:{color:'ink'},variants:{size:{small:{fontSize:'12px'},large:{fontSize:'20px'}}},defaultVariants:{size:'small'}});`,
       'overlay.ts': `import {style} from './barrel.js';export const overlay=style({targets:{native:{opacity:0.5},ios:{opacity:0.7}}});`,
       'index.ts': `import {merge as cx} from './barrel.js';import {card} from './card.js';import {overlay} from './overlay.js';export {card} from './card.js';export const result=cx(card({size:'large'}),overlay());`,
     }
@@ -1551,7 +1551,7 @@ ${web.modules['app.ts']!.code}`,
   test('renders web target overrides in variant alternatives', async () => {
     const output = Graph.compile({
       modules: {
-        'card.ts': `import {variants} from 'zyzz';export const card=variants({base:{opacity:.1,targets:{web:{opacity:.2},native:{opacity:.3}}},variants:{active:{yes:{targets:{web:{opacity:.8},ios:{opacity:.9}}}}}});export const props=card({active:'yes'});`,
+        'card.ts': `import {variants} from 'zyzz';export const card=variants({ selection: 'attribute',base:{opacity:.1,targets:{web:{opacity:.2},native:{opacity:.3}}},variants:{active:{yes:{targets:{web:{opacity:.8},ios:{opacity:.9}}}}}});export const props=card({active:'yes'});`,
       },
     })
     const contract = JSON.parse(output.contracts['card.ts']!)
@@ -2709,7 +2709,7 @@ namespace styles {
     variants: { tone: { blue: { color: 'rgb(0, 0, 255)' }, red: { color: 'rgb(255, 0, 0)' } } },
   })
 
-  export const flag = variants({
+  export const flag = variants({ selection: 'attribute',
     base: { paddingLeft: '1px' },
     variants: { on: { false: {}, true: { paddingLeft: '2px' } } },
   })

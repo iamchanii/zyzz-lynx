@@ -118,6 +118,26 @@ fn field<'a>(entries: &Entries<'a>, name: &str) -> Option<&'a ObjectProperty<'a>
         .map(|(_, property)| *property)
 }
 
+/// Whether any choice is a payload callback, which selects through inline variables.
+fn dynamic_choices(fields: &Entries<'_>) -> bool {
+    let Some(variants) = field(fields, "variants") else {
+        return false;
+    };
+
+    entries(&variants.value).is_ok_and(|axes| {
+        axes.iter().any(|(_, axis)| {
+            entries(&axis.value).is_ok_and(|choices| {
+                choices.iter().any(|(_, choice)| {
+                    matches!(
+                        choice.value,
+                        Expression::ArrowFunctionExpression(_) | Expression::FunctionExpression(_)
+                    )
+                })
+            })
+        })
+    })
+}
+
 fn choice(node: &Expression<'_>, choices: &[Arc<str>]) -> Result<Option<Arc<str>>> {
     let value = match node {
         Expression::NullLiteral(_) => return Ok(None),
@@ -470,7 +490,18 @@ pub fn expand<'s, 'a>(
         }
     }
 
+    // `className` selects like `class`, and applications return the class list itself, which
+    // carries no inline style for conditional or payload selections. Recipes without either
+    // default to it.
+    let class_list = match field(&fields, "selection") {
+        None => field(&fields, "conditions").is_none() && !dynamic_choices(&fields),
+        Some(property) => matches!(
+            &property.value,
+            Expression::StringLiteral(literal) if literal.value == "className"
+        ),
+    };
     let selection = match field(&fields, "selection") {
+        None if class_list => Selection::Class(prefix(options.identity)),
         None => Selection::Attribute,
         Some(property) => match &property.value {
             Expression::StringLiteral(literal) if literal.value == "attribute" => {
@@ -489,11 +520,6 @@ pub fn expand<'s, 'a>(
             }
         },
     };
-    // `className` selects like `class`, and applications return the class list itself, which
-    // carries no inline style for conditional or payload selections.
-    let class_list = field(&fields, "selection").is_some_and(|property| {
-        matches!(&property.value, Expression::StringLiteral(literal) if literal.value == "className")
-    });
 
     let mut named = Vec::new();
 

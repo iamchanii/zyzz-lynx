@@ -1358,7 +1358,7 @@ import {cx,style} from 'zyzz'; const a=style((values:{padding:string})=>({paddin
       namespace styles {
         export const dynamic=style((values:{padding:\`\${number}px\`})=>({padding:values.padding}));
         export const override=style({paddingLeft:'3px'});
-        export const recipe=variants({base:{color:'black'},variants:{tone:{red:{color:'red'},custom:(values:{color:'red'|'blue'})=>({color:values.color})}}});
+        export const recipe=variants({ selection: 'attribute',base:{color:'black'},variants:{tone:{red:{color:'red'},custom:(values:{color:'red'|'blue'})=>({color:values.color})}}});
       }
       export const apply=(padding:\`\${number}px\`)=>cx(styles.dynamic({padding}),styles.override());
       export const optional=(enabled:boolean)=>cx(styles.dynamic({padding:'8px'}),enabled && styles.override());
@@ -1531,7 +1531,7 @@ import {cx,style} from 'zyzz'; const a=style((values:{padding:string})=>({paddin
       namespace styles {
         export const value=style((values:{padding:\`\${number}px\`})=>({padding:values.padding}));
         export const fixed=style({paddingLeft:'3px'});
-        export const recipe=variants({base:{color:'black'},variants:{tone:{custom:(values:{color:'red'|'blue'})=>({color:values.color})}}});
+        export const recipe=variants({ selection: 'attribute',base:{color:'black'},variants:{tone:{custom:(values:{color:'red'|'blue'})=>({color:values.color})}}});
       }
       export const props=(enabled:boolean)=>cx(styles.value({padding:'16px'}),enabled && styles.fixed(),styles.recipe({tone:{custom:{color:'blue'}}}));
       export const clear=()=>cx(styles.recipe({tone:{custom:{color:'red'}}}),styles.recipe({tone:null}));
@@ -1660,10 +1660,10 @@ import {cx,style} from 'zyzz'; const a=style((values:{padding:string})=>({paddin
       expect(() =>
         Transform.compile({
           moduleId: 'bad.ts',
-          source: `import {cx,variants} from 'zyzz';const a=variants({variants:{tone:{red:{color:'red'}}}});const b=variants({variants:{tone:{blue:{color:'blue'}}}});export const props=cx(a(),b());`,
+          source: `import {cx,variants} from 'zyzz';const a=variants({ selection: 'attribute',variants:{tone:{red:{color:'red'}}}});const b=variants({ selection: 'attribute',variants:{tone:{blue:{color:'blue'}}}});export const props=cx(a(),b());`,
         }),
       ).toThrowErrorMatchingInlineSnapshot(
-        `[Source.ExtractError: bad.ts:173: Recipe attribute data-tone has conflicting owners.]`,
+        `[Source.ExtractError: bad.ts:221: Recipe attribute data-tone has conflicting owners.]`,
       )
     })
   })

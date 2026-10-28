@@ -288,7 +288,7 @@ describe('compile', () => {
     test('retains all alternatives in an exported variant', () => {
       const output = Transform.compile({
         moduleId: 'variants.ts',
-        source: `import {variants} from 'zyzz'; export const button = variants({variants:{size:{sm:{padding:'4px'},lg:{padding:'16px'}}},defaultVariants:{size:'sm'}})`,
+        source: `import {variants} from 'zyzz'; export const button = variants({ selection: 'attribute',variants:{size:{sm:{padding:'4px'},lg:{padding:'16px'}}},defaultVariants:{size:'sm'}})`,
       })
 
       expect(output.css.includes('padding:4px;')).toMatchInlineSnapshot('true')
@@ -3464,7 +3464,7 @@ namespace styles {
 export const base=style({color:'red'})
 export const outer=style({padding:'8px'})
 export const inline=style({margin:'4px'})
-export const button=variants({base:{display:'flex'},variants:{active:{false:{opacity:0.5},true:{}},tone:{loud:{color:'red'},quiet:{color:'gray'}}},defaultVariants:{tone:'quiet'}})
+export const button=variants({ selection: 'attribute',base:{display:'flex'},variants:{active:{false:{opacity:0.5},true:{}},tone:{loud:{color:'red'},quiet:{color:'gray'}}},defaultVariants:{tone:'quiet'}})
 }`
       const output = Transform.compile({ moduleId: 'App.tsx', source })
 
@@ -3492,7 +3492,7 @@ export const button=variants({base:{display:'flex'},variants:{active:{false:{opa
         export const base=(1 as unknown as import('zyzz').style.ReturnType)
         export const outer=(1 as unknown as import('zyzz').style.ReturnType)
         export const inline=/*#__PURE__*/__zyzzProps.create({className:"z_l0kPgl2"})
-        export const button=(((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className,style=input.style,vars=input.vars,inline=vars?{...vars,...style}:style,className=external?"z_l0kPgl3 z_l0kPgl4 z_l0kPgl5 z_l0kPgl6"+" "+external:"z_l0kPgl3 z_l0kPgl4 z_l0kPgl5 z_l0kPgl6",result:Record<string,unknown>=inline?{className,style:inline}:{className};let value;value=Object.prototype.hasOwnProperty.call(input,"active")?input["active"]:void 0;if(value!==null&&value!==void 0)result["data-active"]=String(value);value=Object.prototype.hasOwnProperty.call(input,"tone")?input["tone"]:void 0;if(value===void 0)value="quiet";if(value!==null&&value!==void 0)result["data-tone"]=String(value);return result}) as unknown as import('zyzz').variants.ReturnType<{variants:{"active":{"false":{};"true":{}};"tone":{"loud":{};"quiet":{}}}}>)
+        export const button=(((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className,style=input.style,vars=input.vars,inline=vars?{...vars,...style}:style,className=external?"z_l0kPgl3 z_l0kPgl4 z_l0kPgl5 z_l0kPgl6"+" "+external:"z_l0kPgl3 z_l0kPgl4 z_l0kPgl5 z_l0kPgl6",result:Record<string,unknown>=inline?{className,style:inline}:{className};let value;value=Object.prototype.hasOwnProperty.call(input,"active")?input["active"]:void 0;if(value!==null&&value!==void 0)result["data-active"]=String(value);value=Object.prototype.hasOwnProperty.call(input,"tone")?input["tone"]:void 0;if(value===void 0)value="quiet";if(value!==null&&value!==void 0)result["data-tone"]=String(value);return result}) as unknown as import('zyzz').variants.ReturnType<{selection:'attribute';variants:{"active":{"false":{};"true":{}};"tone":{"loud":{};"quiet":{}}}}>)
         }"
       `)
 
@@ -3544,7 +3544,7 @@ export const App = ({ active, tone, width }: Props) => <main>
 <div id="bar" {...styles.bar({ width })} />
 </main>
 namespace styles {
-export const button=variants({base:{display:'flex'},variants:{active:{false:{opacity:0.5},true:{}},tone:{loud:{color:'red'},quiet:{color:'gray'}}},defaultVariants:{tone:'quiet'}})
+export const button=variants({ selection: 'attribute',base:{display:'flex'},variants:{active:{false:{opacity:0.5},true:{}},tone:{loud:{color:'red'},quiet:{color:'gray'}}},defaultVariants:{tone:'quiet'}})
 export const bar=style((values:{width:\`\${number}px\`})=>({width:values.width}))
 }`
       const output = Transform.compile({ moduleId: 'App.tsx', source })
@@ -3876,6 +3876,57 @@ export const button = variants({ base: { display: 'flex' }, defaultVariants: { t
       } finally {
         await browser.close()
       }
+    })
+
+    test('defaults to className selection without conditions or dynamic choices', async () => {
+      const source = `import { variants } from 'zyzz'
+namespace styles {
+export const plain = variants({ variants: { size: { sm: { padding: '4px' } } } })
+export const conditional = variants({ conditions: { wide: '@media (min-width: 40rem)' }, variants: { size: { sm: { padding: '4px' } } } })
+export const dynamic = variants({ variants: { size: { custom: (values: { width: string }) => ({ width: values.width }) } } })
+}
+export const plain = styles.plain({ size: 'sm' })
+export const conditional = styles.conditional({ size: 'sm' })
+export const dynamic = styles.dynamic({ size: { custom: { width: '4px' } } })`
+      const output = Transform.compile({ moduleId: 'recipes.ts', source })
+      const bundle = await Esbuild.build({
+        bundle: true,
+        format: 'cjs',
+        platform: 'node',
+        stdin: {
+          contents: output.code,
+          loader: 'ts',
+          resolveDir: process.cwd(),
+        },
+        write: false,
+      })
+      const module = { exports: {} as Record<string, unknown> }
+
+      new Function('module', 'exports', 'require', bundle.outputFiles[0]!.text)(
+        module,
+        module.exports,
+        Module.createRequire(import.meta.url),
+      )
+
+      // A plain recipe returns its class list, and the others keep data-* props.
+      expect(module.exports.plain).toMatchInlineSnapshot(
+        `"z_vM6ron0 zvdlwyE-Pk0"`,
+      )
+      expect(module.exports.conditional).toMatchInlineSnapshot(`
+        {
+          "className": "z_vM6ron1 z_vM6ron2",
+          "data-size": "sm",
+        }
+      `)
+      expect(module.exports.dynamic).toMatchInlineSnapshot(`
+        {
+          "className": "z_vM6ron3",
+          "data-size": "custom",
+          "style": {
+            "--z-vM6ron-styles-dynamic-1-0-0-width": "4px",
+          },
+        }
+      `)
     })
 
     test('rejects conditions and dynamic choices under className selection', () => {
@@ -4432,7 +4483,7 @@ namespace styles {
     },
   })
 
-  export const flag = variants({
+  export const flag = variants({ selection: 'attribute',
     base: { color: 'rgb(0, 0, 0)' },
     defaultVariants: { tone: 'red' },
     variants: {
@@ -4525,7 +4576,7 @@ namespace styles {
         namespace styles {
           export const chip = (((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className,style=input.style,vars=input.vars,inline=vars?{...vars,...style}:style;let value,className="z_l0kPgl0";value=Object.prototype.hasOwnProperty.call(input,"on")?input["on"]:void 0;if(value!==null&&value!==void 0){value=String(value);className+=value==="true"?" zv4meQUdh61":""}value=Object.prototype.hasOwnProperty.call(input,"size")?input["size"]:void 0;if(value!==null&&value!==void 0){value=String(value);className+=value==="large"?" zv4meQUdh62":value==="small"?" zv4meQUdh63":""}value=Object.prototype.hasOwnProperty.call(input,"tone")?input["tone"]:void 0;if(value===void 0)value="red";if(value!==null&&value!==void 0){value=String(value);className+=value==="blue"?" zv4meQUdh64":value==="red"?" zv4meQUdh65":""}if(external)className+=" "+external;return inline?{className,style:inline}:{className}}) as unknown as import('zyzz').variants.ReturnType<{selection:'class';variants:{"on":{"false":{};"true":{}};"size":{"large":{};"small":{}};"tone":{"blue":{};"red":{}}}}>)
 
-          export const flag = (((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className,style=input.style,vars=input.vars,inline=vars?{...vars,...style}:style,className=external?"z_l0kPgl1"+" "+external:"z_l0kPgl1",result:Record<string,unknown>=inline?{className,style:inline}:{className};let value;value=Object.prototype.hasOwnProperty.call(input,"on")?input["on"]:void 0;if(value!==null&&value!==void 0)result["data-on"]=String(value);value=Object.prototype.hasOwnProperty.call(input,"tone")?input["tone"]:void 0;if(value===void 0)value="red";if(value!==null&&value!==void 0)result["data-tone"]=String(value);return result}) as unknown as import('zyzz').variants.ReturnType<{variants:{"on":{"false":{};"true":{}};"tone":{"blue":{};"false":{};"red":{}}}}>)
+          export const flag = (((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className,style=input.style,vars=input.vars,inline=vars?{...vars,...style}:style,className=external?"z_l0kPgl1"+" "+external:"z_l0kPgl1",result:Record<string,unknown>=inline?{className,style:inline}:{className};let value;value=Object.prototype.hasOwnProperty.call(input,"on")?input["on"]:void 0;if(value!==null&&value!==void 0)result["data-on"]=String(value);value=Object.prototype.hasOwnProperty.call(input,"tone")?input["tone"]:void 0;if(value===void 0)value="red";if(value!==null&&value!==void 0)result["data-tone"]=String(value);return result}) as unknown as import('zyzz').variants.ReturnType<{selection:'attribute';variants:{"on":{"false":{};"true":{}};"tone":{"blue":{};"false":{};"red":{}}}}>)
 
           export declare const wide: import('zyzz').variants.ReturnType<{selection:'class';variants:{"a":{"w":{};"x":{};"y":{}};"b":{"w":{};"x":{};"z":{}};"c":{"w":{};"x":{};"y":{}};"d":{"w":{};"x":{};"y":{}}}}>
         }"
@@ -12268,7 +12319,7 @@ describe('output', () => {
 import { Css } from 'zyzz/web';export const { style, variants, vars:theme } = Config.create({cssOutput:'${cssOutput}',output:'html',vars:{color:{brand:'red'}}});`,
             'pkg/index.ts': `export { style as styled, theme, variants } from './config.js';`,
             'app.ts':
-              "import {Config} from 'zyzz';\nimport { styled, variants, theme } from './pkg/index.js';\nexport const card=styled({color:'brand',padding:'8px'});\nexport const other=styled({color:'brand',padding:'8px'});\nexport const button=variants({base:{color:'brand',padding:'8px'},variants:{size:{large:{padding:'12px'}}}});\nexport const props=card();",
+              "import {Config} from 'zyzz';\nimport { styled, variants, theme } from './pkg/index.js';\nexport const card=styled({color:'brand',padding:'8px'});\nexport const other=styled({color:'brand',padding:'8px'});\nexport const button=variants({ selection: 'attribute',base:{color:'brand',padding:'8px'},variants:{size:{large:{padding:'12px'}}}});\nexport const props=card();",
           },
         })
         const app = output.modules['app.ts']!
@@ -12281,7 +12332,7 @@ import { Css } from 'zyzz/web';export const { style, variants, vars:theme } = Co
             import { styled, variants, theme } from './pkg/index.js';
             export const card=(__zyzzCompositionHtml.bind(__zyzzProps.create({className:"z_Zf5JrJ0 z_Zf5JrJ1 z-style-Zf5JrJ-card"})) as import('zyzz').style.ReturnType<'html'>);
             export const other=(__zyzzCompositionHtml.bind(__zyzzProps.create({className:"z_Zf5JrJ0 z_Zf5JrJ1 z-style-Zf5JrJ-other"})) as import('zyzz').style.ReturnType<'html'>);
-            export const button=(__zyzzCompositionHtml.bind(/*#__PURE__*/__zyzzRecipe.create({"axes":{"size":["large"]},"defaults":{},"className":"z_Zf5JrJ0 z_Zf5JrJ2 z_Zf5JrJ3 z-style-Zf5JrJ-button"})) as import('zyzz').variants.ReturnType<{variants:{"size":{"large":{}}}},"html">);
+            export const button=(__zyzzCompositionHtml.bind(/*#__PURE__*/__zyzzRecipe.create({"axes":{"size":["large"]},"defaults":{},"className":"z_Zf5JrJ0 z_Zf5JrJ2 z_Zf5JrJ3 z-style-Zf5JrJ-button"})) as import('zyzz').variants.ReturnType<{selection:'attribute';variants:{"size":{"large":{}}}},"html">);
             export const props=card();"
           `)
           expect(app.css).toMatchInlineSnapshot(`
@@ -12302,7 +12353,7 @@ import { Css } from 'zyzz/web';export const { style, variants, vars:theme } = Co
             import { styled, variants, theme } from './pkg/index.js';
             export const card=(__zyzzCompositionHtml.bind(__zyzzProps.create({className:"z_Zf5JrJ0 z-style-Zf5JrJ-card"})) as import('zyzz').style.ReturnType<'html'>);
             export const other=(__zyzzCompositionHtml.bind(__zyzzProps.create({className:"z_Zf5JrJ1 z-style-Zf5JrJ-other"})) as import('zyzz').style.ReturnType<'html'>);
-            export const button=(__zyzzCompositionHtml.bind(/*#__PURE__*/__zyzzRecipe.create({"axes":{"size":["large"]},"defaults":{},"className":"z_Zf5JrJ2 z-style-Zf5JrJ-button"})) as import('zyzz').variants.ReturnType<{variants:{"size":{"large":{}}}},"html">);
+            export const button=(__zyzzCompositionHtml.bind(/*#__PURE__*/__zyzzRecipe.create({"axes":{"size":["large"]},"defaults":{},"className":"z_Zf5JrJ2 z-style-Zf5JrJ-button"})) as import('zyzz').variants.ReturnType<{selection:'attribute';variants:{"size":{"large":{}}}},"html">);
             export const props=card();"
           `)
           expect(app.css).toMatchInlineSnapshot(`

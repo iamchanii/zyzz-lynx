@@ -154,7 +154,7 @@ describe('create', () => {
       })().className,
     ).toEqualTypeOf<string>()
     expectTypeOf(
-      variants({ base: { color: 'color.brand' } })().className,
+      variants({ base: { color: 'color.brand' } })(),
     ).toEqualTypeOf<string>()
     PublicConfig.create({ defaultLayer: 'components.buttons' }).style({
       color: 'red',
@@ -171,7 +171,7 @@ describe('create', () => {
     expectTypeOf(
       variants({ variants: { size: { large: { padding: '8px' } } } })({
         size: 'large',
-      }).className,
+      }),
     ).toEqualTypeOf<string>()
     Config.create({ cssOutput: 'atomic', output: 'html' })
     // @ts-expect-error Unsupported CSS representation.

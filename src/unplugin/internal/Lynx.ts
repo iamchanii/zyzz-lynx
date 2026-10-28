@@ -35,7 +35,15 @@ export function flatten(rule: Lightning.Rule): Lightning.Rule[] | undefined {
   const lowered = combinations(nested.value.selectors)
   if (!lowered) return
 
-  return [{ type: 'style', value: { ...nested.value, selectors: lowered } }]
+  // The visitor reads an absent `var()` or `composes` specifier as `from: null`, which a
+  // returned rule cannot carry back, so the copy omits it.
+  const value: typeof nested.value = JSON.parse(
+    JSON.stringify(nested.value),
+    (key, entry: unknown) =>
+      key === 'from' && entry === null ? undefined : entry,
+  )
+
+  return [{ type: 'style', value: { ...value, selectors: lowered } }]
 }
 
 /** The class combinations that `&:where(…)…` matches, when every group lists only choice classes. */

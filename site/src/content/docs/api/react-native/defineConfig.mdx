@@ -182,7 +182,10 @@ The [`variants`](/docs/api/core/variants) function, with the same token names. N
 
 ```ts /'ink'/
 // A choice that reads the same token
-const badge = variants({ variants: { tone: { ink: { color: 'ink' } } } })
+const badge = variants({
+  selection: 'attribute',
+  variants: { tone: { ink: { color: 'ink' } } },
+})
 ```
 
 ### vars

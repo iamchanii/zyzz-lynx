@@ -243,8 +243,8 @@ describe('variants API page', () => {
 
     expect(css(button!.source)).toMatchInlineSnapshot(`
       ".z_0{border-radius:6px;}
-      .z_1{&:where([data-size="compact"]){padding:4px 8px;}}
-      .z_2{&:where([data-size="regular"]){padding:8px 16px;}}"
+      .z_1{&:where(.zv6iHkyrYB0){padding:4px 8px;}}
+      .z_2{&:where(.zv6iHkyrYB1){padding:8px 16px;}}"
     `)
   })
 
@@ -255,12 +255,12 @@ describe('variants API page', () => {
     expect(css(base!.source)).toMatchInlineSnapshot(`
       ".z_0{border-radius:6px;}
       .z_1{&:hover{opacity:0.9;}}
-      .z_2{&:where([data-size="compact"]){padding:4px;}}"
+      .z_2{&:where(.zvcVOY47Ea0){padding:4px;}}"
     `)
     expect(css(boolean!.source)).toMatchInlineSnapshot(`
-      ".z_0{&:where([data-loading="true"]){opacity:0.5;}}
-      .z_1{&:where([data-size="compact"]){padding:4px;}}
-      .z_2{&:where([data-size="regular"]){padding:8px;}}"
+      ".z_0{&:where(.zvcVOY47Ea1){opacity:0.5;}}
+      .z_1{&:where(.zvcVOY47Ea2){padding:4px;}}
+      .z_2{&:where(.zvcVOY47Ea3){padding:8px;}}"
     `)
     expect(css(dynamic!.source)).toMatchInlineSnapshot(`
       ".z_0{&:where([data-size="compact"]){padding:4px;}}
@@ -272,10 +272,10 @@ describe('variants API page', () => {
     const [compound] = await examples('variants', 'definition.compoundVariants')
 
     expect(css(compound!.source)).toMatchInlineSnapshot(`
-      ".z_0{&:where([data-loading="true"]){opacity:0.5;}}
-      .z_1{&:where([data-size="compact"]){padding:4px;}}
-      .z_2{&:where([data-size="regular"]){padding:8px;}}
-      .z_3{&:where([data-loading="true"]):where([data-size="regular"]):where(*, .__zyzz-compound-0){font-weight:600;}}"
+      ".z_0{&:where(.zvcVOY47Ea1){opacity:0.5;}}
+      .z_1{&:where(.zvcVOY47Ea2){padding:4px;}}
+      .z_2{&:where(.zvcVOY47Ea3){padding:8px;}}
+      .z_3{&:where(.zvcVOY47Ea1):where(.zvcVOY47Ea3):where(*, .__zyzz-compound-0){font-weight:600;}}"
     `)
   })
 
@@ -290,12 +290,12 @@ describe('variants API page', () => {
     `)
   })
 
-  test('compiles class selection', async () => {
+  test('compiles attribute selection', async () => {
     const [selection] = await examples('variants', 'definition.selection')
 
     expect(css(selection!.source)).toMatchInlineSnapshot(`
-      ".z_0{&:where(.zvcVOY47Ea0){padding:4px;}}
-      .z_1{&:where(.zvcVOY47Ea1){padding:8px;}}"
+      ".z_0{&:where([data-size="compact"]){padding:4px;}}
+      .z_1{&:where([data-size="regular"]){padding:8px;}}"
     `)
   })
 
@@ -375,8 +375,8 @@ describe('variants API page', () => {
     const [button] = await examples('variants', 'Types')
 
     expect(css(button!.source)).toMatchInlineSnapshot(`
-      ".z_0{&:where([data-size="compact"]){padding:4px;}}
-      .z_1{&:where([data-size="regular"]){padding:8px;}}"
+      ".z_0{&:where(.zv6iHkyrYB0){padding:4px;}}
+      .z_1{&:where(.zv6iHkyrYB1){padding:8px;}}"
     `)
   })
 
@@ -1299,7 +1299,7 @@ describe('core API examples', () => {
       { cwd: root, encoding: 'utf8', timeout: 30000 },
     )
 
-    expect(files).toHaveLength(85)
+    expect(files).toHaveLength(84)
     expect(checked.status, checked.stdout + checked.stderr).toBe(0)
   }, 60_000)
 })

@@ -16,7 +16,7 @@ import { StyleSheet } from 'zyzz/react-native'
 import { Native as Runtime } from 'zyzz/runtime'
 
 const source = `import {variants,style,cx as mix} from 'zyzz';
-export const card=variants({
+export const card=variants({ selection: 'attribute',
   base:{fontSize:'10px',lineHeight:1.5,opacity:0.2},
   variants:{size:{small:{fontSize:'12px'},large:{fontSize:'20px'}},active:{true:{opacity:0.5},false:{opacity:0.8}}},
   defaultVariants:{size:'small',active:false},
@@ -57,7 +57,7 @@ describe('compile', () => {
     const output = Graph.compile({
       modules: {
         'library.ts': `import {variants} from 'zyzz';
-        export const card=variants({base:{fontSize:'10px',lineHeight:1.5},variants:{size:{small:{fontSize:'12px'},large:{fontSize:'20px'}},active:{true:{lineHeight:'CaLc(4px + 1rem)'},false:{}}},defaultVariants:{size:'small',active:false}});`,
+        export const card=variants({ selection: 'attribute',base:{fontSize:'10px',lineHeight:1.5},variants:{size:{small:{fontSize:'12px'},large:{fontSize:'20px'}},active:{true:{lineHeight:'CaLc(4px + 1rem)'},false:{}}},defaultVariants:{size:'small',active:false}});`,
       },
       native: { colorScheme: 'light', platform: 'ios', units: { rem: 16 } },
     })
@@ -92,7 +92,7 @@ describe('compile', () => {
     'omits inherited constructor defaults in native recipes (packed: %s)',
     async (packed) => {
       const source = `import {variants} from 'zyzz';
-        export const card=variants({base:{opacity:0.2},variants:{constructor:{selected:{opacity:0.8}}}});`
+        export const card=variants({ selection: 'attribute',base:{opacity:0.2},variants:{constructor:{selected:{opacity:0.8}}}});`
       const publisher = Graph.compile({ modules: { 'library.ts': source } })
       const output = Graph.compile({
         ...(packed ? { contracts: publisher.contracts } : {}),
@@ -393,7 +393,7 @@ describe('compile', () => {
       colorScheme: 'light',
       moduleId: 'payloads.ts',
       source: `import {variants} from 'zyzz';
-        const button=variants({base:{fontSize:'10px',lineHeight:1.5},variants:{appearance:{base:{},inverse:{},overlay:{}},scale:{small:{fontSize:'12px'},medium:{fontSize:'16px'},large:{fontSize:'20px'}},variant:{primary:{},secondary:{},tertiary:{}},disabled:{true:{opacity:0.4},false:{}},loading:{true:(input:{alpha:number})=>({opacity:input.alpha}),false:{}}},defaultVariants:{scale:'medium'},compoundVariants:[{when:{disabled:true,loading:true},style:{padding:'8px'}}]});
+        const button=variants({ selection: 'attribute',base:{fontSize:'10px',lineHeight:1.5},variants:{appearance:{base:{},inverse:{},overlay:{}},scale:{small:{fontSize:'12px'},medium:{fontSize:'16px'},large:{fontSize:'20px'}},variant:{primary:{},secondary:{},tertiary:{}},disabled:{true:{opacity:0.4},false:{}},loading:{true:(input:{alpha:number})=>({opacity:input.alpha}),false:{}}},defaultVariants:{scale:'medium'},compoundVariants:[{when:{disabled:true,loading:true},style:{padding:'8px'}}]});
         export const results=[button({loading:{true:{alpha:0.6}},disabled:true}),button({loading:null,scale:'large'})];`,
     })
 
@@ -1687,7 +1687,7 @@ describe('compile', () => {
   test('executes dynamic scalars and selected variant payloads in authored order', async () => {
     const source = `import {style,variants} from 'zyzz';
       const bar=style((values:{width:string;alpha:number})=>({width:values.width,opacity:values.alpha,fontSize:'10px',lineHeight:1.5}));
-      const card=variants({base:{padding:'2px',opacity:0.1},variants:{size:{custom:(values:{gap:string;alpha:number})=>({padding:values.gap,opacity:values.alpha}),small:{padding:'4px'}}},defaultVariants:{size:{custom:{gap:'3px',alpha:0.5}}},compoundVariants:[{when:{size:'custom'},style:{paddingLeft:'9px'}}]});
+      const card=variants({ selection: 'attribute',base:{padding:'2px',opacity:0.1},variants:{size:{custom:(values:{gap:string;alpha:number})=>({padding:values.gap,opacity:values.alpha}),small:{padding:'4px'}}},defaultVariants:{size:{custom:{gap:'3px',alpha:0.5}}},compoundVariants:[{when:{size:'custom'},style:{paddingLeft:'9px'}}]});
       export const results=[bar({width:'12px',alpha:0.8}),bar({width:'20px',alpha:0.2}),card(),card({size:{custom:{gap:'6px',alpha:0.7}}}),card({size:null})];`
     const output = Native.compile({
       moduleId: 'dynamic.ts',
@@ -1795,7 +1795,7 @@ describe('compile', () => {
   test('executes imported and packed dynamic contracts without publisher source', async () => {
     const directory = await Fs.mkdtemp(Path.resolve('.fixture-native-payload-'))
     try {
-      const source = `import {style,variants} from 'zyzz';export const bar=style((values:{alpha:number})=>({opacity:values.alpha}));export const card=variants({variants:{size:{custom:(values:{gap:string})=>({padding:values.gap})}},defaultVariants:{size:{custom:{gap:'3px'}}}});`
+      const source = `import {style,variants} from 'zyzz';export const bar=style((values:{alpha:number})=>({opacity:values.alpha}));export const card=variants({ selection: 'attribute',variants:{size:{custom:(values:{gap:string})=>({padding:values.gap})}},defaultVariants:{size:{custom:{gap:'3px'}}}});`
       const publisher = Graph.compile({ modules: { 'library.ts': source } })
       const invalid = JSON.parse(publisher.contracts['library.ts']!)
       invalid.version = 22
@@ -1900,7 +1900,7 @@ describe('compile', () => {
   test('rejects invalid dynamic inputs and preserves caller overrides', async () => {
     const source = `import {style,variants} from 'zyzz';
       const bar=style((values:{width:string;alpha:number})=>({width:values.width,opacity:values.alpha,targets:{native:{transform:[{scale:2}]}}}));
-      const card=variants({variants:{size:{custom:(values:{gap:string})=>({padding:values.gap})}}});
+      const card=variants({ selection: 'attribute',variants:{size:{custom:(values:{gap:string})=>({padding:values.gap})}}});
       const errors=[];
       for(const input of [{width:'4px'},{width:'4px',alpha:2},{width:'4px',alpha:0.5,unknown:1},{width:'calc(1px + 2%)',alpha:0.5}]){try{bar(input)}catch(error){errors.push(error.message)}}
       try{card({size:'custom'})}catch(error){errors.push(error.message)}
@@ -1931,7 +1931,7 @@ describe('compile', () => {
     const source = `import {style,variants,cx} from 'zyzz';
       const base=style({opacity:0.2});
       const bar=style((input:{alpha:number})=>({opacity:input.alpha}));
-      const card=variants({variants:{size:{custom:(input:{gap:string})=>({padding:input.gap})}}});
+      const card=variants({ selection: 'attribute',variants:{size:{custom:(input:{gap:string})=>({padding:input.gap})}}});
       const first={}; const second={};
       Object.defineProperty(first,'inspect',{get(){throw new Error('Opaque values must not be traversed')}});
       const override={opacity:first,color:second,transform:[{translateX:first}]};
@@ -2160,7 +2160,7 @@ describe('compile', () => {
 
   test('compiles local configured tokens for explicit schemes', async () => {
     const source =
-      "import {Config} from 'zyzz';\nconst config=Config.create({vars:{color:{ink:{light:'#000',dark:'#fff'}}}});\nexport const card=config.variants({base:{color:'ink'},variants:{tone:{quiet:{opacity:0.5}}},defaultVariants:{tone:'quiet'}});"
+      "import {Config} from 'zyzz';\nconst config=Config.create({vars:{color:{ink:{light:'#000',dark:'#fff'}}}});\nexport const card=config.variants({ selection: 'attribute',base:{color:'ink'},variants:{tone:{quiet:{opacity:0.5}}},defaultVariants:{tone:'quiet'}});"
     const light = await execute(
       Native.compile({ source, moduleId: 'theme.ts', colorScheme: 'light' })
         .code,
@@ -2189,7 +2189,7 @@ describe('compile', () => {
           Native.compile({
             source:
               source +
-              `export const bar=style((value:{alpha:number})=>({opacity:value.alpha}));export const custom=variants({variants:{size:{custom:(value:{gap:string})=>({padding:value.gap})}},defaultVariants:{size:{custom:{gap:'2px'}}}});`,
+              `export const bar=style((value:{alpha:number})=>({opacity:value.alpha}));export const custom=variants({ selection: 'attribute',variants:{size:{custom:(value:{gap:string})=>({padding:value.gap})}},defaultVariants:{size:{custom:{gap:'2px'}}}});`,
             moduleId: 'compiled.ts',
             platform: 'ios',
             colorScheme: 'light',
@@ -2322,7 +2322,7 @@ card().className;
       '[Error: Use Native.compile for native source output.]',
     )
     for (const definition of [
-      `variants({conditions:{wide:'@media (width > 0px)'},variants:{tone:{quiet:{opacity:0.5}}}})`,
+      `variants({ selection: 'attribute',conditions:{wide:'@media (width > 0px)'},variants:{tone:{quiet:{opacity:0.5}}}})`,
     ])
       expect(() =>
         Native.compile({

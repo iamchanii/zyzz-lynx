@@ -10,7 +10,7 @@ Define typed component choices, apply defaults, and combine matching selections 
 
 A variant is a named choice that changes how a component looks, such as a compact or regular size, or a primary or quiet tone. Choices are grouped into axes, and each call selects at most one choice per axis.
 
-`variants` defines one element's axes, choices, defaults, and the rules that apply when choices combine. The compiler emits every choice ahead of time, so selecting one only switches the classes and `data-*` attributes on the element.
+`variants` defines one element's axes, choices, defaults, and the rules that apply when choices combine. The compiler emits every choice ahead of time, so selecting one only switches the classes on the element.
 
 Start with [Getting Started](/docs/introduction/getting-started) to connect the compiler. Import `variants` from `zyzz` for literal CSS values, or from a project config for its tokens.
 
@@ -19,7 +19,7 @@ import { variants } from 'zyzz'
 
 export function Badge() {
   // [!code hl]
-  return <span {...styles.badge({ tone: 'success' })}>Paid</span>
+  return <span className={styles.badge({ tone: 'success' })}>Paid</span>
 }
 
 namespace styles {
@@ -46,7 +46,7 @@ Put declarations shared by every choice in `base`. Group alternatives under a na
 import { variants } from 'zyzz'
 
 export function SaveButton() {
-  return <button {...styles.button({ size: 'compact' })}>Save</button>
+  return <button className={styles.button({ size: 'compact' })}>Save</button>
 }
 
 namespace styles {
@@ -79,9 +79,9 @@ namespace styles {
 </Tab>
 </Tabs>
 
-This button selects `compact` and keeps the default `primary` tone. Calls return a stable class and selection attributes such as `data-size`, so spread the full result onto the element.
+This button selects `compact` and keeps the default `primary` tone. Calls return the recipe class and one class per selected choice, so assign the result to `className`.
 
-Axis names become `data-*` attributes. They use lowercase letters, digits, and hyphens, start with a letter, and cannot be `class`, `conditions`, `key`, `ref`, `style`, or `vars`.
+Axis names use lowercase letters, digits, and hyphens, start with a letter, and cannot be `class`, `conditions`, `key`, `ref`, `style`, or `vars`, since attribute selection writes them as `data-*` attributes.
 
 ## Type Component Props
 
@@ -98,7 +98,7 @@ export function Button(props: Button.Props) {
   const { children, disabled, ...rest } = props // [!code hl]
 
   return (
-    <button disabled={disabled} {...styles.button(rest)}>
+    <button disabled={disabled} className={styles.button(rest)}>
       {children}
     </button>
   )
@@ -133,7 +133,7 @@ namespace styles {
 </Tab>
 </Tabs>
 
-`Props.Variants` covers everything the call accepts: the `size` selection, the `className`, `style`, and `vars` overrides, and `conditions` when the recipe declares them. The component reads `children` and `disabled` and forwards the rest to the call, so callers can pass overrides along with a size.
+`Props.Variants` covers everything the call accepts: the `size` selection, the `className` override, and `conditions` when the recipe declares them. The component reads `children` and `disabled` and forwards the rest to the call, so callers can pass a class along with a size.
 
 Call sites complete the declared choices, and an undeclared value such as `size="huge"` fails the type check:
 
@@ -147,7 +147,7 @@ export function Button(props: Button.Props) {
   const { children, disabled, ...rest } = props
 
   return (
-    <button disabled={disabled} {...styles.button(rest)}>
+    <button disabled={disabled} className={styles.button(rest)}>
       {children}
     </button>
   )
@@ -225,7 +225,7 @@ styles.label({ muted: null }) // [!code hl]
       <tr>
         <th scope="col">Selection</th>
         <th scope="col">Applied choice</th>
-        <th scope="col">Attribute</th>
+        <th scope="col">Choice class</th>
       </tr>
     </thead>
     <tbody>
@@ -237,7 +237,7 @@ styles.label({ muted: null }) // [!code hl]
           Default <code>true</code> choice
         </td>
         <td>
-          <code>data-muted="true"</code>
+          <code>true</code> class
         </td>
       </tr>
       <tr>
@@ -248,7 +248,7 @@ styles.label({ muted: null }) // [!code hl]
           <code>false</code> choice
         </td>
         <td>
-          <code>data-muted="false"</code>
+          <code>false</code> class
         </td>
       </tr>
       <tr>
@@ -257,7 +257,7 @@ styles.label({ muted: null }) // [!code hl]
         </td>
         <td>No choice, and base still applies</td>
         <td>
-          No <code>data-muted</code> attribute
+          No <code>muted</code> class
         </td>
       </tr>
     </tbody>
@@ -308,7 +308,7 @@ styles.button({ tone: 'quiet' })
 </Tab>
 </Tabs>
 
-The quiet button receives a visible border at either size, and compounds also match defaults. For conflicting declarations, precedence is `base`, then axes in declaration order, then compounds in array order, within matching contexts and importance. Selection attributes add no selector specificity.
+The quiet button receives a visible border at either size, and compounds also match defaults. For conflicting declarations, precedence is `base`, then axes in declaration order, then compounds in array order, within matching contexts and importance. Choice selectors add no specificity.
 
 ## Select with Conditions
 
@@ -414,7 +414,7 @@ Payload fields must be required scalars with explicit types. Defaults need compl
 
 ## Compose Variants
 
-Use `cx` when combining a recipe with another generated style. Separate JSX spreads replace props and can lose the recipe's class, attributes, or variable bindings.
+Use `cx` when combining a recipe with another generated style. `cx` merges props, so the recipe returns props with `selection: 'class'`, and separate JSX spreads would replace each other's class.
 
 <Tabs label="Composed focus ring">
 <Tab title="FocusedButton.tsx">
@@ -433,6 +433,8 @@ export function FocusedButton() {
 
 namespace styles {
   export const button = variants({
+    // Returns props that cx can merge
+    selection: 'class',
     variants: { size: { compact: { padding: '4px 8px' } } },
   })
 
@@ -455,17 +457,17 @@ namespace styles {
 </Tab>
 </Tabs>
 
-Styling calls also accept `className`, `style`, and `vars` overrides, such as `styles.button({ size: 'compact', style: { opacity: 0.5 } })`. TypeScript checks application inputs, and runtime selection does not validate them.
+Styling calls also accept a `className` override, and props-returning recipes accept `style` and `vars`, such as `styles.button({ size: 'compact', style: { opacity: 0.5 } })`. TypeScript checks application inputs, and runtime selection does not validate them.
 
-## Select with Classes
+## Return Props
 
-Set `selection: 'class'` to select each choice with its own generated class instead of a `data-*` attribute. Applications then return only `className` and `style`, so each element renders one class list, as a hand-written class string would.
+Set `selection: 'attribute'` or `selection: 'class'` to return props instead of a class list. `'attribute'` marks each choice with a `data-*` attribute, `'class'` with a generated class, and both accept `style` and `vars` overrides.
 
 ```tsx title="StatusBadge.tsx"
 import { variants } from 'zyzz'
 
 export function StatusBadge() {
-  // Renders a class list with the success choice class and no data-tone attribute
+  // Renders the recipe class and data-tone="success"
   return <span {...styles.badge({ tone: 'success' })}>Paid</span>
 }
 
@@ -473,8 +475,8 @@ namespace styles {
   export const badge = variants({
     base: { borderRadius: '999px', padding: '2px 8px' },
     // [!code hl:2]
-    // Each selected choice adds a class instead of an attribute
-    selection: 'class',
+    // Each selected choice adds an attribute to the returned props
+    selection: 'attribute',
     variants: {
       tone: {
         neutral: { backgroundColor: '#eee', color: '#333' },
@@ -485,39 +487,9 @@ namespace styles {
 }
 ```
 
-The emitted rules keep their order and zero-specificity `:where()` wrappers, matching `:where(.class)` where attribute selection matches `:where([data-tone="success"])`. Defaults, `null`, compounds, conditions, payloads, and `cx` therefore resolve the same declarations in both modes.
+Every mode keeps rule order and zero-specificity `:where()` wrappers, matching `:where(.class)` where attribute selection matches `:where([data-tone="success"])`. Defaults, `null`, and compounds resolve the same declarations in each mode.
 
-Class selection gives up readable selection state. Choice classes are generated names, so stylesheets, tests, and selectors outside the recipe cannot match a choice the way they match `[data-tone="success"]`, and the return type has no `data-*` keys. Native output ignores the option.
-
-## Class List Results
-
-Set `selection: 'className'` to select with classes and return the class list as a string. Assign it to `className` directly on targets such as Lynx, where every selection is a class.
-
-```tsx title="StatusBadge.tsx"
-import { variants } from 'zyzz'
-
-export function StatusBadge() {
-  // [!code hl:2]
-  // Assigns the class list string instead of spreading props
-  return <span className={styles.badge({ tone: 'success' })}>Paid</span>
-}
-
-namespace styles {
-  export const badge = variants({
-    base: { borderRadius: '999px', padding: '2px 8px' },
-    // Returns the class list instead of props
-    selection: 'className',
-    variants: {
-      tone: {
-        neutral: { backgroundColor: '#eee', color: '#333' },
-        success: { backgroundColor: '#e6f6ec', color: '#05612c' },
-      },
-    },
-  })
-}
-```
-
-A string carries no inline style, so applications accept only the `className` override, and the compiler rejects `conditions` and dynamic choices. Native compilation rejects the option.
+Recipes with conditions or dynamic choices default to `'attribute'`, since a class list carries no inline variable bindings. Native recipes declare a props mode, because the default types applications as strings.
 
 ## More
 

@@ -561,61 +561,61 @@ describe('Default Theme guide', () => {
         }
 
         .z_default-aTfGk4a {
-          &:where([data-size="lg"]) {
+          &:where(.zv7eUzOtMo0) {
             font-family: var(--z-default-typography-copy-16-fontFamily, Geist, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji");
           }
         }
 
         .z_default-aTfGk4b {
-          &:where([data-size="lg"]) {
+          &:where(.zv7eUzOtMo0) {
             font-size: var(--z-default-typography-copy-16-fontSize, 16px);
           }
         }
 
         .z_default-aTfGk4c {
-          &:where([data-size="lg"]) {
+          &:where(.zv7eUzOtMo0) {
             font-weight: var(--z-default-typography-copy-16-fontWeight, 400);
           }
         }
 
         .z_default-aTfGk4d {
-          &:where([data-size="lg"]) {
+          &:where(.zv7eUzOtMo0) {
             letter-spacing: var(--z-default-typography-copy-16-letterSpacing, 0px);
           }
         }
 
         .z_default-aTfGk4e {
-          &:where([data-size="lg"]) {
+          &:where(.zv7eUzOtMo0) {
             line-height: var(--z-default-typography-copy-16-lineHeight, 24px);
           }
         }
 
         .z_default-aTfGk4f {
-          &:where([data-size="sm"]) {
+          &:where(.zv7eUzOtMo1) {
             font-family: var(--z-default-typography-copy-13-fontFamily, Geist, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji");
           }
         }
 
         .z_default-aTfGk4g {
-          &:where([data-size="sm"]) {
+          &:where(.zv7eUzOtMo1) {
             font-size: var(--z-default-typography-copy-13-fontSize, 13px);
           }
         }
 
         .z_default-aTfGk4h {
-          &:where([data-size="sm"]) {
+          &:where(.zv7eUzOtMo1) {
             font-weight: var(--z-default-typography-copy-13-fontWeight, 400);
           }
         }
 
         .z_default-aTfGk4i {
-          &:where([data-size="sm"]) {
+          &:where(.zv7eUzOtMo1) {
             letter-spacing: var(--z-default-typography-copy-13-letterSpacing, 0px);
           }
         }
 
         .z_default-aTfGk4j {
-          &:where([data-size="sm"]) {
+          &:where(.zv7eUzOtMo1) {
             line-height: var(--z-default-typography-copy-13-lineHeight, 18px);
           }
         }

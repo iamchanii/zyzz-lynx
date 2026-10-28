@@ -16,6 +16,7 @@ const output = Native.compile({
   source: `import { variants } from 'zyzz'
 
 export const button = variants({
+    selection: 'attribute',
   base: { paddingTop: '8px' },
   variants: { tone: { quiet: { opacity: 0.5 }, loud: { opacity: 1 } } },
   defaultVariants: { tone: 'quiet' },
@@ -216,6 +217,7 @@ A compiled `style` or `variants` callable returns `{ style }` for a native compo
 import { style, variants } from 'zyzz'
 
 const button = variants({
+  selection: 'attribute',
   base: { paddingTop: '8px' },
   variants: { tone: { quiet: { opacity: 0.5 }, loud: { opacity: 1 } } },
   defaultVariants: { tone: 'quiet' },

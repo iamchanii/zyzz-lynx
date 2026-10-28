@@ -20,6 +20,7 @@ import { zyzz } from 'zyzz/vite'
 const source = `import { variants as recipe } from 'zyzz'
 export namespace styles {
   export const button = recipe({
+    selection: 'attribute',
     base: { color: 'black', padding: '2px', opacity: 1 },
     variants: {
       size: { sm: { padding: '4px' }, lg: { padding: '12px' } },
@@ -55,7 +56,7 @@ describe('variants', () => {
       const file = Path.join(root, '.fixture-variants-editor.ts')
       const source = `${imports}
 ${setup}
-const button = variants({
+const button = variants({ selection: 'attribute',
   base: { /* base */ display: '/* display */', color: '/* baseColor */', flexShrink: '/* shrink */' },
   variants: {
     size: {
@@ -153,7 +154,7 @@ const button = variants({
   )
 
   test('renders registered computed conditions in recipe bodies', async () => {
-    const source = `import {variants} from 'zyzz';import {customMedia} from 'zyzz/web';const query=customMedia('(width > 0px)');export const button=variants({base:{[query]:{color:'red'}},variants:{size:{sm:{[query]:{padding:'4px'}}}},defaultVariants:{size:'sm'},compoundVariants:[{when:{size:'sm'},style:{[query]:{opacity:0.5}}}]});`
+    const source = `import {variants} from 'zyzz';import {customMedia} from 'zyzz/web';const query=customMedia('(width > 0px)');export const button=variants({ selection: 'attribute',base:{[query]:{color:'red'}},variants:{size:{sm:{[query]:{padding:'4px'}}}},defaultVariants:{size:'sm'},compoundVariants:[{when:{size:'sm'},style:{[query]:{opacity:0.5}}}]});`
     const graph = Graph.compile({ modules: { 'computed.ts': source } })
     const output = graph.modules['computed.ts']!
     const bundled = await Esbuild.build({
@@ -206,7 +207,7 @@ const button = variants({
     function size(count: number) {
       return Transform.compile({
         moduleId: 'compounds.ts',
-        source: `import {variants} from 'zyzz';export const recipe=variants({variants:{tone:{red:{}}},compoundVariants:[${Array.from({ length: count }, (_, index) => `{when:{tone:'red'},style:{zIndex:${index}}}`).join(',')}]});`,
+        source: `import {variants} from 'zyzz';export const recipe=variants({ selection: 'attribute',variants:{tone:{red:{}}},compoundVariants:[${Array.from({ length: count }, (_, index) => `{when:{tone:'red'},style:{zIndex:${index}}}`).join(',')}]});`,
       }).css.length
     }
     expect(size(100) < size(50) * 2.2).toMatchInlineSnapshot('true')
@@ -218,11 +219,11 @@ const button = variants({
       source: `import { style, variants } from 'zyzz';
       namespace styles {
         export const card = style({ color: 'red' });
-        export const button = variants({ variants: { constructor: { small: {} } }, defaultVariants: { constructor: 'small' } });
+        export const button = variants({ selection: 'attribute', variants: { constructor: { small: {} } }, defaultVariants: { constructor: 'small' } });
       }
       export const props = styles.card();
       export function recipe(input?: object) { return styles.button(input) };
-      export const empty = variants({ variants: { size: { sm: {} } }, defaultVariants: { size: undefined } });`,
+      export const empty = variants({ selection: 'attribute', variants: { size: { sm: {} } }, defaultVariants: { size: undefined } });`,
     })
     // The application follows the namespace, so it folds without a guard.
     expect(
@@ -262,18 +263,18 @@ const button = variants({
     expect(() =>
       Source.extract({
         moduleId: 'invalid.ts',
-        source: `import { variants } from 'zyzz'; variants({ variants: { size: { 1: {} } } })`,
+        source: `import { variants } from 'zyzz'; variants({ selection: 'attribute', variants: { size: { 1: {} } } })`,
       }),
     ).toThrowErrorMatchingInlineSnapshot(
-      `[Source.ExtractError: invalid.ts:64: Recipe choice names require CSS-safe strings.]`,
+      `[Source.ExtractError: invalid.ts:88: Recipe choice names require CSS-safe strings.]`,
     )
     expect(() =>
       Source.extract({
         moduleId: 'invalid.ts',
-        source: `import { variants } from 'zyzz'; variants({ variants: { size: { '\\0': {} } } })`,
+        source: `import { variants } from 'zyzz'; variants({ selection: 'attribute', variants: { size: { '\\0': {} } } })`,
       }),
     ).toThrowErrorMatchingInlineSnapshot(
-      `[Source.ExtractError: invalid.ts:64: Recipe choice names require CSS-safe strings.]`,
+      `[Source.ExtractError: invalid.ts:88: Recipe choice names require CSS-safe strings.]`,
     )
     expect(() =>
       Source.extract({
@@ -324,7 +325,7 @@ const button = variants({
         await page.evaluate(
           `getComputedStyle(document.querySelector('#button')).paddingTop`,
         ),
-      ).toMatchInlineSnapshot('"4px"')
+      ).toMatchInlineSnapshot(`"4px"`)
       expect(
         await page.evaluate(
           `getComputedStyle(document.querySelector('#button')).color`,
@@ -344,43 +345,43 @@ const button = variants({
         await page.evaluate(
           `document.querySelector('#button').getAttribute('data-size')`,
         ),
-      ).toMatchInlineSnapshot('"sm"')
+      ).toMatchInlineSnapshot(`"sm"`)
       expect(
         await page.evaluate(
           `document.querySelector('#button').getAttribute('data-loading')`,
         ),
-      ).toMatchInlineSnapshot('"false"')
+      ).toMatchInlineSnapshot(`"false"`)
       await page.evaluate(`apply({size:'lg',loading:true})`)
       expect(
         await page.evaluate(
           `getComputedStyle(document.querySelector('#button')).paddingTop`,
         ),
-      ).toMatchInlineSnapshot('"12px"')
+      ).toMatchInlineSnapshot(`"12px"`)
       expect(
         await page.evaluate(
           `getComputedStyle(document.querySelector('#button')).color`,
         ),
-      ).toMatchInlineSnapshot('"rgb(0, 0, 255)"')
+      ).toMatchInlineSnapshot(`"rgb(0, 0, 255)"`)
       expect(
         await page.evaluate(
           `getComputedStyle(document.querySelector('#button')).opacity`,
         ),
-      ).toMatchInlineSnapshot('"0.5"')
+      ).toMatchInlineSnapshot(`"0.5"`)
       expect(
         await page.evaluate(
           `getComputedStyle(document.querySelector('#button')).fontWeight`,
         ),
-      ).toMatchInlineSnapshot('"700"')
+      ).toMatchInlineSnapshot(`"700"`)
       expect(
         await page.evaluate(
           `document.querySelector('#button').getAttribute('data-size')`,
         ),
-      ).toMatchInlineSnapshot('"lg"')
+      ).toMatchInlineSnapshot(`"lg"`)
       expect(
         await page.evaluate(
           `document.querySelector('#button').getAttribute('data-loading')`,
         ),
-      ).toMatchInlineSnapshot('"true"')
+      ).toMatchInlineSnapshot(`"true"`)
       await page.evaluate(
         `apply({size:null,loading:null,style:{color:'green'}})`,
       )
@@ -388,12 +389,12 @@ const button = variants({
         await page.evaluate(
           `getComputedStyle(document.querySelector('#button')).paddingTop`,
         ),
-      ).toMatchInlineSnapshot('"2px"')
+      ).toMatchInlineSnapshot(`"2px"`)
       expect(
         await page.evaluate(
           `getComputedStyle(document.querySelector('#button')).color`,
         ),
-      ).toMatchInlineSnapshot('"rgb(0, 128, 0)"')
+      ).toMatchInlineSnapshot(`"rgb(0, 128, 0)"`)
       expect(
         await page.evaluate(
           `getComputedStyle(document.querySelector('#button')).opacity`,
@@ -429,7 +430,7 @@ const button = variants({
         await page.evaluate(
           `getComputedStyle(document.querySelector('#button')).paddingTop`,
         ),
-      ).toMatchInlineSnapshot('"4px"')
+      ).toMatchInlineSnapshot(`"4px"`)
       expect(
         await page.evaluate(
           `getComputedStyle(document.querySelector('#button')).color`,
@@ -449,12 +450,12 @@ const button = variants({
         await page.evaluate(
           `document.querySelector('#button').getAttribute('data-size')`,
         ),
-      ).toMatchInlineSnapshot('"sm"')
+      ).toMatchInlineSnapshot(`"sm"`)
       expect(
         await page.evaluate(
           `document.querySelector('#button').getAttribute('data-loading')`,
         ),
-      ).toMatchInlineSnapshot('"false"')
+      ).toMatchInlineSnapshot(`"false"`)
     } finally {
       await browser.close()
     }
@@ -464,18 +465,18 @@ const button = variants({
     expect(() =>
       Source.extract({
         moduleId: 'recipe.ts',
-        source: `import {variants} from 'zyzz'; variants({slots:{root:{}}})`,
+        source: `import {variants} from 'zyzz'; variants({ selection: 'attribute',slots:{root:{}}})`,
       }),
     ).toThrowErrorMatchingInlineSnapshot(
-      `[Source.ExtractError: recipe.ts:41: Unknown recipe field: slots.]`,
+      `[Source.ExtractError: recipe.ts:65: Unknown recipe field: slots.]`,
     )
     expect(() =>
       Source.extract({
         moduleId: 'recipe.ts',
-        source: `import {variants} from 'zyzz'; variants({variants:{size:{sm:{}}},defaultVariants:{size:'lg'}})`,
+        source: `import {variants} from 'zyzz'; variants({ selection: 'attribute',variants:{size:{sm:{}}},defaultVariants:{size:'lg'}})`,
       }),
     ).toThrowErrorMatchingInlineSnapshot(
-      `[Source.ExtractError: recipe.ts:87: Unknown recipe choice.]`,
+      `[Source.ExtractError: recipe.ts:111: Unknown recipe choice.]`,
     )
   })
 })
@@ -491,7 +492,7 @@ describe('bound', () => {
       const app = `import {styled,variants,theme} from './index.js';
 export const scope=theme().className;
 export const base=styled({color:'black !custom',padding:'6px !custom'});
-export const button=variants({variants:{intent:{primary:{color:'brand'},quiet:{color:'red !custom'}}},defaultVariants:{intent:'primary'}});`
+export const button=variants({ selection: 'attribute',variants:{intent:{primary:{color:'brand'},quiet:{color:'red !custom'}}},defaultVariants:{intent:'primary'}});`
       const publisher = Graph.compile({ modules })
       const packed = Graph.compile({
         modules: { 'app.ts': app },
@@ -571,7 +572,7 @@ export const button=variants({variants:{intent:{primary:{color:'brand'},quiet:{c
     test('preserves configured aliases through source and packed contracts', async () => {
       const config =
         "import {Config} from 'zyzz'; export const {variants,vars:theme}=Config.create({output:'html',vars:{color:{brand:'#06c'}},shorthands:{px:['paddingLeft','paddingRight']}})"
-      const app = `import {variants as recipe,theme} from './config.js'; export const scope=theme().class; export const button=recipe({base:{px:'8px !custom'},variants:{intent:{primary:{color:'brand'},quiet:{color:'black !custom'}}},defaultVariants:{intent:'primary'}})`
+      const app = `import {variants as recipe,theme} from './config.js'; export const scope=theme().class; export const button=recipe({selection:'attribute',base:{px:'8px !custom'},variants:{intent:{primary:{color:'brand'},quiet:{color:'black !custom'}}},defaultVariants:{intent:'primary'}})`
       const publisher = Graph.compile({ modules: { 'config.ts': config } })
       const result = Graph.compile({
         modules: { 'app.ts': app },
@@ -654,7 +655,7 @@ export const button=variants({variants:{intent:{primary:{color:'brand'},quiet:{c
       const output = Graph.compile({
         modules: {
           'app.ts':
-            "import {Config} from 'zyzz';\nimport {Vars} from 'zyzz'; const theme=Vars.define({color:{brand:'#06c'}}); const themeConfig=Config.create({vars:theme}); const {variants}=themeConfig; export const a=themeConfig.variants({base:{color:'brand'}}); export const b=variants({base:{color:'brand'}});",
+            "import {Config} from 'zyzz';\nimport {Vars} from 'zyzz'; const theme=Vars.define({color:{brand:'#06c'}}); const themeConfig=Config.create({vars:theme}); const {variants}=themeConfig; export const a=themeConfig.variants({ selection: 'attribute',base:{color:'brand'}}); export const b=variants({ selection: 'attribute',base:{color:'brand'}});",
         },
       })
       const bundled = await Esbuild.build({
@@ -692,7 +693,7 @@ describe('conditions', () => {
     "import {Config} from 'zyzz';\nexport const {variants,vars:theme}=Config.create({output:'html',vars:{breakpoint:{md:'600px'},color:{brand:'black'}}});"
   const source = `import {variants,theme} from './config.js';
 export const scope=theme().class;
-export const button=variants({
+export const button=variants({ selection: 'attribute',
   base:{padding:'2px',borderWidth:'0px',borderStyle:'solid',color:'brand',opacity:1,fontWeight:400},
   conditions:{wide:'@media >=md',compact:'@media/**/(height < 500px), print',grid:'@supports(display: grid)'},
   variants:{size:{sm:{padding:'4px',borderWidth:'2px'},lg:{padding:'12px'}},loading:{true:{opacity:0.5},false:{}},constructor:{normal:{}}},
@@ -716,7 +717,7 @@ export const button=variants({
       const source = `import {variants} from 'zyzz';${queries
         .map(
           (query, index) =>
-            `export const r${index}=variants({base:{color:'black'},conditions:{when:${JSON.stringify(query)}},variants:{tone:{selected:{color:'red'}}}});`,
+            `export const r${index}=variants({ selection: 'attribute',base:{color:'black'},conditions:{when:${JSON.stringify(query)}},variants:{tone:{selected:{color:'red'}}}});`,
         )
         .join('')}`
       const output = Graph.compile({ modules: { 'app.ts': source } }).modules[
@@ -927,10 +928,10 @@ export const button=variants({
       expect(() =>
         Source.extract({
           moduleId: 'app.ts',
-          source: `import {variants} from 'zyzz'; variants({conditions:{wide:'@container (width > 20px)'}})`,
+          source: `import {variants} from 'zyzz'; variants({ selection: 'attribute',conditions:{wide:'@container (width > 20px)'}})`,
         }),
       ).toThrowErrorMatchingInlineSnapshot(
-        `[Source.ExtractError: app.ts:58: Recipe conditions support only @media and @supports.]`,
+        `[Source.ExtractError: app.ts:82: Recipe conditions support only @media and @supports.]`,
       )
     })
 
@@ -942,10 +943,10 @@ export const button=variants({
       expect(() =>
         Source.extract({
           moduleId: 'app.ts',
-          source: `import {variants} from 'zyzz'; variants({conditions:{${conditions}}})`,
+          source: `import {variants} from 'zyzz'; variants({ selection: 'attribute',conditions:{${conditions}}})`,
         }),
       ).toThrowErrorMatchingInlineSnapshot(
-        `[Source.ExtractError: app.ts:272: Recipes support at most eight named conditions (256 CSS regions).]`,
+        `[Source.ExtractError: app.ts:296: Recipes support at most eight named conditions (256 CSS regions).]`,
       )
     })
   })
@@ -1265,7 +1266,7 @@ describe('payloads', () => {
   describe('variants', () => {
     test('reads payload getters once and accepts static template defaults', async () => {
       const source =
-        "import { variants } from 'zyzz'; export const button = variants({ variants: { size: { custom: (values: { padding: `${number}px` }) => ({ padding: values.padding }) } }, defaultVariants: { size: { custom: { padding: `${12}px` } } } });"
+        "import { variants } from 'zyzz'; export const button = variants({ selection: 'attribute', variants: { size: { custom: (values: { padding: `${number}px` }) => ({ padding: values.padding }) } }, defaultVariants: { size: { custom: { padding: `${12}px` } } } });"
       const output = Graph.compile({ modules: { 'getter.ts': source } })
         .modules['getter.ts']!
       const bundled = await Esbuild.build({
@@ -1316,19 +1317,19 @@ describe('payloads', () => {
         Source.extract({
           moduleId: 'reserved.ts',
           source:
-            "import {variants} from 'zyzz'; variants({conditions:{__proto__:'@media screen'}})",
+            "import {variants} from 'zyzz'; variants({ selection: 'attribute',conditions:{__proto__:'@media screen'}})",
         }),
       ).toThrowErrorMatchingInlineSnapshot(
-        `[Source.ExtractError: reserved.ts:53: Static object prototypes are unsupported.]`,
+        `[Source.ExtractError: reserved.ts:77: Static object prototypes are unsupported.]`,
       )
       expect(() =>
         Source.extract({
           moduleId: 'reserved.ts',
           source:
-            "import {variants} from 'zyzz'; variants({variants:{size:{__proto__:(values:{padding:string})=>({padding:values.padding})}}})",
+            "import {variants} from 'zyzz'; variants({ selection: 'attribute',variants:{size:{__proto__:(values:{padding:string})=>({padding:values.padding})}}})",
         }),
       ).toThrowErrorMatchingInlineSnapshot(
-        `[Source.ExtractError: reserved.ts:57: Static object prototypes are unsupported.]`,
+        `[Source.ExtractError: reserved.ts:81: Static object prototypes are unsupported.]`,
       )
     })
 
@@ -1345,7 +1346,7 @@ describe('payloads', () => {
         expect(() =>
           Source.extract({
             moduleId: 'bad.ts',
-            source: `import {variants} from 'zyzz';variants({${body}})`,
+            source: `import {variants} from 'zyzz';variants({ selection: 'attribute',${body}})`,
           }),
         ).toThrow()
     })
@@ -1402,7 +1403,7 @@ describe('payloads', () => {
 
     test('binds independent base and conditional payloads and removes stale styles', async () => {
       const source = `import {variants} from 'zyzz';
-      export const button=variants({
+      export const button=variants({ selection: 'attribute',
         base:{padding:'2px'},
         conditions:{wide:'@media (width >= 600px)'},
         variants:{size:{sm:{padding:'4px'},custom:(values:{padding:\`\${number}px\`})=>({padding:values.padding})}},
@@ -1547,7 +1548,7 @@ export const selected = {
   plain: (input: {}) => classes.plain(input),
 }
 
-namespace attributes {${recipes('')}
+namespace attributes {${recipes("\n    selection: 'attribute',")}
 }
 
 namespace classes {${recipes("\n    selection: 'class',")}
@@ -1936,7 +1937,7 @@ export const render = (input: Input) => [
 ]
 
 namespace attributes {
-  export const button = ${recipe('')}
+  export const button = ${recipe("\n    selection: 'attribute',")}
 }
 
 namespace classes {
@@ -2066,7 +2067,7 @@ describe('watch', () => {
       const root = await Fs.mkdtemp(Path.resolve('.fixture-variants-watch-'))
       const outDir = Path.join(root, 'output')
       const source = `import {style,variants} from 'zyzz';
-export const button=variants({base:{padding:'2px'},variants:{size:{sm:{padding:'4px'},lg:{padding:'12px'}}},defaultVariants:{size:'sm'}});
+export const button=variants({ selection: 'attribute',base:{padding:'2px'},variants:{size:{sm:{padding:'4px'},lg:{padding:'12px'}}},defaultVariants:{size:'sm'}});
 export const override=style({paddingLeft:'3px'});`
       const app = (
         file: string,
@@ -2160,7 +2161,7 @@ export function apply(){return cx(button({size:'lg'}),override())}`
             }),
           ),
         ).rejects.toThrowErrorMatchingInlineSnapshot(
-          `[Source.ExtractError: watch-variants/styles.ts:135: Expected a literal string or number; expressions are not evaluated.]`,
+          `[Source.ExtractError: watch-variants/styles.ts:159: Expected a literal string or number; expressions are not evaluated.]`,
         )
         expect(
           (await Fs.readFile(Path.join(outDir, 'app.ts'), 'utf8')) ===

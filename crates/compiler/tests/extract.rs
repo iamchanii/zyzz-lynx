@@ -127,6 +127,7 @@ export namespace styles {
 
   export const button = variants({
     base: { padding: 4 },
+    selection: 'attribute',
     variants: { size: { small: { padding: 2 } } },
     defaultVariants: { size: 'small' },
   })
@@ -177,7 +178,7 @@ export namespace styles {
                 },
                 "recipeTypes": [],
                 "identity": "z-style-7Zcbld-styles-button",
-                "end": 314,
+                "end": 342,
                 "name": "style-aohfip19p1g4b-182",
                 "start": 182
               }

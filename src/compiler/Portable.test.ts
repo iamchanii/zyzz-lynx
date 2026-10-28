@@ -181,12 +181,13 @@ describe('compile', () => {
           size: { small: { padding: '4px' }, large: { padding: '8px' } },
         },
         defaultVariants: { size: 'small' },
+        selection: 'attribute',
       },
       { id: 'button' },
     )
     const source = `import { style, variants } from 'zyzz';
       export const bar = style((values: { width: \`\${number}px\` }) => ({ width: values.width }), { id: 'bar' });
-      export const button = variants({ variants: { size: { small: { padding: '4px' }, large: { padding: '8px' } } }, defaultVariants: { size: 'small' } }, { id: 'button' });`
+      export const button = variants({ variants: { size: { small: { padding: '4px' }, large: { padding: '8px' } } }, defaultVariants: { size: 'small' }, selection: 'attribute' }, { id: 'button' });`
     const output = Transform.compile({
       compiler: false,
       moduleId: 'app.ts',

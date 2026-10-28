@@ -56,7 +56,7 @@ export const card = style({color: 'red'});`,
     const result = Source.extract({
       moduleId: 'recipe.ts',
       source: `import {variants} from 'zyzz';
-export const card = variants({
+export const card = variants({ selection: 'attribute',
   base: {opacity: 0.2},
   variants: {tone: {quiet: {opacity: 0.4}, loud: {targets: {native: {opacity: 0.6}, ios: {opacity: 0.7}}}}},
   defaultVariants: {tone: 'quiet'},

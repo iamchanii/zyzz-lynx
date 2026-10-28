@@ -23,6 +23,7 @@ export declare namespace Button {
 
 namespace styles {
   export const button = variants({
+    selection: 'attribute',
     base: {
       typography: 'button.16',
       alignItems: 'center',

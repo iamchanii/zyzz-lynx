@@ -237,7 +237,7 @@ Design choices such as size or tone are variants. The definition lists the choic
 import { type Props, variants } from 'zyzz'
 
 export function Button(props: Props.Variants<typeof styles.button>) {
-  return <button {...styles.button(props)}>Save</button>
+  return <button className={styles.button(props)}>Save</button>
 }
 
 const example = <Button size="xl" /> // Type error: size accepts 'md' or 'sm'
@@ -256,7 +256,7 @@ namespace styles {
 }
 ```
 
-Each choice compiles ahead of time, and a data attribute such as `data-size="sm"` selects it on the rendered element. [Variants](/docs/guides/variants) covers compound rules and choices selected by CSS conditions.
+Each choice compiles ahead of time, and a generated class per selected choice applies it to the rendered element. [Variants](/docs/guides/variants) covers compound rules and choices selected by CSS conditions.
 
 ## Next Steps
 

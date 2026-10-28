@@ -159,7 +159,7 @@ describe('zyzz', () => {
       )
       await Fs.writeFile(
         Path.join(root, 'src/App.tsx'),
-        `import { variants, vars } from './config'\n\nexport function App(props: { tone?: 'neutral' | 'success' }) {\n  return <view {...vars({ set: 'large' })}><text {...badge({ tone: props.tone })}>Hello</text></view>\n}\n\nconst badge = variants({\n  defaultVariants: { tone: 'neutral' },\n  variants: { tone: { neutral: { color: vars.color.brand }, success: { color: '#00aa00 !custom' } } },\n})\n`,
+        `import { variants, vars } from './config'\n\nexport function App(props: { tone?: 'neutral' | 'success' }) {\n  return <view {...vars({ set: 'large' })}><text className={badge({ tone: props.tone })}>Hello</text></view>\n}\n\nconst badge = variants({\n  defaultVariants: { tone: 'neutral' },\n  variants: { tone: { neutral: { color: vars.color.brand }, success: { color: '#00aa00 !custom' } } },\n})\n`,
       )
 
       const result = await (await create(root)).build()
@@ -172,6 +172,16 @@ describe('zyzz', () => {
       )
       expect(source.includes('Object.hasOwn(')).toMatchInlineSnapshot(`false`)
       expect(source.includes('z-theme-large')).toMatchInlineSnapshot(`true`)
+
+      // A flattened choice rule keeps its `var()` token reference.
+      const { css } = await template(root)
+      expect(css.filter((rule) => rule.startsWith('.zv')))
+        .toMatchInlineSnapshot(`
+        [
+          ".zveWCW2ABL0 { color: {{--z-color-brand}} }",
+          ".zveWCW2ABL1 { color: #0a0 }",
+        ]
+      `)
     } finally {
       await Fs.rm(root, { force: true, recursive: true })
     }

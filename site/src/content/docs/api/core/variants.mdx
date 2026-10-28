@@ -2,7 +2,7 @@
 
 Define finite style choices, defaults, and compound rules for one element.
 
-The compiler emits every choice and compound ahead of time. Applying the recipe selects choices through `data-*` attributes under one generated class, or through one class per choice with `selection: 'class'`, so a call never creates CSS.
+The compiler emits every choice and compound ahead of time. Applying the recipe returns a class list with one class per selected choice, so a call never creates CSS. Recipes with conditions or dynamic choices return props with `data-*` attributes instead.
 
 ```tsx title="Button.tsx"
 import { variants } from 'zyzz'
@@ -11,7 +11,7 @@ export function Button(props: Button.Props) {
   return (
     // [!code hl:2]
     // Selects a size choice, or the default when omitted
-    <button {...styles.button({ size: props.size })} type="button">
+    <button className={styles.button({ size: props.size })} type="button">
       Save
     </button>
   )
@@ -68,7 +68,7 @@ const button = variants({
 - **Type:** `{ [axis: string]: { [choice: string]: Style.LiteralProperties } }{:ts}`
 - **Default:** `{}{:ts}`
 
-Named axes, each holding named style objects. Axis names become `data-*` attributes, so they use lowercase names and cannot reuse styling props such as `style`. Choices named `true` and `false` make an axis accept booleans.
+Named axes, each holding named style objects. Attribute selection writes axis names as `data-*` attributes, so they use lowercase names and cannot reuse styling props such as `style`. Choices named `true` and `false` make an axis accept booleans.
 
 ```ts
 import { variants } from 'zyzz'
@@ -142,7 +142,7 @@ const button = variants({
 })
 ```
 
-Precedence follows the base, then axes in declaration order, then compounds in array order. Choices match through `:where()` attribute selectors, so they add no specificity.
+Precedence follows the base, then axes in declaration order, then compounds in array order. Choices match through `:where()` class or attribute selectors, so they add no specificity.
 
 ### definition.conditions
 
@@ -168,41 +168,24 @@ Recipes from `defineConfig` also accept the config's query aliases, such as `@me
 ### definition.selection
 
 - **Type:** `'attribute' | 'class' | 'className'{:ts}`
-- **Default:** `'attribute'{:ts}`
+- **Default:** `'className'{:ts}`, or `'attribute'{:ts}` with conditions or dynamic choices
 
-How applications carry selections. `'attribute'` writes one `data-*` attribute per selected axis. `'class'` appends one generated class per selected choice instead, and the emitted rules match `:where()` class selectors in the same order, so precedence is unchanged. `'className'` selects like `'class'`, and applications return the class list string.
+How applications carry selections. `'className'` returns the class list, with one generated class per selected choice. `'class'` returns the same classes as props. `'attribute'` returns props with one `data-*` attribute per selected axis. Class and attribute rules match `:where()` selectors in the same order, so precedence is unchanged.
 
 ```ts
 import { variants } from 'zyzz'
 
 const button = variants({
   // [!code hl:2]
-  // Applications return classes without data-* attributes
-  selection: 'class',
+  // Applications return props with data-* attributes
+  selection: 'attribute',
   variants: {
     size: { compact: { padding: '4px' }, regular: { padding: '8px' } },
   },
 })
 ```
 
-Class selection omits the `data-*` keys from the return type. Choice classes are generated names, so selectors and tests outside the recipe cannot match a selected choice. Native compilation ignores `'class'` and rejects `'className'`.
-
-A `'className'` application accepts only the `className` override, since a string carries no inline style. The compiler rejects `conditions` and dynamic choices in these recipes.
-
-```ts
-import { variants } from 'zyzz'
-
-const chip = variants({
-  selection: 'className',
-  variants: {
-    size: { compact: { padding: '4px' }, regular: { padding: '8px' } },
-  },
-})
-
-// [!code hl:2]
-// A string such as "z_0 zv…0 extra", for a className prop
-const className = chip({ size: 'compact', className: 'extra' })
-```
+A class list carries no inline style, so `'className'` applications accept only the `className` override, and the compiler rejects an explicit `'className'` with conditions or dynamic choices. Choice classes are generated names, so selectors and tests outside the recipe cannot match a selected choice.
 
 ### options.id
 
@@ -223,17 +206,17 @@ const button = variants(
 
 ## Application
 
-Applying a recipe returns props for one element. The argument accepts one selection per axis, plus the same styling overrides as [`style`](/docs/api/core/style#application).
+Applying a recipe returns the class list for one element, or props under `'attribute'` and `'class'` selection. The argument accepts one selection per axis, plus `className`. Props-returning recipes also accept the `style` and `vars` overrides of [`style`](/docs/api/core/style#application).
 
 ### options[axis]
 
 - **Type:** `choice | boolean | { [choice: string]: values } | null | undefined{:ts}`
 - **Default:** `undefined{:ts}`
 
-Selects a choice for the axis. Omitting the axis or passing `undefined` applies the default, and `null` removes the axis along with its default. Boolean axes still set the attribute for `false`.
+Selects a choice for the axis. Omitting the axis or passing `undefined` applies the default, and `null` removes the axis along with its default. Boolean axes still select the `false` choice.
 
 ```ts /size: 'compact'/
-// Sets data-size="compact" and keeps the default for other axes
+// Adds the compact class and keeps the default for other axes
 styles.button({ size: 'compact' })
 ```
 
@@ -273,7 +256,7 @@ styles.button({ className: 'external' })
 - **Type:** `style.Options['style']{:ts}`
 - **Default:** `undefined{:ts}`
 
-Inline declarations copied onto the returned `style`, as with [`style`](/docs/api/core/style#optionsstyle).
+Inline declarations copied onto the returned `style`, as with [`style`](/docs/api/core/style#optionsstyle). Only props-returning recipes accept it.
 
 ```ts /style: { opacity: 0.5 }/
 // Overrides opacity on this element only
@@ -285,7 +268,7 @@ styles.button({ style: { opacity: 0.5 } })
 - **Type:** ``{ [variable: `--${string}`]: string | number | undefined }{:ts}``
 - **Default:** `undefined{:ts}`
 
-Inline custom-property assignments keyed by variable reference, as with [`style`](/docs/api/core/style#optionsvars).
+Inline custom-property assignments keyed by variable reference, as with [`style`](/docs/api/core/style#optionsvars). Only props-returning recipes accept it.
 
 ```ts /vars: { [variables.accent]: 'crimson' }/
 // Assigns the variable on this element
@@ -298,18 +281,18 @@ styles.button({ vars: { [variables.accent]: 'crimson' } })
 
 - **Type:** `string{:ts}`
 
-The recipe's generated class, followed by `options.className` when supplied. Class-selection recipes also include one class per selected choice. A recipe declared with `selection: 'className'` returns this string itself instead of props.
+The recipe's generated class, then one class per selected choice under class selection, followed by `options.className` when supplied. `'className'` selection returns this string itself, and the other modes return it in props.
 
-```tsx /{...styles.button({ size: 'compact' })}/
-// Spreading assigns the class, data attributes, and style together
-<button {...styles.button({ size: 'compact' })} />
+```tsx /className={styles.button({ size: 'compact' })}/
+// Assigns the class list directly
+<button className={styles.button({ size: 'compact' })} />
 ```
 
 ### data-[axis]
 
 - **Type:** `string | undefined{:ts}`
 
-One attribute per selected axis, such as `data-size`. Defaults are serialized, and axes suppressed with `null` are omitted. Class-selection recipes return no `data-*` attributes.
+One attribute per selected axis under `'attribute'` selection, such as `data-size`. Defaults are serialized, and axes suppressed with `null` are omitted.
 
 ```ts /props['data-size']/
 const props = styles.button({ size: 'compact' })
@@ -342,7 +325,7 @@ import { type Props, variants } from 'zyzz'
 export function Button(props: Button.Props) {
   const { children, ...selection } = props
   return (
-    <button {...styles.button(selection)} type="button">
+    <button className={styles.button(selection)} type="button">
       {children}
     </button>
   )
@@ -350,7 +333,7 @@ export function Button(props: Button.Props) {
 
 export declare namespace Button {
   // [!code hl:2]
-  // Accepts `size` plus the styling overrides
+  // Accepts `size` plus the `className` override
   type Props = Props.Variants<typeof styles.button> & { children: ReactNode }
 }
 
@@ -383,7 +366,7 @@ The compiler reports unsupported source as `Source.ExtractError` with the source
 
 ## React Native
 
-Applying a recipe on native returns `{ style }`, resolved from the selected choices as the component renders. Native compilation rejects named conditions, so interaction and viewport states come from component props.
+Applying a recipe on native returns `{ style }`, resolved from the selected choices as the component renders. Native recipes declare `selection: 'attribute'`, since the default types applications as strings. Native compilation rejects named conditions, so interaction and viewport states come from component props.
 
 ```tsx title="Badge.tsx"
 import { Text } from 'react-native'
@@ -401,6 +384,7 @@ export declare namespace Badge {
 
 namespace styles {
   export const badge = variants({
+    selection: 'attribute',
     variants: {
       tone: { info: { color: '#0070f3' }, warning: { color: '#f5a623' } },
     },

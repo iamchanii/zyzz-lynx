@@ -224,12 +224,6 @@ pub fn compile<'a>(
             ));
         }
 
-        if call.recipe.as_ref().is_some_and(|recipe| recipe.class_list) {
-            return Err(native(
-                "Native source compilation does not support className selection.",
-            ));
-        }
-
         let single;
         let recipe = match (&call.static_recipe, &call.dynamic_recipe) {
             (Some(recipe), _) | (None, Some(recipe)) => recipe,

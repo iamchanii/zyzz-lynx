@@ -640,7 +640,7 @@ import type { Props } from 'zyzz'
 import { variants } from 'zyzz/default'
 
 export function Button(props: Button.Props) {
-  return <button {...styles.button({ size: props.size })}>Save</button>
+  return <button className={styles.button({ size: props.size })}>Save</button>
 }
 
 export declare namespace Button {

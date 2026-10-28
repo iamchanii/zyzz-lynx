@@ -12,6 +12,7 @@ const extracted = Source.extract({
   moduleId: 'button.ts',
   source: `import { variants } from 'zyzz'
 export const button = variants({
+    selection: 'attribute',
   base: { padding: '8px' },
   variants: { tone: { quiet: { opacity: 0.5 }, loud: { opacity: 1 } } },
   defaultVariants: { tone: 'quiet' },

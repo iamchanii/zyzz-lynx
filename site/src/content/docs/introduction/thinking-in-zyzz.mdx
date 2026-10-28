@@ -210,7 +210,7 @@ export function PasswordField(props: PasswordField.Props) {
         aria-invalid={props.invalid}
         type="password"
         // [!code hl]
-        {...styles.input({ size: props.size })}
+        className={styles.input({ size: props.size })}
       />
     </label>
   )
@@ -281,7 +281,7 @@ export function PasswordField(props: PasswordField.Props) {
       <input
         aria-invalid={props.invalid}
         type="password"
-        {...styles.input({ size: props.size })}
+        className={styles.input({ size: props.size })}
       />
     </label>
   )

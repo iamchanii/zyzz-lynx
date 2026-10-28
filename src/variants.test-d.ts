@@ -49,6 +49,7 @@ describe('variants', () => {
 
   test('accepts React inline overrides through inferred recipe props', () => {
     const button = variants({
+      selection: 'attribute',
       variants: { size: { small: { padding: '8px' } } },
     })
     const inline: CSSProperties = { opacity: undefined, padding: 12 }
@@ -66,6 +67,7 @@ describe('variants', () => {
   test('infers choices, booleans, null, defaults, compounds, and overrides', () => {
     const button = variants({
       base: { display: 'inline-flex' },
+      selection: 'attribute',
       variants: {
         size: { sm: { padding: '4px' }, lg: { padding: '12px' } },
         loading: { true: { opacity: 0.5 }, false: {} },
@@ -123,6 +125,29 @@ describe('variants', () => {
     void button()['data-size']
     // @ts-expect-error Selection names one of the three modes.
     variants({ selection: 'classes', variants: { size: { sm: {} } } })
+  })
+
+  test('defaults to the class list without conditions or dynamic choices', () => {
+    const button = variants({
+      variants: { size: { sm: { padding: '4px' } } },
+    })
+    const conditional = variants({
+      conditions: { wide: '@media (width >= 48rem)' },
+      variants: { size: { sm: { padding: '4px' } } },
+    })
+    const dynamic = variants({
+      variants: {
+        size: {
+          custom: (values: { padding: `${number}px` }) => ({
+            padding: values.padding,
+          }),
+        },
+      },
+    })
+
+    expectTypeOf(button({ size: 'sm' })).toEqualTypeOf<string>()
+    expectTypeOf(conditional()['data-size']).toEqualTypeOf<string | undefined>()
+    expectTypeOf(dynamic()['data-size']).toEqualTypeOf<string | undefined>()
   })
 
   test('returns the class list for className selection', () => {
@@ -202,6 +227,7 @@ describe('bound', () => {
         spacing: { sm: '4px' },
       })
       const button = theme.variants({
+        selection: 'attribute',
         variants: { intent: { primary: { color: 'brand', padding: 'sm' } } },
       })
       expectTypeOf(button()).toHaveProperty('className')
@@ -215,16 +241,17 @@ describe('bound', () => {
       })
       const link = variants({
         base: { '@layer components': { px: '4px' } },
+        selection: 'attribute',
         variants: { intent: { primary: { color: 'brand' } } },
       })
       expectTypeOf(link()).toHaveProperty('class')
       expectTypeOf(
-        configured.variants({ base: { px: '4px' } })(),
+        configured.variants({ base: { px: '4px' }, selection: 'attribute' })(),
       ).toHaveProperty('class')
       const extended = Theme.extend(configured, { color: { brand: '#09c' } })
-      expectTypeOf(extended.variants({ base: { px: '4px' } })()).toHaveProperty(
-        'class',
-      )
+      expectTypeOf(
+        extended.variants({ base: { px: '4px' }, selection: 'attribute' })(),
+      ).toHaveProperty('class')
       // @ts-expect-error Unknown configured layer.
       variants({ base: { '@layer missing': { color: 'brand' } } })
       // @ts-expect-error Unknown configured token.

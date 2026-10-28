@@ -7,7 +7,7 @@ import { style as ui } from 'zyzz/default'
 export function Choices() {
   return (
     <Preview name="choices">
-      <button type="button" {...styles.choices({ size: 'compact' })}>
+      <button type="button" className={styles.choices({ size: 'compact' })}>
         Save
       </button>
     </Preview>
@@ -28,10 +28,10 @@ export function Props() {
 export function Defaults() {
   return (
     <Preview name="defaults">
-      <span {...styles.defaults()}>Omitted</span>
-      <span {...styles.defaults({ muted: undefined })}>undefined</span>
-      <span {...styles.defaults({ muted: false })}>false</span>
-      <span {...styles.defaults({ muted: null })}>null</span>
+      <span className={styles.defaults()}>Omitted</span>
+      <span className={styles.defaults({ muted: undefined })}>undefined</span>
+      <span className={styles.defaults({ muted: false })}>false</span>
+      <span className={styles.defaults({ muted: null })}>null</span>
     </Preview>
   )
 }
@@ -40,7 +40,7 @@ export function Defaults() {
 export function Compounds() {
   return (
     <Preview name="compounds">
-      <button type="button" {...styles.compounds({ tone: 'quiet' })}>
+      <button type="button" className={styles.compounds({ tone: 'quiet' })}>
         Save
       </button>
     </Preview>
@@ -97,7 +97,7 @@ function Button(props: Button.Props) {
   const { children, disabled, ...rest } = props
 
   return (
-    <button type="button" disabled={disabled} {...styles.props(rest)}>
+    <button type="button" disabled={disabled} className={styles.props(rest)}>
       {children}
     </button>
   )
@@ -221,6 +221,7 @@ namespace styles {
   })
 
   export const composition = variants({
+    selection: 'class',
     variants: { size: { compact: { padding: '4px 8px' } } },
   })
 

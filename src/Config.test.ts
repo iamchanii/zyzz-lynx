@@ -36,7 +36,7 @@ describe('create', () => {
       }
       const result =
         compile(`export const card=style({color:'red',padding:['md','7px !custom'],display:'flex',width:'calc(100% - 2rem) !custom',':hover':{color:'#123456 !custom'}});
-export const button=variants({base:{padding:'md'},variants:{tone:{brand:{color:'red !custom !important'}}}});
+export const button=variants({ selection: 'attribute',base:{padding:'md'},variants:{tone:{brand:{color:'red !custom !important'}}}});
 export const dynamic=style((values:{padding:'7px'})=>({padding:\`\${values.padding} !custom\`}));`)
       expect(
         result.modules['app.ts']!.css.split('\n')
@@ -62,7 +62,7 @@ export const dynamic=style((values:{padding:'7px'})=>({padding:\`\${values.paddi
           `style({padding:'7px'})`,
           `style({padding:['md','7px']})`,
           `style({':hover':{color:'green'}})`,
-          `variants({variants:{tone:{brand:{color:'green'}}}})`,
+          `variants({ selection: 'attribute',variants:{tone:{brand:{color:'green'}}}})`,
           `style({padding:{custom:'7px'}})`,
         ].map((body) => {
           try {
@@ -77,7 +77,7 @@ export const dynamic=style((values:{padding:'7px'})=>({padding:\`\${values.paddi
           "app.ts:82: Expected a configured token or a CSS value with the " !custom" suffix.",
           "app.ts:82: Expected a configured token or a CSS value with the " !custom" suffix.",
           "app.ts:90: Expected a configured token or a CSS value with the " !custom" suffix.",
-          "app.ts:106: Expected a configured token or a CSS value with the " !custom" suffix.",
+          "app.ts:130: Expected a configured token or a CSS value with the " !custom" suffix.",
           "app.ts:82: Expected a literal string or number; expressions are not evaluated.",
         ]
       `)
@@ -309,7 +309,7 @@ export const { style, variants } = Config.create({
 });
 export const themed = Config.create({ defaultLayer: 'components', vars: {color: {brand: 'red'}} });`
       const source = `import { style, variants, themed } from './config';
-export const button = variants({
+export const button = variants({ selection: 'attribute',
   base: { color: 'red', padding: '4px', ':hover': { color: 'orange' } },
   variants: { size: { large: { padding: '16px' } } },
   compoundVariants: [{ when: {size: 'large'}, style: { borderRadius: '8px' } }],

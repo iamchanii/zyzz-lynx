@@ -294,7 +294,7 @@ Multiple JSX spreads replace fields rather than compose them. `style([styles.but
 
 ## Variants
 
-Root and config-bound recipes support static choices, defaults, ordered compounds, conditional selections, and dynamic payloads. A recipe styles one element and returns one props object. Multipart components use separate definitions with shared inputs, so there is no slots option.
+Root and config-bound recipes support static choices, defaults, ordered compounds, conditional selections, and dynamic payloads. A recipe styles one element and returns its class list, or one props object with conditions or dynamic choices. Multipart components use separate definitions with shared inputs, so there is no slots option.
 
 <Tabs label="Variants">
 
@@ -304,7 +304,7 @@ Root and config-bound recipes support static choices, defaults, ordered compound
 import { variants } from 'zyzz'
 
 export function Button() {
-  return <button {...styles.button({ size: 'sm' })}>Save</button>
+  return <button className={styles.button({ size: 'sm' })}>Save</button>
 }
 
 namespace styles {

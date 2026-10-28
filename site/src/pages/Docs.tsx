@@ -900,6 +900,7 @@ namespace styles {
   })
 
   export const copy = variants({
+    selection: 'attribute',
     base: {
       alignItems: 'center',
       backgroundColor: 'transparent !custom',

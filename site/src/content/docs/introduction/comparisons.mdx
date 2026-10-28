@@ -331,7 +331,7 @@ Every `Button` accepts the same optional `size` and `tone` choices, with `regula
 import { type Props, variants } from 'zyzz'
 
 export function Button(props: Button.Props) {
-  return <button {...styles.button(props)}>Continue</button>
+  return <button className={styles.button(props)}>Continue</button>
 }
 
 export declare namespace Button {
@@ -364,7 +364,7 @@ namespace styles {
 import { type Props, variants } from 'zyzz'
 
 export function Button(props: Button.Props) {
-  return <button {...styles.button(props)}>Continue</button>
+  return <button className={styles.button(props)}>Continue</button>
 }
 
 export declare namespace Button {

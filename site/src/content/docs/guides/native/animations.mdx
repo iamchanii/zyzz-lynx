@@ -33,6 +33,7 @@ export declare namespace Toggle {
 
 namespace styles {
   export const track = variants({
+    selection: 'attribute',
     variants: {
       active: {
         false: { backgroundColor: '#d1d5db' },
@@ -127,6 +128,7 @@ export declare namespace Badge {
 
 namespace styles {
   export const badge = variants({
+    selection: 'attribute',
     variants: { visible: { false: { opacity: 0 }, true: { opacity: 1 } } },
   })
 }

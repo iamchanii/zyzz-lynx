@@ -81,7 +81,7 @@ describe('zyzz', () => {
   test('executes platform styles, variants, and changing payloads without authoring callbacks', async () => {
     const source = `import { style, variants } from 'zyzz'
       const box = style({ width: '10px', targets: { ios: { opacity: 0.5 }, android: { opacity: 0.8 } } })
-      const card = variants({ base: { padding: '2px' }, variants: { big: { true: { padding: '8px' }, false: { padding: '4px' } } }, defaultVariants: { big: false } })
+      const card = variants({ selection: 'attribute', base: { padding: '2px' }, variants: { big: { true: { padding: '8px' }, false: { padding: '4px' } } }, defaultVariants: { big: false } })
       const meter = style((value: { width: \`\${number}px\` }) => ({ width: value.width }))
       export const results = [box(), card(), card({ big: true }), meter({ width: '12px' }), meter({ width: '24px' })]`
     const ios = await execute(compile(source).code!)
@@ -407,7 +407,7 @@ describe('web', () => {
       const source = `import { style, variants } from 'zyzz'
         const box = style({ width: '40px', height: '12px', backgroundColor: 'red', selectors: { '&:hover': { opacity: 0.5 } } })
         const meter = style((value: { width: \`\${number}px\` }) => ({ width: value.width, height: '8px' }))
-        const card = variants({ base: { opacity: 0.2 }, variants: { active: { true: { opacity: 0.7 } } } })
+        const card = variants({ selection: 'attribute', base: { opacity: 0.2 }, variants: { active: { true: { opacity: 0.7 } } } })
         export const results = [box(), meter({ width: '72px' }), card({ active: true })]`
       const output = Babel.transformSync(source, {
         babelrc: false,

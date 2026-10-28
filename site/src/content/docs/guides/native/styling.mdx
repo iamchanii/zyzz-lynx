@@ -209,6 +209,7 @@ export declare namespace SaveButton {
 
 namespace styles {
   export const button = variants({
+    selection: 'attribute',
     base: { backgroundColor: '#2563eb', padding: '12px' },
     variants: {
       disabled: { false: { opacity: 1 }, true: { opacity: 0.5 } },
@@ -220,7 +221,7 @@ namespace styles {
 }
 ```
 
-See [Variants](/docs/guides/variants) for compound rules, dynamic choices, and typed props.
+Native recipes declare `selection: 'attribute'`, since the default types applications as class list strings. See [Variants](/docs/guides/variants) for compound rules, dynamic choices, and typed props.
 
 ## More
 

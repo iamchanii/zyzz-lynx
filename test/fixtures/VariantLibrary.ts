@@ -14,7 +14,7 @@ export function sources(options: sources.Options = {}) {
 export const {style,variants,vars}=Config.create({${cssOutput ? `cssOutput:'${cssOutput}',` : ''}${output === 'html' ? "output:'html'," : ''}vars:{color:{brand:{light:'#0066cc',dark:'#99ccff'}},breakpoint:{wide:'600px'}},shorthands:{px:['paddingLeft','paddingRight']}});`,
     '@acme/variants/styles.ts': `import {style,variants} from './config.js';
 export namespace styles {
-  export const button=variants({
+  export const button=variants({ selection: 'attribute',
     base:{color:'brand',padding:'2px'},
     conditions:{wide:'@media >=wide'},
     variants:{size:{sm:{px:'4px'},lg:{px:'12px'},custom:(values:{padding:\`\${number}px\`})=>({px:values.padding})},active:{true:{opacity:1},false:{opacity:0.5}}},

@@ -177,6 +177,7 @@ namespace styles {
       scale: 'medium',
       variant: 'primary',
     },
+    selection: 'attribute',
     variants: {
       appearance: {
         base: {},

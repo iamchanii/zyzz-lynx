@@ -634,7 +634,7 @@ fn recipe_type(call: &Call<'_>, recipe: &runtime::Definition, html: bool) -> Str
     let selection = match (&recipe.prefix, recipe.class_list) {
         (Some(_), true) => "selection:'className';",
         (Some(_), false) => "selection:'class';",
-        (None, _) => "",
+        (None, _) => "selection:'attribute';",
     };
 
     format!(

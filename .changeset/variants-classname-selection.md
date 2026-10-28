@@ -2,4 +2,4 @@
 'zyzz-lynx': minor
 ---
 
-Added `selection: 'className'` to `variants`. It selects choices with classes like `selection: 'class'`, and applications return the class list string, so Lynx elements take `className={styles.badge({ tone: 'success' })}` directly. The compiler rejects `conditions` and dynamic choices in these recipes, and native compilation rejects the option.
+Added `selection: 'className'` to `variants` and made it the default for recipes without conditions or dynamic choices. These recipes select choices with classes, and applications return the class list string, so elements take `className={styles.badge({ tone: 'success' })}` directly. Recipes with conditions or dynamic choices keep `data-*` attribute props. Declare `selection: 'attribute'` or `selection: 'class'` to keep spreading props, as `cx` and native code need.

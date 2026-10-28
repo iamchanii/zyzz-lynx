@@ -43,6 +43,24 @@ Recipe.create({
 })
 ```
 
+### options.classList
+
+- **Type:** `boolean{:ts}`
+- **Default:** `false{:ts}`
+
+Whether the callable returns the class list string instead of props, as recipes with `selection: 'className'` do. Only class-selection metadata, which carries a `prefix`, sets it.
+
+```ts /classList: true/
+// Returns "z-button zvAbCdEfGh0"
+Recipe.create({
+  axes: { size: ['small'] },
+  className: 'z-button',
+  classList: true,
+  defaults: { size: 'small' },
+  prefix: 'zvAbCdEfGh',
+})()
+```
+
 ### options.className
 
 - **Type:** `string{:ts}`

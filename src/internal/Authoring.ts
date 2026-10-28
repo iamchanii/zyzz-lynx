@@ -195,7 +195,14 @@ export function variants(
   )
   const conditions = Object.keys((input.conditions ?? {}) as object)
   const defaults = (input.defaultVariants ?? {}) as Record<string, unknown>
-  const classList = input.selection === 'className'
+  // Recipes without conditions or dynamic choices return the class list by default.
+  const classList =
+    input.selection === 'className' ||
+    (input.selection === undefined &&
+      input.conditions === undefined &&
+      !axes.some(([, choices]) =>
+        Object.values(choices).some((choice) => typeof choice === 'function'),
+      ))
   if (classList && conditions.length)
     throw new Style.InvalidError([
       {

@@ -11,7 +11,7 @@ import { type Props, variants } from 'zyzz'
 export function Button(props: Button.Props) {
   const { children, ...selection } = props
   return (
-    <button {...styles.button(selection)} type="button">
+    <button className={styles.button(selection)} type="button">
       {children}
     </button>
   )
@@ -38,7 +38,7 @@ namespace styles {
 
 - **Type:** `Props.Variants<typeof recipe>{:ts}`
 
-The input of an applied recipe: every selection, dynamic choice payloads, `conditions` when the recipe declares them, and the `className`, `style`, and `vars` overrides. Optional selections stay optional. It equals `NonNullable<Parameters<typeof recipe>[0]>`.
+The input of an applied recipe: every selection, dynamic choice payloads, `conditions` when the recipe declares them, and the `className` override, plus `style` and `vars` when the recipe returns props. Optional selections stay optional. It equals `NonNullable<Parameters<typeof recipe>[0]>`.
 
 ```ts /Props.Variants<typeof styles.button>/
 // { className?, size?, style?, vars? }

@@ -42,6 +42,7 @@ export declare namespace Callout {
 
 namespace styles {
   export const callout = variants({
+    selection: 'attribute',
     base: {
       typography: 'copy.14',
       alignItems: 'flex-start',

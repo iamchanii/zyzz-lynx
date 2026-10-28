@@ -334,6 +334,7 @@ namespace styles {
   export const box = variants({
     base: { backgroundColor: 'background', width: 'size' },
     defaultVariants: { wide: false },
+    selection: 'attribute',
     variants: { wide: { false: {}, true: { width: '200px !custom' } } },
   })
   export const safe = style({

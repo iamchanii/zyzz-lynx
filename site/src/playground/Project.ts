@@ -229,7 +229,7 @@ namespace styles {
   export const page = style({ padding: '40px !custom' })
 
   // The runtime selects precompiled styles, without generating CSS.
-  export const button = variants({
+  export const button = variants({ selection: 'attribute',
     base: {
       border: 'none',
       borderRadius: '10px',

@@ -311,6 +311,7 @@ namespace styles {
   export const muted = ui({ color: 'gray.900', typography: 'copy.14' })
 
   export const recipe = variants({
+    selection: 'attribute',
     base: {
       backgroundColor: '#0066cc',
       border: '0px',

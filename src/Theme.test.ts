@@ -621,7 +621,7 @@ export const body=style({
       contracts: { 'library.js': contract },
       imports: { 'app.ts': { library: 'library.js', zyzz: null } },
       modules: {
-        'app.ts': `import {style,theme,variants} from 'library';export const body=style({typography:'copy.14'});export const strong=style({fontWeight:theme.typography.copy[14].fontWeight});export const text=variants({base:{typography:'copy.14'},variants:{strong:{true:{fontWeight:550}}}});`,
+        'app.ts': `import {style,theme,variants} from 'library';export const body=style({typography:'copy.14'});export const strong=style({fontWeight:theme.typography.copy[14].fontWeight});export const text=variants({ selection: 'attribute',base:{typography:'copy.14'},variants:{strong:{true:{fontWeight:550}}}});`,
       },
     })
 

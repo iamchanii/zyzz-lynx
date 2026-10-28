@@ -119,22 +119,42 @@ type Keys<value> = value extends unknown ? keyof value : never
  * choice returned as the class list itself.
  */
 type Selection = 'attribute' | 'class' | 'className'
+/** Whether applications return the class list, which recipes without conditions or dynamic choices do by default. */
+type ClassList<definition> = definition extends {
+  readonly selection: infer selection
+}
+  ? [selection] extends ['className']
+    ? true
+    : false
+  : definition extends { readonly conditions: unknown }
+    ? false
+    : [
+          {
+            [axis in keyof Axes<definition>]: DynamicKeys<
+              Axes<definition>[axis]
+            >
+          }[keyof Axes<definition>],
+        ] extends [never]
+      ? true
+      : false
 type Attributes<definition> = definition extends {
-  readonly selection: 'class' | 'className'
+  readonly selection: 'class'
 }
   ? {}
-  : {
-      readonly [axis in keyof Axes<definition> as `data-${axis & string}`]?:
-        | string
-        | undefined
-    }
+  : ClassList<definition> extends true
+    ? {}
+    : {
+        readonly [axis in keyof Axes<definition> as `data-${axis & string}`]?:
+          | string
+          | undefined
+      }
 type Selections<axes> = {
   readonly [axis in keyof axes]?: Choice<axes[axis]> | null | undefined
 }
 type Input<definition, output extends style.Output> = Selections<
   Axes<definition>
 > &
-  (definition extends { readonly selection: 'className' }
+  (ClassList<definition> extends true
     ? Pick<style.Options, 'className'>
     : style.Options<output>) &
   (keyof Conditions<definition> extends never
@@ -236,9 +256,10 @@ type Checked<
 
 /**
  * Declares base styles, variant axes, defaults, and ordered compounds.
- * `selection: 'class'` selects each choice with its own class instead of a `data-*` attribute.
- * `selection: 'className'` also selects with classes, and applications return the class list
- * string, without conditions, dynamic choices, or inline overrides.
+ * `selection: 'className'`, the default without conditions or dynamic choices, selects each
+ * choice with its own class, and applications return the class list string without inline
+ * overrides. `selection: 'class'` returns the same classes as props, and `selection: 'attribute'`,
+ * the default otherwise, selects with `data-*` attributes.
  * @param definition - Static recipe for one element.
  * @returns A callable selecting precompiled styles and returning one props object, or the class
  * list for `selection: 'className'`.
@@ -273,15 +294,15 @@ export declare namespace variants {
 
   /**
    * Callable selection; omitted values use defaults and null suppresses them.
-   * Props carry `data-*` selection attributes unless the definition selects with classes.
-   * `selection: 'className'` returns the class list instead of props.
+   * Class-list recipes return a string. Props carry `data-*` selection attributes unless the
+   * definition selects with classes.
    */
   type ReturnType<definition, output extends style.Output = 'react'> = <
     const input extends Input<definition, output> = Input<definition, output>,
   >(
     input?: input &
       Record<Exclude<Keys<input>, keyof Input<definition, output>>, never>,
-  ) => definition extends { readonly selection: 'className' }
+  ) => ClassList<definition> extends true
     ? string
     : style.Props<output> & Attributes<definition>
 
