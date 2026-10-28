@@ -177,6 +177,42 @@ describe('zyzz', () => {
     }
   }, 60_000)
 
+  test('encodes class-selection variants as flat choice rules', async () => {
+    const root = await fixture()
+    try {
+      await Fs.writeFile(
+        Path.join(root, 'src/App.tsx'),
+        `import { variants } from 'zyzz'\n\nexport function App(props: { tone?: 'neutral' | 'success' }) {\n  return <view {...badge({ size: 'large', tone: props.tone })} />\n}\n\nconst badge = variants({\n  base: { padding: '2px' },\n  compoundVariants: [{ style: { opacity: 0.5 }, when: { size: ['large', 'small'], tone: 'success' } }],\n  defaultVariants: { tone: 'neutral' },\n  selection: 'class',\n  variants: {\n    size: { large: { height: '40px' }, small: { height: '20px' } },\n    tone: { neutral: { color: 'rgb(0, 0, 0)' }, success: { color: 'rgb(0, 170, 0)' } },\n  },\n})\n`,
+      )
+
+      const result = await (await create(root)).build()
+      await result.close()
+
+      // The template encoder drops nested rules and `:where()` selectors.
+      const { css, mainThread } = await template(root)
+      expect(css).toMatchInlineSnapshot(`
+        [
+          ".z_i6Fywm0 { padding: 2px }",
+          ".zveWCW2ABL0 { height: 40px }",
+          ".zveWCW2ABL1 { height: 20px }",
+          ".zveWCW2ABL2 { color: #000 }",
+          ".zveWCW2ABL3 { color: #0a0 }",
+          ".zveWCW2ABL0.zveWCW2ABL3,.zveWCW2ABL1.zveWCW2ABL3 { opacity: .5 }",
+        ]
+      `)
+      expect(mainThread.match(/" zveWCW2ABL\d"/g)).toMatchInlineSnapshot(`
+        [
+          "" zveWCW2ABL0"",
+          "" zveWCW2ABL1"",
+          "" zveWCW2ABL2"",
+          "" zveWCW2ABL3"",
+        ]
+      `)
+    } finally {
+      await Fs.rm(root, { force: true, recursive: true })
+    }
+  }, 60_000)
+
   test('rebuilds the zyzz.css module after a style edit in watch mode', async () => {
     const root = await fixture()
     const rspeedy = await create(root)

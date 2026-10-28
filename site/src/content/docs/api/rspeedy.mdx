@@ -41,6 +41,31 @@ root.render(<App />)
 
 Each environment compiles separately, so `lynx` and `web` environments receive their own stylesheet. Watch rebuilds recompile the stylesheet after any source edit.
 
+## Variants
+
+The Lynx template encoder drops nested rules and `:where()` selectors, so attribute selection does not reach the bundle. Recipes declared with `selection: 'class'` compile to one flat rule per choice class, which the encoder keeps.
+
+```tsx title="src/Badge.tsx"
+import { variants } from 'zyzz'
+
+export function Badge() {
+  return <view {...styles.badge({ tone: 'success' })} />
+}
+
+namespace styles {
+  export const badge = variants({
+    // [!code hl:2]
+    // Emits .zv…1 { color: #0a0 } instead of a nested :where() rule
+    selection: 'class',
+    variants: {
+      tone: { neutral: { color: '#000' }, success: { color: '#0a0' } },
+    },
+  })
+}
+```
+
+A choice rule keeps the one-class specificity of the nested rule it replaces. A compound rule matches its choice classes together, so it gains one class of specificity for each additional axis it names. Conditional selections stay nested and do not reach Lynx.
+
 ## Signature
 
 ```ts

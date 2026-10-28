@@ -12,6 +12,7 @@ import * as AtRules from '../compiler/internal/AtRules.js'
 import * as Catalogs from '../compiler/internal/Catalogs.js'
 import * as ClassName from '../web/internal/ClassName.js'
 import * as Contracts from '../node/internal/Contracts.js'
+import * as Lynx from './internal/Lynx.js'
 import * as Results from '../compiler/internal/Results.js'
 import * as Vite from '../vite/index.js'
 import * as ThemeRules from '../web/internal/Themes.js'
@@ -432,6 +433,8 @@ const portable = createUnplugin<Options | undefined, false>(
                       emitted.has(component.name)
                     )
                       return []
+                    // Rspeedy encodes the stylesheet into a Lynx template.
+                    if (meta.framework === 'rspack') return Lynx.flatten(rule)
                   }
                   if (rule.type !== 'import') return
                   const url = replacements.get(rule.value.url)
