@@ -43,26 +43,29 @@ Each environment compiles separately, so `lynx` and `web` environments receive t
 
 ## Variants
 
-The Lynx template encoder drops nested rules and `:where()` selectors, so attribute selection does not reach the bundle. Recipes declared with `selection: 'class'` compile to one flat rule per choice class, which the encoder keeps.
+The Lynx template encoder drops nested rules and `:where()` selectors, so attribute selection does not reach the bundle. Recipes declared with `selection: 'className'` or `selection: 'class'` compile to one flat rule per choice class, which the encoder keeps.
 
 ```tsx title="src/Badge.tsx"
 import { variants } from 'zyzz'
 
 export function Badge() {
-  return <view {...styles.badge({ tone: 'success' })} />
+  // [!code hl:2]
+  // The call returns the class list string
+  return <view className={styles.badge({ tone: 'success' })} />
 }
 
 namespace styles {
   export const badge = variants({
-    // [!code hl:2]
     // Emits .zv…1 { color: #0a0 } instead of a nested :where() rule
-    selection: 'class',
+    selection: 'className',
     variants: {
       tone: { neutral: { color: '#000' }, success: { color: '#0a0' } },
     },
   })
 }
 ```
+
+`selection: 'class'` emits the same rules and returns props for a spread, such as `<view {...styles.badge()} />`.
 
 A choice rule keeps the one-class specificity of the nested rule it replaces. A compound rule matches its choice classes together, so it gains one class of specificity for each additional axis it names. Conditional selections stay nested and do not reach Lynx.
 

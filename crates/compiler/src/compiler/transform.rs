@@ -444,9 +444,16 @@ fn write_class_selector(
     let listed = class_name.len() > 2 && class_name.starts_with('"');
     let initial = if listed { class_name } else { "\"\"" };
 
+    // A class list carries no inline overrides.
+    let inline = if recipe.class_list {
+        ""
+    } else {
+        ",style=input.style,vars=input.vars,inline=vars?{...vars,...style}:style"
+    };
+
     let _ = write!(
         output,
-        "((input{parameter}={{}})=>{{const external=input.className,style=input.style,vars=input.vars,inline=vars?{{...vars,...style}}:style;let value,className={initial};"
+        "((input{parameter}={{}})=>{{const external=input.className{inline};let value,className={initial};"
     );
 
     let positions = recipes::Positions::new(&recipe.axes);
@@ -503,7 +510,11 @@ fn write_class_selector(
         );
     }
 
-    output.push_str("return inline?{className,style:inline}:{className}})");
+    output.push_str(if recipe.class_list {
+        "return className})"
+    } else {
+        "return inline?{className,style:inline}:{className}})"
+    });
 }
 
 /// `JSON.stringify({ ...recipe, html })`, in the key order `Recipes.expand` builds.
@@ -620,10 +631,10 @@ fn recipe_type(call: &Call<'_>, recipe: &runtime::Definition, html: bool) -> Str
         _ => String::new(),
     };
     let output = if html { ",\"html\"" } else { "" };
-    let selection = if recipe.prefix.is_some() {
-        "selection:'class';"
-    } else {
-        ""
+    let selection = match (&recipe.prefix, recipe.class_list) {
+        (Some(_), true) => "selection:'className';",
+        (Some(_), false) => "selection:'class';",
+        (None, _) => "",
     };
 
     format!(
@@ -1543,7 +1554,9 @@ pub fn compile<'a>(
                 continue;
             };
 
+            // A class list is no props object, so its applications never spread onto elements.
             if outputs.get(&*call.name).copied().unwrap_or_default()
+                || recipe.class_list
                 || recipe
                     .conditions
                     .as_ref()
@@ -3515,6 +3528,10 @@ impl<'a> Generator<'_, 'a> {
                     if let Some(prefix) = &recipe.prefix {
                         selection.push_str(",\"prefix\":");
                         js::write_string(&mut selection, prefix);
+                    }
+
+                    if recipe.class_list {
+                        selection.push_str(",\"classList\":true");
                     }
 
                     if let Some(silent) = &recipe.silent {

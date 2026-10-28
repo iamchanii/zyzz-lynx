@@ -489,6 +489,36 @@ The emitted rules keep their order and zero-specificity `:where()` wrappers, mat
 
 Class selection gives up readable selection state. Choice classes are generated names, so stylesheets, tests, and selectors outside the recipe cannot match a choice the way they match `[data-tone="success"]`, and the return type has no `data-*` keys. Native output ignores the option.
 
+## Class List Results
+
+Set `selection: 'className'` to select with classes and return the class list as a string. Assign it to `className` directly on targets such as Lynx, where every selection is a class.
+
+```tsx title="StatusBadge.tsx"
+import { variants } from 'zyzz'
+
+export function StatusBadge() {
+  // [!code hl:2]
+  // Assigns the class list string instead of spreading props
+  return <span className={styles.badge({ tone: 'success' })}>Paid</span>
+}
+
+namespace styles {
+  export const badge = variants({
+    base: { borderRadius: '999px', padding: '2px 8px' },
+    // Returns the class list instead of props
+    selection: 'className',
+    variants: {
+      tone: {
+        neutral: { backgroundColor: '#eee', color: '#333' },
+        success: { backgroundColor: '#e6f6ec', color: '#05612c' },
+      },
+    },
+  })
+}
+```
+
+A string carries no inline style, so applications accept only the `className` override, and the compiler rejects `conditions` and dynamic choices. Native compilation rejects the option.
+
 ## More
 
 <Card.Group>

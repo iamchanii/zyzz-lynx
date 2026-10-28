@@ -7,6 +7,8 @@ import * as Props from './Props.js'
 export type Definition = {
   /** Ordered axis names and their finite choices. */
   readonly axes: Readonly<Record<string, readonly string[]>>
+  /** Whether applications of a class-selection recipe return the class list instead of props. */
+  readonly classList?: boolean | undefined
   /** Ordered named conditions; only CSS evaluates their queries. */
   readonly conditions?: readonly string[] | undefined
   /** Normalized default selections. */
@@ -123,6 +125,7 @@ export function create(options: create.Options) {
         overrides.className,
       )
 
+    if (options.classList) return result.className
     return options.html ? Html.from(result) : result
   }
 }
@@ -130,7 +133,10 @@ export function create(options: create.Options) {
 /** Generated recipe initialization inputs. */
 export declare namespace create {
   /** Fixed metadata retained by the compiled callable. */
-  type Options = Pick<Definition, 'axes' | 'defaults' | 'prefix' | 'silent'> & {
+  type Options = Pick<
+    Definition,
+    'axes' | 'classList' | 'defaults' | 'prefix' | 'silent'
+  > & {
     /** Complete compiled class list. */
     readonly className: string
     /** Whether to return native HTML attributes. */

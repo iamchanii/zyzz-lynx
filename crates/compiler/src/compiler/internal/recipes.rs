@@ -476,21 +476,35 @@ pub fn expand<'s, 'a>(
             Expression::StringLiteral(literal) if literal.value == "attribute" => {
                 Selection::Attribute
             }
-            Expression::StringLiteral(literal) if literal.value == "class" => {
+            Expression::StringLiteral(literal)
+                if literal.value == "class" || literal.value == "className" =>
+            {
                 Selection::Class(prefix(options.identity))
             }
             _ => {
                 return Err(invalid(
-                    "Recipe selection must be 'attribute' or 'class'.",
+                    "Recipe selection must be 'attribute', 'class', or 'className'.",
                     property.value.span(),
                 ));
             }
         },
     };
+    // `className` selects like `class`, and applications return the class list itself, which
+    // carries no inline style for conditional or payload selections.
+    let class_list = field(&fields, "selection").is_some_and(|property| {
+        matches!(&property.value, Expression::StringLiteral(literal) if literal.value == "className")
+    });
 
     let mut named = Vec::new();
 
     if let Some(conditions) = field(&fields, "conditions") {
+        if class_list {
+            return Err(invalid(
+                "className selection does not support conditions.",
+                conditions.span,
+            ));
+        }
+
         for (name, property) in entries(&conditions.value)? {
             // Uncompiled authoring numbers conditions in `Object.keys` order, which moves array
             // indexes first, so condition classes would not match.
@@ -622,6 +636,13 @@ pub fn expand<'s, 'a>(
                 if let Some(models) = &models
                     && let Some(first) = models.first().and_then(|index| bindings.model(*index))
                 {
+                    if class_list {
+                        return Err(invalid(
+                            "className selection does not support dynamic choices.",
+                            style.span,
+                        ));
+                    }
+
                     let span = first.read.type_annotation.span();
                     let signature = options
                         .source
@@ -1007,6 +1028,7 @@ pub fn expand<'s, 'a>(
     let dynamic = !payloads.is_empty();
     let recipe = runtime::Definition {
         axes,
+        class_list,
         conditions: (!named.is_empty()).then(|| {
             named
                 .iter()

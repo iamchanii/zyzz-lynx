@@ -167,10 +167,10 @@ Recipes from `defineConfig` also accept the config's query aliases, such as `@me
 
 ### definition.selection
 
-- **Type:** `'attribute' | 'class'{:ts}`
+- **Type:** `'attribute' | 'class' | 'className'{:ts}`
 - **Default:** `'attribute'{:ts}`
 
-How applications carry selections. `'attribute'` writes one `data-*` attribute per selected axis. `'class'` appends one generated class per selected choice instead, and the emitted rules match `:where()` class selectors in the same order, so precedence is unchanged.
+How applications carry selections. `'attribute'` writes one `data-*` attribute per selected axis. `'class'` appends one generated class per selected choice instead, and the emitted rules match `:where()` class selectors in the same order, so precedence is unchanged. `'className'` selects like `'class'`, and applications return the class list string.
 
 ```ts
 import { variants } from 'zyzz'
@@ -185,7 +185,24 @@ const button = variants({
 })
 ```
 
-Class selection omits the `data-*` keys from the return type. Choice classes are generated names, so selectors and tests outside the recipe cannot match a selected choice. Native compilation ignores the option.
+Class selection omits the `data-*` keys from the return type. Choice classes are generated names, so selectors and tests outside the recipe cannot match a selected choice. Native compilation ignores `'class'` and rejects `'className'`.
+
+A `'className'` application accepts only the `className` override, since a string carries no inline style. The compiler rejects `conditions` and dynamic choices in these recipes.
+
+```ts
+import { variants } from 'zyzz'
+
+const chip = variants({
+  selection: 'className',
+  variants: {
+    size: { compact: { padding: '4px' }, regular: { padding: '8px' } },
+  },
+})
+
+// [!code hl:2]
+// A string such as "z_0 zv…0 extra", for a className prop
+const className = chip({ size: 'compact', className: 'extra' })
+```
 
 ### options.id
 
@@ -281,7 +298,7 @@ styles.button({ vars: { [variables.accent]: 'crimson' } })
 
 - **Type:** `string{:ts}`
 
-The recipe's generated class, followed by `options.className` when supplied. Class-selection recipes also include one class per selected choice.
+The recipe's generated class, followed by `options.className` when supplied. Class-selection recipes also include one class per selected choice. A recipe declared with `selection: 'className'` returns this string itself instead of props.
 
 ```tsx /{...styles.button({ size: 'compact' })}/
 // Spreading assigns the class, data attributes, and style together

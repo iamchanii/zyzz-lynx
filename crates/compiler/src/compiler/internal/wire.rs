@@ -484,6 +484,11 @@ impl<'o> Encoder<'o> {
                     .map(|(axis, choices)| (axis.to_string(), strings(choices.iter()))),
             ),
         );
+
+        if recipe.class_list {
+            object.insert("classList".into(), Value::Bool(true));
+        }
+
         optional(
             &mut object,
             "conditions",

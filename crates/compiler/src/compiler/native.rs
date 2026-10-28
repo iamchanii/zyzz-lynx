@@ -224,6 +224,12 @@ pub fn compile<'a>(
             ));
         }
 
+        if call.recipe.as_ref().is_some_and(|recipe| recipe.class_list) {
+            return Err(native(
+                "Native source compilation does not support className selection.",
+            ));
+        }
+
         let single;
         let recipe = match (&call.static_recipe, &call.dynamic_recipe) {
             (Some(recipe), _) | (None, Some(recipe)) => recipe,
@@ -1489,6 +1495,7 @@ impl Compiler<'_, '_> {
                     .iter()
                     .map(|(axis, choices)| (Arc::clone(axis), choices.clone()))
                     .collect(),
+                class_list: false,
                 conditions: None,
                 default_payloads: dynamic.default_payloads.clone(),
                 defaults: recipe

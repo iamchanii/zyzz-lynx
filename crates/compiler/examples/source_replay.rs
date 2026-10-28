@@ -31,6 +31,7 @@ fn calls<'a>(case: &Value) -> Vec<Call<'a>> {
                     recipe: call["recipe"].as_bool().filter(|recipe| *recipe).map(|_| {
                         compiler::runtime::recipe::Definition {
                             axes: compiler::js::Record::new(),
+                            class_list: false,
                             conditions: None,
                             default_payloads: None,
                             defaults: compiler::js::Record::new(),

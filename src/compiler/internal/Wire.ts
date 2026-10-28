@@ -587,6 +587,7 @@ function create(contracts: readonly Token.Contract[], options: decode.Options) {
   function recipe(input: Fields) {
     return {
       axes: lookup(input.axes, (choices) => [...(choices as string[])]),
+      ...(input.classList === true ? { classList: true } : {}),
       defaults: lookup(input.defaults, (value) => value),
       ...(input.payloads !== undefined
         ? {

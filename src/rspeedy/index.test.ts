@@ -213,6 +213,59 @@ describe('zyzz', () => {
     }
   }, 60_000)
 
+  test('applies className-selection variants as a className string', async () => {
+    const root = await fixture()
+    try {
+      await Fs.writeFile(
+        Path.join(root, 'src/App.tsx'),
+        `import { variants } from 'zyzz'\n\nexport function App(props: { tone?: 'neutral' | 'success' }) {\n  return <view className={styles.badge({ size: 'large', tone: props.tone })}><text className={styles.badge({ className: 'label', tone: 'success' })}>Hello</text></view>\n}\n\nnamespace styles {\n  export const badge = variants({\n    base: { padding: '2px' },\n    defaultVariants: { tone: 'neutral' },\n    selection: 'className',\n    variants: {\n      size: { large: { height: '40px' }, small: { height: '20px' } },\n      tone: { neutral: { color: 'rgb(0, 0, 0)' }, success: { color: 'rgb(0, 170, 0)' } },\n    },\n  })\n}\n`,
+      )
+
+      const result = await (await create(root)).build()
+      await result.close()
+
+      const { css, mainThread } = await template(root)
+      expect(css).toMatchInlineSnapshot(`
+        [
+          ".z_i6Fywm0 { padding: 2px }",
+          ".zv7eXG394G0 { height: 40px }",
+          ".zv7eXG394G1 { height: 20px }",
+          ".zv7eXG394G2 { color: #000 }",
+          ".zv7eXG394G3 { color: #0a0 }",
+        ]
+      `)
+      // ReactLynx passes each `className` value to `__SetClasses` unchanged.
+      expect(
+        mainThread.match(
+          /__SetClasses\(ctx\.__elements\[\d\], ctx\.__values\[\d\] \|\| ''\)/g,
+        ),
+      ).toMatchInlineSnapshot(`
+        [
+          "__SetClasses(ctx.__elements[0], ctx.__values[0] || '')",
+          "__SetClasses(ctx.__elements[1], ctx.__values[1] || '')",
+        ]
+      `)
+
+      const selector = mainThread.match(
+        /styles\.badge = (\(input = \{\}\)=>\{[\s\S]*?return className;\s*\})/,
+      )?.[1]
+      const badge = new Function(`return ${selector}`)() as (
+        input?: object,
+      ) => unknown
+
+      expect(badge({ size: 'large' })).toMatchInlineSnapshot(
+        `"z_i6Fywm0 z_i6Fywm1 z_i6Fywm2 z_i6Fywm3 z_i6Fywm4 zv7eXG394G0 zv7eXG394G2"`,
+      )
+      expect(
+        badge({ className: 'label', tone: 'success' }),
+      ).toMatchInlineSnapshot(
+        `"z_i6Fywm0 z_i6Fywm1 z_i6Fywm2 z_i6Fywm3 z_i6Fywm4 zv7eXG394G3 label"`,
+      )
+    } finally {
+      await Fs.rm(root, { force: true, recursive: true })
+    }
+  }, 60_000)
+
   test('rebuilds the zyzz.css module after a style edit in watch mode', async () => {
     const root = await fixture()
     const rspeedy = await create(root)

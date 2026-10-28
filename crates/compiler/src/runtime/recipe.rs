@@ -29,6 +29,8 @@ pub struct Payload {
 pub struct Definition {
     /// Choices of each axis.
     pub axes: Record<Vec<Arc<str>>>,
+    /// Whether applications return the class list string instead of props.
+    pub class_list: bool,
     /// Condition names, for conditional recipes.
     pub conditions: Option<Vec<Arc<str>>>,
     /// Default payload values by axis and field.

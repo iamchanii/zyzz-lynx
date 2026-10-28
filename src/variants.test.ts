@@ -2030,7 +2030,7 @@ export const initialized = renderToStaticMarkup(<button {...classes.button({ var
           source: `import {variants} from 'zyzz'; variants({selection:'classes',variants:{size:{sm:{}}}})`,
         }),
       ).toThrowErrorMatchingInlineSnapshot(
-        `[Source.ExtractError: recipe.ts:51: Recipe selection must be 'attribute' or 'class'.]`,
+        `[Source.ExtractError: recipe.ts:51: Recipe selection must be 'attribute', 'class', or 'className'.]`,
       )
       expect(() =>
         Source.extract({

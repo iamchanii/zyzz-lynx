@@ -121,8 +121,23 @@ describe('variants', () => {
     expectTypeOf(attributes()['data-size']).toEqualTypeOf<string | undefined>()
     // @ts-expect-error Class selection writes no data attributes.
     void button()['data-size']
-    // @ts-expect-error Selection names one of the two modes.
+    // @ts-expect-error Selection names one of the three modes.
     variants({ selection: 'classes', variants: { size: { sm: {} } } })
+  })
+
+  test('returns the class list for className selection', () => {
+    const button = variants({
+      selection: 'className',
+      variants: { size: { sm: { padding: '4px' } } },
+      defaultVariants: { size: 'sm' },
+    })
+
+    expectTypeOf(button({ size: 'sm' })).toEqualTypeOf<string>()
+    expectTypeOf(button({ className: 'external' })).toEqualTypeOf<string>()
+    // @ts-expect-error A class list carries no inline style.
+    button({ style: { opacity: 0.5 } })
+    // @ts-expect-error A class list carries no variable assignments.
+    button({ vars: { '--gap': '4px' } })
   })
 
   test('rejects invalid properties and recipe structure', () => {

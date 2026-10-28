@@ -246,6 +246,11 @@ pub fn candidate<'a>(
     let definition = recipe.definition;
     let attributes = definition.prefix.is_none();
 
+    // A class list is no props object, so the element cannot spread it.
+    if definition.class_list {
+        return None;
+    }
+
     // Choice tests compare strings, while the runtime stringifies values, so a number or other
     // value could stringify to a numeric choice name. Attribute selection calls `String`.
     if (attributes && !strings)

@@ -3775,6 +3775,129 @@ export const button = variants({ base: { display: 'flex' }, defaultVariants: { t
         await browser.close()
       }
     })
+
+    test('returns class lists from className-selection recipe applications', async () => {
+      const source = `import { variants } from 'zyzz'
+export const App = ({ tone }: { tone?: 'loud' | 'quiet' }) => <main>
+<button id="first" className={styles.button({ size: 'large', tone })} />
+<button id="second" className={styles.button({ className: 'extra', tone: 'loud' })} />
+<button id="third" className={styles.button()} />
+</main>
+namespace styles {
+export const button = variants({ base: { display: 'flex' }, defaultVariants: { tone: 'quiet' }, selection: 'className', variants: { size: { large: { paddingLeft: '8px' }, small: { paddingLeft: '4px' } }, tone: { loud: { color: 'rgb(255, 0, 0)' }, quiet: { color: 'rgb(128, 128, 128)' } } } })
+}`
+      const output = Transform.compile({
+        cssOutput: 'grouped',
+        moduleId: 'App.tsx',
+        source,
+      })
+
+      // The selector returns the class list instead of props.
+      expect(output.code).toMatchInlineSnapshot(`
+        "
+        export const App = ({ tone }: { tone?: 'loud' | 'quiet' }) => <main>
+        <button id="first" className={styles.button({ size: 'large', tone })} />
+        <button id="second" className={styles.button({ className: 'extra', tone: 'loud' })} />
+        <button id="third" className={styles.button()} />
+        </main>
+        namespace styles {
+        export const button = (((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className;let value,className="z_l0kPgl0";value=Object.prototype.hasOwnProperty.call(input,"size")?input["size"]:void 0;if(value!==null&&value!==void 0){value=String(value);className+=value==="large"?" zv3hmMUQlM0":value==="small"?" zv3hmMUQlM1":""}value=Object.prototype.hasOwnProperty.call(input,"tone")?input["tone"]:void 0;if(value===void 0)value="quiet";if(value!==null&&value!==void 0){value=String(value);className+=value==="loud"?" zv3hmMUQlM2":value==="quiet"?" zv3hmMUQlM3":""}if(external)className+=" "+external;return className}) as unknown as import('zyzz').variants.ReturnType<{selection:'className';variants:{"size":{"large":{};"small":{}};"tone":{"loud":{};"quiet":{}}}}>)
+        }"
+      `)
+
+      const bundle = await Esbuild.build({
+        bundle: true,
+        external: ['react'],
+        format: 'cjs',
+        jsx: 'automatic',
+        platform: 'node',
+        stdin: {
+          contents: output.code,
+          loader: 'tsx',
+          resolveDir: process.cwd(),
+        },
+        write: false,
+      })
+      const module = {
+        exports: {} as { App: (props: object) => React.ReactNode },
+      }
+
+      new Function('module', 'exports', 'require', bundle.outputFiles[0]!.text)(
+        module,
+        module.exports,
+        Module.createRequire(import.meta.url),
+      )
+
+      const props: object = { tone: 'loud' }
+      const markup = Server.renderToStaticMarkup(
+        React.createElement(module.exports.App, props),
+      )
+
+      expect(markup).toMatchInlineSnapshot(
+        `"<main><button id="first" class="z_l0kPgl0 zv3hmMUQlM0 zv3hmMUQlM2"></button><button id="second" class="z_l0kPgl0 zv3hmMUQlM2 extra"></button><button id="third" class="z_l0kPgl0 zv3hmMUQlM3"></button></main>"`,
+      )
+
+      const browser = await chromium.launch()
+
+      try {
+        const page = await browser.newPage()
+
+        await page.setContent(`<style>${output.css}</style>${markup}`)
+
+        expect(
+          await page
+            .locator('button')
+            .evaluateAll((elements) =>
+              elements.map((element) => [
+                element.id,
+                getComputedStyle(element).color,
+                getComputedStyle(element).paddingLeft,
+              ]),
+            ),
+        ).toMatchInlineSnapshot(`
+          [
+            [
+              "first",
+              "rgb(255, 0, 0)",
+              "8px",
+            ],
+            [
+              "second",
+              "rgb(255, 0, 0)",
+              "6px",
+            ],
+            [
+              "third",
+              "rgb(128, 128, 128)",
+              "6px",
+            ],
+          ]
+        `)
+      } finally {
+        await browser.close()
+      }
+    })
+
+    test('rejects conditions and dynamic choices under className selection', () => {
+      expect(() =>
+        Transform.compile({
+          moduleId: 'conditions.ts',
+          source: `import { variants } from 'zyzz'
+export const button = variants({ conditions: { wide: '@media (min-width: 40rem)' }, selection: 'className', variants: { size: { large: { paddingLeft: '8px' } } } })`,
+        }),
+      ).toThrowErrorMatchingInlineSnapshot(
+        `[Source.ExtractError: conditions.ts:65: className selection does not support conditions.]`,
+      )
+      expect(() =>
+        Transform.compile({
+          moduleId: 'payloads.ts',
+          source: `import { variants } from 'zyzz'
+export const button = variants({ selection: 'className', variants: { size: { custom: (values: { width: string }) => ({ width: values.width }) } } })`,
+        }),
+      ).toThrowErrorMatchingInlineSnapshot(
+        `[Source.ExtractError: payloads.ts:109: className selection does not support dynamic choices.]`,
+      )
+    })
   })
 })
 
