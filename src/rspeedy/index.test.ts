@@ -1,6 +1,7 @@
 /** Builds ReactLynx applications with Rspeedy and inspects the encoded Lynx stylesheet. @module */
 import { pluginReactLynx } from '@lynx-js/react-rsbuild-plugin'
 import { createRspeedy } from '@lynx-js/rspeedy'
+import type { RsbuildPlugin, Rspack } from '@rsbuild/core'
 import * as Fs from 'node:fs/promises'
 import * as Path from 'node:path'
 import { describe, expect, test } from 'vite-plus/test'
@@ -172,6 +173,96 @@ describe('zyzz', () => {
       )
       expect(source.includes('Object.hasOwn(')).toMatchInlineSnapshot(`false`)
       expect(source.includes('z-theme-large')).toMatchInlineSnapshot(`true`)
+    } finally {
+      await Fs.rm(root, { force: true, recursive: true })
+    }
+  }, 60_000)
+
+  test('compiles sources before pre-enforced loaders', async () => {
+    const root = await fixture()
+    try {
+      // Mirrors source-rewriting pre loaders such as a GraphQL Babel optimizer.
+      const loader = Path.join(root, 'pre-loader.cjs')
+      await Fs.writeFile(
+        loader,
+        "module.exports = function (source) { return source + '\\nglobalThis.preLoaded = true\\n' }\n",
+      )
+      const lateLoader = Path.join(root, 'late-loader.cjs')
+      await Fs.writeFile(
+        lateLoader,
+        "module.exports = function (source) { return source + '\\nglobalThis.lateLoaded = true\\n' }\n",
+      )
+      await Fs.writeFile(
+        Path.join(root, 'src/store.ts'),
+        'export const store = { items: [] as readonly string[] }\n',
+      )
+      await Fs.writeFile(
+        Path.join(root, 'src/index.tsx'),
+        `import 'zyzz.css'\nimport { root } from '@lynx-js/react'\nimport { App } from './App'\nimport { store } from './store'\n\nconsole.log(store)\nroot.render(<App />)\n`,
+      )
+
+      // Appends a pre rule from a setup hook tapped after the Zyzz plugin applies.
+      const late: RsbuildPlugin = {
+        name: 'late',
+        setup(api) {
+          api.modifyRspackConfig((config) => {
+            config.plugins.push({
+              apply(compiler: Rspack.Compiler) {
+                compiler.hooks.afterEnvironment.tap('late', () => {
+                  compiler.options.module.rules.push({
+                    enforce: 'pre',
+                    test: /\.tsx?$/,
+                    use: [lateLoader],
+                  })
+                })
+              },
+            })
+          })
+        },
+      }
+
+      const rspeedy = await createRspeedy({
+        cwd: root,
+        loadEnv: false,
+        rspeedyConfig: {
+          mode: 'development',
+          plugins: [pluginReactLynx(), zyzz(), late],
+          source: { entry: { main: './src/index.tsx' } },
+          tools: {
+            rspack: {
+              module: {
+                rules: [{ enforce: 'pre', test: /\.tsx?$/, use: [loader] }],
+              },
+            },
+          },
+        },
+      })
+      let errors: readonly string[] = []
+      rspeedy.onAfterBuild((context) => {
+        errors = (
+          context.stats?.toJson({ all: false, errors: true }).errors ?? []
+        ).map((error) => error.message)
+      })
+      const result = await rspeedy.build()
+      await result.close()
+
+      expect(errors).toMatchInlineSnapshot(`[]`)
+
+      const { css, mainThread } = await template(root)
+      expect(css).toMatchInlineSnapshot(`
+        [
+          ".z_i6Fywm0 { background-color: #06c }",
+          ".z_i6Fywm1 { padding: 8px }",
+          ".z_i6Fywm2 { color: #fff }",
+          ".z_i6Fywm3 { font-size: 20px }",
+        ]
+      `)
+      expect(mainThread.includes('globalThis.preLoaded')).toMatchInlineSnapshot(
+        `true`,
+      )
+      expect(
+        mainThread.includes('globalThis.lateLoaded'),
+      ).toMatchInlineSnapshot(`true`)
     } finally {
       await Fs.rm(root, { force: true, recursive: true })
     }
