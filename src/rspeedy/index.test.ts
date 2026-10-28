@@ -1,6 +1,7 @@
 /** Builds ReactLynx applications with Rspeedy and inspects the encoded Lynx stylesheet. @module */
 import { pluginReactLynx } from '@lynx-js/react-rsbuild-plugin'
 import { createRspeedy } from '@lynx-js/rspeedy'
+import type { RsbuildPlugin, Rspack } from '@rsbuild/core'
 import * as Fs from 'node:fs/promises'
 import * as Path from 'node:path'
 import { describe, expect, test } from 'vite-plus/test'
@@ -186,6 +187,11 @@ describe('zyzz', () => {
         loader,
         "module.exports = function (source) { return source + '\\nglobalThis.preLoaded = true\\n' }\n",
       )
+      const lateLoader = Path.join(root, 'late-loader.cjs')
+      await Fs.writeFile(
+        lateLoader,
+        "module.exports = function (source) { return source + '\\nglobalThis.lateLoaded = true\\n' }\n",
+      )
       await Fs.writeFile(
         Path.join(root, 'src/store.ts'),
         'export const store = { items: [] as readonly string[] }\n',
@@ -195,12 +201,32 @@ describe('zyzz', () => {
         `import 'zyzz.css'\nimport { root } from '@lynx-js/react'\nimport { App } from './App'\nimport { store } from './store'\n\nconsole.log(store)\nroot.render(<App />)\n`,
       )
 
+      // Appends a pre rule from a setup hook tapped after the Zyzz plugin applies.
+      const late: RsbuildPlugin = {
+        name: 'late',
+        setup(api) {
+          api.modifyRspackConfig((config) => {
+            config.plugins.push({
+              apply(compiler: Rspack.Compiler) {
+                compiler.hooks.afterEnvironment.tap('late', () => {
+                  compiler.options.module.rules.push({
+                    enforce: 'pre',
+                    test: /\.tsx?$/,
+                    use: [lateLoader],
+                  })
+                })
+              },
+            })
+          })
+        },
+      }
+
       const rspeedy = await createRspeedy({
         cwd: root,
         loadEnv: false,
         rspeedyConfig: {
           mode: 'development',
-          plugins: [pluginReactLynx(), zyzz()],
+          plugins: [pluginReactLynx(), zyzz(), late],
           source: { entry: { main: './src/index.tsx' } },
           tools: {
             rspack: {
@@ -234,6 +260,9 @@ describe('zyzz', () => {
       expect(mainThread.includes('globalThis.preLoaded')).toMatchInlineSnapshot(
         `true`,
       )
+      expect(
+        mainThread.includes('globalThis.lateLoaded'),
+      ).toMatchInlineSnapshot(`true`)
     } finally {
       await Fs.rm(root, { force: true, recursive: true })
     }

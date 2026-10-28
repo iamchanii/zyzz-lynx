@@ -23,19 +23,22 @@ export function zyzz(options: Unplugin.Options = {}): RsbuildPlugin {
         config.plugins.push({
           apply(compiler: Rspack.Compiler) {
             const rules = compiler.options.module.rules
-            const count = rules.length
+            const before = new Set(rules)
             plugin.apply(compiler)
-            // The unplugin prepends its pre-enforced rules.
-            const added = rules.slice(0, rules.length - count)
+            const added = rules.filter((rule) => !before.has(rule))
 
             // Loaders of one stage run from the last rule to the first, so the
-            // appended rules see the authored source. Waiting until every
-            // plugin has applied also places them after rules added later.
-            compiler.hooks.afterEnvironment.tap('zyzz', () => {
-              const current = compiler.options.module.rules
-              const others = current.filter((rule) => !added.includes(rule))
-              current.splice(0, current.length, ...others, ...added)
-            })
+            // appended rules see the authored source. `initialize` is the last
+            // setup hook before Rspack reads the rules, so the final stage also
+            // places them after rules that plugins add in earlier setup hooks.
+            compiler.hooks.initialize.tap(
+              { name: 'zyzz', stage: Infinity },
+              () => {
+                const current = compiler.options.module.rules
+                const others = current.filter((rule) => !added.includes(rule))
+                current.splice(0, current.length, ...others, ...added)
+              },
+            )
           },
         })
       })
