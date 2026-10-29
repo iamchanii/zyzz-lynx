@@ -139,6 +139,9 @@ pub struct Call<'a> {
     pub composition_case: bool,
     /// Names of precompiled presence alternatives in bitmask order.
     pub composition_cases: Option<Vec<Arc<str>>>,
+    /// Choice-class prefixes this composition renames, as (runtime input, from, to), when it
+    /// copies the class rules of a Lynx recipe under classes of its own.
+    pub composition_renames: Option<Vec<Rename>>,
     /// Starts of a compile-time composition's input applications that keep no guard, since
     /// they always follow their definition's initialization.
     pub composition_settled: Vec<u32>,
@@ -189,6 +192,10 @@ pub struct Call<'a> {
     /// Authored scalar input type text.
     pub values_type: Option<Arc<str>>,
 }
+
+/// A choice-class prefix a composition renames: the runtime input it applies to, the recipe's
+/// prefix, and the composition's prefix for that input.
+pub type Rename = (usize, Arc<str>, Arc<str>);
 
 /// The stable category of a source diagnostic.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -279,6 +286,9 @@ pub struct StaticThemeReference {
 /// The target whose authoring semantics extraction applies.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum Target {
+    /// Lynx: the web authoring contract, compiled for a template encoder that keeps only flat
+    /// class rules. Recipes select with classes and emit one rule per choice and compound.
+    Lynx,
     /// React Native: applications keep native props composition.
     Native,
     /// The web.
@@ -1937,6 +1947,7 @@ impl<'a> Converter<'_, '_, '_, 'a> {
                         parts
                             .into_iter()
                             .map(|style| style::Rule {
+                                class: None,
                                 condition: None,
                                 style,
                             })
@@ -2698,6 +2709,7 @@ pub fn extract<'a>(allocator: &'a Allocator, options: &Options<'_, 'a>) -> Resul
                 object,
                 recipes::Options {
                     identity: &definition_id,
+                    lynx: options.target == Target::Lynx,
                     payloads: recipe_payloads::Options {
                         allocator,
                         allowed: &static_calls,
@@ -2828,9 +2840,15 @@ pub fn extract<'a>(allocator: &'a Allocator, options: &Options<'_, 'a>) -> Resul
                 })
         });
         let mut target_recipe = None;
+        // The Lynx target prints each choice and compound under its own class, as a rule of
+        // the recipe's style that applications select.
+        let mut class_rules: Vec<style::Rule> = Vec::new();
         let mut failed = false;
 
         if let Some((kind, recipe)) = retained {
+            let flat = expanded
+                .as_ref()
+                .and_then(|expanded| expanded.flat.as_deref());
             let mut rules = Vec::with_capacity(recipe.rules.len());
 
             for (position, rule) in recipe.rules.iter().enumerate() {
@@ -2838,10 +2856,29 @@ pub fn extract<'a>(allocator: &'a Allocator, options: &Options<'_, 'a>) -> Resul
                 let rule_name: Arc<str> = Arc::from(format!("{name}-{position}"));
 
                 match converter.define(values, &rule_name) {
-                    Ok(value) => rules.push(recipe::Rule {
-                        matches: rule.matches.clone(),
-                        value,
-                    }),
+                    Ok(value) => {
+                        if let Some(class) = flat.and_then(|flat| flat.get(position)?.as_ref()) {
+                            class_rules.extend(value.styles.iter().map(|style| style::Rule {
+                                class: Some(Arc::clone(class)),
+                                condition: None,
+                                // At-rules wrap the class rule only in atomic output. Lynx
+                                // drops every nested block.
+                                style: Arc::new(NamedStyle {
+                                    css_output: Some(if style.rules.is_none() {
+                                        token::CssOutput::Grouped
+                                    } else {
+                                        token::CssOutput::Atomic
+                                    }),
+                                    ..(**style).clone()
+                                }),
+                            }));
+                        }
+
+                        rules.push(recipe::Rule {
+                            matches: rule.matches.clone(),
+                            value,
+                        });
+                    }
                     Err(Error::Style(diagnostics)) => {
                         invalid_literals(converter.reporter, diagnostics, call.span);
                         failed = true;
@@ -2871,12 +2908,31 @@ pub fn extract<'a>(allocator: &'a Allocator, options: &Options<'_, 'a>) -> Resul
         let css_output = contract.and_then(|contract| contract.css_output);
 
         bodies.insert(call.span.start, body);
-        styles.extend(
-            definition
-                .styles
-                .iter()
-                .map(|style| with_contract(style, composition, css_output)),
-        );
+        styles.extend(definition.styles.iter().map(|style| {
+            if class_rules.is_empty() || style.name != name {
+                return with_contract(style, composition, css_output);
+            }
+
+            // The base keeps the configured output; the class rules follow it in order.
+            let base = style::Rule {
+                class: None,
+                condition: None,
+                style: with_contract(style, composition, css_output),
+            };
+
+            Arc::new(NamedStyle {
+                composition: style.composition.or(composition),
+                css_output: Some(token::CssOutput::Atomic),
+                declarations: Vec::new(),
+                name: Arc::clone(&style.name),
+                rules: Some(
+                    std::iter::once(base)
+                        .chain(class_rules.iter().cloned())
+                        .collect(),
+                ),
+                targets: None,
+            })
+        }));
 
         if failed {
             continue;

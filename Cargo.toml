@@ -16,7 +16,9 @@ compiler = { path = "crates/compiler" }
 css = { path = "crates/css" }
 indexmap = "2"
 insta = "1"
-lightningcss = { version = "=1.0.0-alpha.72", default-features = false, features = ["visitor"] }
+lightningcss = { version = "=1.0.0-alpha.72", default-features = false, features = [
+  "visitor",
+] }
 memchr = "2"
 mimalloc = "0.1"
 napi = { version = "3", default-features = false, features = ["napi6"] }

@@ -7,6 +7,13 @@ import * as Props from './Props.js'
 export type Definition = {
   /** Ordered axis names and their finite choices. */
   readonly axes: Readonly<Record<string, readonly string[]>>
+  /** Whether applications of a class-selection recipe return the class list instead of props. */
+  readonly classList?: boolean | undefined
+  /**
+   * Compound matches whose classes applications add themselves, in compound order, as
+   * `[axis, choices]` pairs. The class of a compound follows every choice class in position order.
+   */
+  readonly compounds?: readonly Matches[] | undefined
   /** Ordered named conditions; only CSS evaluates their queries. */
   readonly conditions?: readonly string[] | undefined
   /** Normalized default selections. */
@@ -22,6 +29,9 @@ export type Definition = {
   /** Choices of a class-selection recipe that no rule matches, whose classes applications omit. */
   readonly silent?: Readonly<Record<string, readonly string[]>> | undefined
 }
+
+/** Required choices by axis; an empty list matches every selection. */
+export type Matches = readonly (readonly [string, readonly string[]])[]
 
 /** Fixed input bindings for one dynamic choice. */
 export type Payload = {
@@ -75,6 +85,18 @@ export function offsets(axes: Definition['axes']): readonly number[] {
 export function create(options: create.Options) {
   const props = Props.create({ className: options.className })
   const starts = offsets(options.axes)
+  const total = Object.values(options.axes).reduce(
+    (count, choices) => count + choices.length,
+    0,
+  )
+  // Compound classes follow every choice class, so a match only needs the compound's position.
+  const compounds = (options.compounds ?? []).map((matches, index) => ({
+    class: ` ${choice({ index: total + index, prefix: options.prefix ?? '' })}`,
+    matches: matches.map(([axis, choices]) => ({
+      axis: Object.keys(options.axes).indexOf(axis),
+      choices,
+    })),
+  }))
   // Attribute names, choice classes, and defaults are fixed, so calls only read the selection.
   const axes = Object.keys(options.axes).map((axis, index) => ({
     attribute: `data-${axis}` as const,
@@ -100,6 +122,7 @@ export function create(options: create.Options) {
     // Props are fresh on every call, so selection attributes extend them in place.
     const result = props(overrides) as style.Props &
       Record<`data-${string}`, string>
+    const selections: (string | undefined)[] = []
 
     for (const entry of axes) {
       const selected = Object.prototype.hasOwnProperty.call(input, entry.axis)
@@ -110,11 +133,24 @@ export function create(options: create.Options) {
         | boolean
         | null
         | undefined
-      if (value === null || value === undefined) continue
+      if (value === null || value === undefined) {
+        selections.push(undefined)
+        continue
+      }
 
+      selections.push(String(value))
       if (entry.classes) classes += entry.classes.get(String(value)) ?? ''
       else result[entry.attribute] = String(value)
     }
+
+    for (const compound of compounds)
+      if (
+        compound.matches.every((match) => {
+          const selected = selections[match.axis]
+          return selected !== undefined && match.choices.includes(selected)
+        })
+      )
+        classes += compound.class
 
     // A recipe without rules has no compiled class list, so its first choice class keeps no space.
     if (classes)
@@ -123,6 +159,7 @@ export function create(options: create.Options) {
         overrides.className,
       )
 
+    if (options.classList) return result.className
     return options.html ? Html.from(result) : result
   }
 }
@@ -130,7 +167,10 @@ export function create(options: create.Options) {
 /** Generated recipe initialization inputs. */
 export declare namespace create {
   /** Fixed metadata retained by the compiled callable. */
-  type Options = Pick<Definition, 'axes' | 'defaults' | 'prefix' | 'silent'> & {
+  type Options = Pick<
+    Definition,
+    'axes' | 'classList' | 'compounds' | 'defaults' | 'prefix' | 'silent'
+  > & {
     /** Complete compiled class list. */
     readonly className: string
     /** Whether to return native HTML attributes. */

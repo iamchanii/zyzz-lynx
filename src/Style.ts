@@ -917,6 +917,8 @@ export type LiteralProperties = LiteralDeclarations & {
 
 /** Ordered nested blocks; an absent condition represents a declaration segment. */
 export type Rule = {
+  /** A class the block prints under instead of the owning style's classes, which applications add. Lynx recipes print each choice and compound this way. */
+  readonly class?: string | undefined
   /** Scoped selector or conditional at-rule; absent for a declaration segment. */
   readonly condition?: string | undefined
   /** Immutable nested declarations and ordered child rules. */

@@ -129,6 +129,7 @@ pub fn merge(name: &Arc<str>, rules: &[Rule], default: Option<CssOutput>) -> Opt
 
     if !kept.is_empty() {
         output.push(Rule {
+            class: None,
             condition: None,
             style: Arc::new(NamedStyle {
                 css_output: Some(CssOutput::Grouped),
@@ -151,6 +152,7 @@ pub fn merge(name: &Arc<str>, rules: &[Rule], default: Option<CssOutput>) -> Opt
 
         if let Some(style) = without(&rule.style, &mut visit) {
             output.push(Rule {
+                class: None,
                 condition: rule.condition.clone(),
                 style: Arc::new(style),
             });
@@ -364,6 +366,7 @@ fn without(style: &NamedStyle, visit: &mut Visit<'_>) -> Option<NamedStyle> {
             .iter()
             .filter_map(|rule| {
                 without(&rule.style, visit).map(|style| Rule {
+                    class: rule.class.clone(),
                     condition: rule.condition.clone(),
                     style: Arc::new(style),
                 })

@@ -1814,6 +1814,88 @@ export const button = variants({
       }
     })
 
+    test('returns the class list for className selection, compiled and uncompiled', async () => {
+      const source = `import { variants } from 'zyzz'
+export const button = variants({
+  selection: 'className',
+  base: { padding: '2px', color: 'black' },
+  variants: { size: { sm: { padding: '4px' }, lg: { padding: '12px' } }, tone: { loud: { color: 'red' }, quiet: {} } },
+  defaultVariants: { size: 'sm' },
+  compoundVariants: [{ when: { size: 'lg', tone: 'loud' }, style: { color: 'blue' } }],
+}, { id: 'button' })
+export const html = variants({
+  selection: 'className',
+  variants: { size: { sm: { padding: '4px' } } },
+}, { id: 'html' })`
+      const compiled = Graph.compile({ modules: { 'app.ts': source } })
+      const uncompiled = Graph.compile({
+        compiler: false,
+        modules: { 'app.ts': source },
+      })
+      const code = await Packed.bundle({
+        entry: 'app.ts',
+        modules: { 'app.ts': compiled.modules['app.ts']!.code },
+      })
+      const authored = await Packed.bundle({
+        entry: 'app.ts',
+        modules: { 'app.ts': source },
+      })
+
+      expect(compiled.modules['app.ts']!.code).toMatchInlineSnapshot(`
+        "
+        export const button = (((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className;let value,className="z_Zf5JrJ0 z_Zf5JrJ1 z_Zf5JrJ2 z_Zf5JrJ3 z_Zf5JrJ4 z_Zf5JrJ5 z-style-id-button";value=Object.prototype.hasOwnProperty.call(input,"size")?input["size"]:void 0;if(value===void 0)value="sm";if(value!==null&&value!==void 0){value=String(value);className+=value==="sm"?" zv1AOB2t480":value==="lg"?" zv1AOB2t481":""}value=Object.prototype.hasOwnProperty.call(input,"tone")?input["tone"]:void 0;if(value!==null&&value!==void 0){value=String(value);className+=value==="loud"?" zv1AOB2t482":""}if(external)className+=" "+external;return className}) as unknown as import('zyzz').variants.ReturnType<{selection:'className';variants:{"size":{"sm":{};"lg":{}};"tone":{"loud":{};"quiet":{}}}}>)
+        export const html = (((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className;let value,className="z_Zf5JrJ6 z-style-id-html";value=Object.prototype.hasOwnProperty.call(input,"size")?input["size"]:void 0;if(value!==null&&value!==void 0){value=String(value);className+=value==="sm"?" zvaOmHkFDw0":""}if(external)className+=" "+external;return className}) as unknown as import('zyzz').variants.ReturnType<{selection:'className';variants:{"size":{"sm":{}}}}>)"
+      `)
+
+      const browser = await chromium.launch({
+        headless: true,
+        args: ['--no-sandbox'],
+      })
+
+      try {
+        const page = await browser.newPage()
+        // Compiled and uncompiled CSS share the choice classes under distinct base classes.
+        await page.setContent(
+          `<style>${compiled.modules['app.ts']!.css}</style><style>${uncompiled.modules['app.ts']!.css}</style><button>Button</button>`,
+        )
+        await page.addScriptTag({ content: code + ';globalThis.App=Fixture;' })
+        await page.addScriptTag({
+          content: authored + ';globalThis.Authored=Fixture;',
+        })
+        await page.evaluate(`window.apply = (library, input) => {
+          const element = document.querySelector('button');
+          const value = library.button(input);
+          element.className = value;
+          const style = getComputedStyle(element);
+          return [typeof value, value, style.paddingTop, style.color].join(' | ');
+        }`)
+
+        // The compiled selector and uncompiled authoring return the same class list string.
+        expect(await page.evaluate(`apply(App)`)).toMatchInlineSnapshot(
+          `"string | z_Zf5JrJ0 z_Zf5JrJ1 z_Zf5JrJ2 z_Zf5JrJ3 z_Zf5JrJ4 z_Zf5JrJ5 z-style-id-button zv1AOB2t480 | 4px | rgb(0, 0, 0)"`,
+        )
+        expect(
+          await page.evaluate(
+            `apply(App, { size: 'lg', tone: 'loud', className: 'extra' })`,
+          ),
+        ).toMatchInlineSnapshot(
+          `"string | z_Zf5JrJ0 z_Zf5JrJ1 z_Zf5JrJ2 z_Zf5JrJ3 z_Zf5JrJ4 z_Zf5JrJ5 z-style-id-button zv1AOB2t481 zv1AOB2t482 extra | 12px | rgb(0, 0, 255)"`,
+        )
+        expect(await page.evaluate(`apply(Authored)`)).toMatchInlineSnapshot(
+          `"string | z-style-id-button zv1AOB2t480 | 4px | rgb(0, 0, 0)"`,
+        )
+        expect(
+          await page.evaluate(
+            `apply(Authored, { size: 'lg', tone: 'loud', className: 'extra' })`,
+          ),
+        ).toMatchInlineSnapshot(
+          `"string | z-style-id-button extra zv1AOB2t481 zv1AOB2t482 | 12px | rgb(0, 0, 255)"`,
+        )
+      } finally {
+        await browser.close()
+      }
+    })
+
     test('replaces repeated packed applications in cx through contract ownership', async () => {
       const publisher = Graph.compile({
         modules: {
@@ -2030,7 +2112,7 @@ export const initialized = renderToStaticMarkup(<button {...classes.button({ var
           source: `import {variants} from 'zyzz'; variants({selection:'classes',variants:{size:{sm:{}}}})`,
         }),
       ).toThrowErrorMatchingInlineSnapshot(
-        `[Source.ExtractError: recipe.ts:51: Recipe selection must be 'attribute' or 'class'.]`,
+        `[Source.ExtractError: recipe.ts:51: Recipe selection must be 'attribute', 'class', or 'className'.]`,
       )
       expect(() =>
         Source.extract({

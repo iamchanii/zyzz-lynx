@@ -501,6 +501,11 @@ fn representation(output: &mut String, style: &NamedStyle) {
         output.push('(');
 
         for rule in rules {
+            if let Some(class) = &rule.class {
+                output.push('.');
+                output.push_str(class);
+            }
+
             representation(output, &rule.style);
         }
 
@@ -830,6 +835,12 @@ impl<'a> Compiler<'a> {
     fn write_nested(&mut self, output: &mut String, style: &'a NamedStyle) {
         if let Some(rules) = &style.rules {
             for rule in rules {
+                // Nested output never carries class rules; the class only keys the text.
+                if let Some(class) = &rule.class {
+                    output.push('.');
+                    output.push_str(class);
+                }
+
                 match &rule.condition {
                     None => self.write_nested(output, &rule.style),
                     Some(condition) => {
@@ -873,7 +884,7 @@ impl<'a> Compiler<'a> {
             let mut items = Vec::new();
 
             for rule in rules {
-                if is_layer(rule.condition.as_ref()) {
+                if rule.class.is_some() || is_layer(rule.condition.as_ref()) {
                     return None;
                 }
 
@@ -1115,6 +1126,18 @@ impl<'a> Compiler<'a> {
 
         if let Some(rules) = &style.rules {
             for rule in rules {
+                // A class rule prints under its own class, which applications add, so it joins
+                // no class list and shares no unit.
+                if let Some(class) = &rule.class {
+                    let explicit = state.explicit.replace(class);
+                    let names = state.names.len();
+
+                    self.atoms(state, &rule.style, conditions, None, units);
+                    state.explicit = explicit;
+                    state.names.truncate(names);
+                    continue;
+                }
+
                 if is_layer(rule.condition.as_ref()) {
                     // Repeating an anonymous layer would change cascade precedence.
                     let inner = self.nested(&rule.style);

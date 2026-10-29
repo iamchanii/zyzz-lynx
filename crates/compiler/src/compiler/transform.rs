@@ -443,15 +443,32 @@ fn write_class_selector(
     // that the join below removes.
     let listed = class_name.len() > 2 && class_name.starts_with('"');
     let initial = if listed { class_name } else { "\"\"" };
+    // A class list carries no inline overrides.
+    let inline = if recipe.class_list {
+        ""
+    } else {
+        ",style=input.style,vars=input.vars,inline=vars?{...vars,...style}:style"
+    };
 
     let _ = write!(
         output,
-        "((input{parameter}={{}})=>{{const external=input.className,style=input.style,vars=input.vars,inline=vars?{{...vars,...style}}:style;let value,className={initial};"
+        "((input{parameter}={{}})=>{{const external=input.className{inline};let value,className={initial}"
     );
+
+    // Compound matches read the selected choice of each axis after every axis is read.
+    let compounds = recipe.compounds.as_deref().unwrap_or_default();
+
+    if !compounds.is_empty() {
+        for index in 0..recipe.axes.len() {
+            let _ = write!(output, ",s{index}");
+        }
+    }
+
+    output.push(';');
 
     let positions = recipes::Positions::new(&recipe.axes);
 
-    for (axis, choices) in recipe.axes.iter() {
+    for (index, (axis, choices)) in recipe.axes.iter().enumerate() {
         let mut key = String::new();
 
         js::write_string(&mut key, axis);
@@ -467,7 +484,13 @@ fn write_class_selector(
         }
 
         // `String` matches the attribute value an attribute recipe would write.
-        output.push_str("if(value!==null&&value!==void 0){value=String(value);className+=");
+        output.push_str("if(value!==null&&value!==void 0){value=String(value);");
+
+        if !compounds.is_empty() {
+            let _ = write!(output, "s{index}=value;");
+        }
+
+        output.push_str("className+=");
 
         let silent = recipe
             .silent
@@ -494,6 +517,52 @@ fn write_class_selector(
         output.push_str("\"\"}");
     }
 
+    // A compound's class follows every choice class in position order, as `Recipe.create` adds it.
+    let total: usize = recipe.axes.values().map(Vec::len).sum();
+
+    for (index, matches) in compounds.iter().enumerate() {
+        output.push_str("if(");
+
+        // A compound without conditions matches every selection, as in `Recipe.create`.
+        if matches.is_empty() {
+            output.push_str("true");
+        }
+
+        for (position, (axis, choices)) in matches.iter().enumerate() {
+            let Some(slot) = recipe.axes.keys().position(|name| name == axis) else {
+                continue;
+            };
+
+            if position > 0 {
+                output.push_str("&&");
+            }
+
+            if choices.len() > 1 {
+                output.push('(');
+            }
+
+            for (alternative, choice) in choices.iter().enumerate() {
+                if alternative > 0 {
+                    output.push_str("||");
+                }
+
+                let _ = write!(output, "s{slot}===");
+                js::write_string(output, choice);
+            }
+
+            if choices.len() > 1 {
+                output.push(')');
+            }
+        }
+
+        output.push_str(")className+=");
+        js::write_string(
+            output,
+            &format!(" {}", recipes::class(prefix, total + index, None)),
+        );
+        output.push(';');
+    }
+
     if listed {
         output.push_str("if(external)className+=\" \"+external;");
     } else {
@@ -503,7 +572,11 @@ fn write_class_selector(
         );
     }
 
-    output.push_str("return inline?{className,style:inline}:{className}})");
+    output.push_str(if recipe.class_list {
+        "return className})"
+    } else {
+        "return inline?{className,style:inline}:{className}})"
+    });
 }
 
 /// `JSON.stringify({ ...recipe, html })`, in the key order `Recipes.expand` builds.
@@ -620,10 +693,10 @@ fn recipe_type(call: &Call<'_>, recipe: &runtime::Definition, html: bool) -> Str
         _ => String::new(),
     };
     let output = if html { ",\"html\"" } else { "" };
-    let selection = if recipe.prefix.is_some() {
-        "selection:'class';"
-    } else {
-        ""
+    let selection = match (&recipe.prefix, recipe.class_list) {
+        (Some(_), true) => "selection:'className';",
+        (Some(_), false) => "selection:'class';",
+        (None, _) => "",
     };
 
     format!(
@@ -891,6 +964,11 @@ fn recipe_classes<'a>(
     recipe: &runtime::Definition,
 ) -> Option<ClassFields<'a>> {
     recipe.prefix.as_ref()?;
+
+    // A class list is no props object to spread, and compound classes need the selector.
+    if recipe.class_list || recipe.compounds.is_some() {
+        return None;
+    }
 
     let mut fields: ClassFields<'a> = SmallVec::new();
 
@@ -1883,6 +1961,8 @@ pub fn compile<'a>(
                 let recipe = call.recipe.as_ref().filter(|recipe| {
                     recipe.conditions.as_ref().is_none_or(Vec::is_empty)
                         && recipe.payloads.as_ref().is_none_or(Vec::is_empty)
+                        && !recipe.class_list
+                        && recipe.compounds.is_none()
                 })?;
                 let classes = generator.classes.get(&call.name)?;
 
@@ -2687,6 +2767,7 @@ fn fold_chains(styles: &mut Vec<Arc<NamedStyle>>, options: &FoldChains<'_, '_>) 
             .iter()
             .filter_map(|level| by_name.get(level))
             .map(|style| Rule {
+                class: None,
                 condition: None,
                 style: Arc::clone(style),
             })
@@ -3115,6 +3196,57 @@ impl<'a> Generator<'_, 'a> {
                 fields.push(format!("\"condition\":{condition}"));
             }
 
+            // Each presence alternative copies a Lynx recipe's class rules under its own
+            // prefix, so the helper renames the application's choice classes per case.
+            let alternatives: Vec<&Call<'a>> = match &call.composition_cases {
+                Some(cases) => cases
+                    .iter()
+                    .filter_map(|name| self.extracted.calls.iter().find(|call| call.name == *name))
+                    .collect(),
+                None => vec![call],
+            };
+
+            if alternatives.iter().any(|alternative| {
+                alternative
+                    .composition_renames
+                    .iter()
+                    .flatten()
+                    .any(|(position, ..)| *position == index)
+            }) {
+                let mut field = String::from("\"renames\":[");
+
+                for (position, alternative) in alternatives.iter().enumerate() {
+                    if position > 0 {
+                        field.push(',');
+                    }
+
+                    field.push('[');
+
+                    for (count, (_, from, to)) in alternative
+                        .composition_renames
+                        .iter()
+                        .flatten()
+                        .filter(|(input, ..)| *input == index)
+                        .enumerate()
+                    {
+                        if count > 0 {
+                            field.push(',');
+                        }
+
+                        field.push('[');
+                        js::write_string(&mut field, from);
+                        field.push(',');
+                        js::write_string(&mut field, to);
+                        field.push(']');
+                    }
+
+                    field.push(']');
+                }
+
+                field.push(']');
+                fields.push(field);
+            }
+
             for (key, values) in [
                 (
                     "attributes",
@@ -3524,6 +3656,24 @@ impl<'a> Generator<'_, 'a> {
                             silent.iter().map(|(axis, choices)| (&**axis, choices)),
                             |output, choices| write_strings(output, choices),
                         );
+                    }
+
+                    if let Some(compounds) = &recipe.compounds {
+                        selection.push_str(",\"compounds\":[");
+
+                        for (index, matches) in compounds.iter().enumerate() {
+                            if index > 0 {
+                                selection.push(',');
+                            }
+
+                            crate::internal::recipe::write_matches(&mut selection, matches);
+                        }
+
+                        selection.push(']');
+                    }
+
+                    if recipe.class_list {
+                        selection.push_str(",\"classList\":true");
                     }
 
                     if let Some(conditions) = &recipe.conditions {
@@ -4352,6 +4502,13 @@ impl<'a> Generator<'_, 'a> {
 
             owners.reserve(emitted.rules.len());
 
+            let by_name: FxHashMap<&str, &NamedStyle> = extracted
+                .styles
+                .styles
+                .iter()
+                .map(|style| (&*style.name, &**style))
+                .collect();
+
             for call in &extracted.calls {
                 for name in split_spaces(
                     lists
@@ -4361,6 +4518,20 @@ impl<'a> Generator<'_, 'a> {
                 ) {
                     if !owners.contains_key(name) {
                         owners.insert(name, call);
+                    }
+                }
+
+                // Class rules print under classes outside the call's class list.
+                for rule in by_name
+                    .get(&*call.name)
+                    .and_then(|style| style.rules.as_deref())
+                    .into_iter()
+                    .flatten()
+                {
+                    if let Some(class) = &rule.class
+                        && !owners.contains_key(&**class)
+                    {
+                        owners.insert(class, call);
                     }
                 }
             }

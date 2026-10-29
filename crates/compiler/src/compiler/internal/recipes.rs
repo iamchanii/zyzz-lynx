@@ -32,6 +32,10 @@ use crate::runtime::recipe as runtime;
 pub struct Options<'s, 'a> {
     /// Stable module and call identity.
     pub identity: &'s str,
+    /// Whether the Lynx target compiles the recipe. Lynx selects with classes and keeps only flat
+    /// class rules, so every rule becomes its own class rule and applications add compound
+    /// classes themselves.
+    pub lynx: bool,
     /// Static resolution hooks for payload callbacks.
     pub payloads: recipe_payloads::Options<'s, 'a>,
     /// Bound query aliases.
@@ -48,6 +52,9 @@ pub struct Expanded<'s, 'a> {
     pub body: &'a ObjectExpression<'a>,
     /// Ordered dynamic alternatives, for recipes with payloads and no conditions.
     pub dynamic_recipe: Option<recipe::Definition<&'a ObjectExpression<'a>>>,
+    /// The class of each retained rule, aligned with the alternatives' rules and `None` for
+    /// the base, when the target emits every choice and compound as its own flat class rule.
+    pub flat: Option<Vec<Option<Arc<str>>>>,
     /// Selection metadata.
     pub recipe: runtime::Definition,
     /// Ordered static alternatives, for recipes without payloads or conditions.
@@ -470,27 +477,57 @@ pub fn expand<'s, 'a>(
         }
     }
 
+    // Lynx matches no attribute selector, so its recipes select with classes by default.
     let selection = match field(&fields, "selection") {
+        None if options.lynx => Selection::Class(prefix(options.identity)),
         None => Selection::Attribute,
         Some(property) => match &property.value {
             Expression::StringLiteral(literal) if literal.value == "attribute" => {
+                if options.lynx {
+                    return Err(invalid(
+                        "Lynx recipes select with classes, not attributes. Remove selection: 'attribute'.",
+                        property.value.span(),
+                    ));
+                }
+
                 Selection::Attribute
             }
-            Expression::StringLiteral(literal) if literal.value == "class" => {
+            Expression::StringLiteral(literal)
+                if literal.value == "class" || literal.value == "className" =>
+            {
                 Selection::Class(prefix(options.identity))
             }
             _ => {
                 return Err(invalid(
-                    "Recipe selection must be 'attribute' or 'class'.",
+                    "Recipe selection must be 'attribute', 'class', or 'className'.",
                     property.value.span(),
                 ));
             }
         },
     };
+    // `className` selects like `class`, and applications return the class list itself, which
+    // carries neither conditional selections nor the inline bindings of dynamic choices.
+    let class_list = field(&fields, "selection").is_some_and(|property| {
+        matches!(&property.value, Expression::StringLiteral(literal) if literal.value == "className")
+    });
 
     let mut named = Vec::new();
 
     if let Some(conditions) = field(&fields, "conditions") {
+        if options.lynx {
+            return Err(invalid(
+                "Lynx recipes do not support conditions. Nest at-rules inside the choice styles instead.",
+                conditions.span,
+            ));
+        }
+
+        if class_list {
+            return Err(invalid(
+                "className selection does not support conditions.",
+                conditions.span,
+            ));
+        }
+
         for (name, property) in entries(&conditions.value)? {
             // Uncompiled authoring numbers conditions in `Object.keys` order, which moves array
             // indexes first, so condition classes would not match.
@@ -622,6 +659,13 @@ pub fn expand<'s, 'a>(
                 if let Some(models) = &models
                     && let Some(first) = models.first().and_then(|index| bindings.model(*index))
                 {
+                    if class_list {
+                        return Err(invalid(
+                            "className selection does not support dynamic choices.",
+                            style.span,
+                        ));
+                    }
+
                     let span = first.read.type_annotation.span();
                     let signature = options
                         .source
@@ -840,7 +884,8 @@ pub fn expand<'s, 'a>(
         }
     }
 
-    // A choice class that no selector reads changes nothing, so applications omit it.
+    // A choice class that no selector reads changes nothing, so applications omit it. Lynx
+    // applications match compounds themselves, so a compound reads no choice class there.
     let silent = matches!(selection, Selection::Class(_))
         .then(|| {
             let mut silent: Record<Vec<Arc<str>>> = Record::new();
@@ -855,13 +900,14 @@ pub fn expand<'s, 'a>(
                     continue;
                 };
                 let empty = matches!(&rule.property.value, Expression::ObjectExpression(body) if body.properties.is_empty());
-                let compounded = rules.iter().any(|other| {
-                    !other.suffix.is_empty()
-                        && other
-                            .matches
-                            .iter()
-                            .any(|(name, names)| name == axis && names.contains(choice))
-                });
+                let compounded = !options.lynx
+                    && rules.iter().any(|other| {
+                        !other.suffix.is_empty()
+                            && other
+                                .matches
+                                .iter()
+                                .any(|(name, names)| name == axis && names.contains(choice))
+                    });
 
                 if !empty || compounded {
                     continue;
@@ -879,7 +925,17 @@ pub fn expand<'s, 'a>(
     let positions = Positions::new(&axes);
     let mut tree = Tree::default();
 
-    for region in &regions {
+    // Lynx keeps no nested rule, so choices and compounds leave the body and become flat class
+    // rules of their own, which the retained alternatives below describe.
+    if options.lynx {
+        for rule in &rules {
+            if rule.bodies.is_none() {
+                object(&rule.property.value)?;
+            }
+        }
+    }
+
+    for region in regions.iter().filter(|_| !options.lynx) {
         let mut target = &mut tree;
 
         for rule in &region.rules {
@@ -972,6 +1028,58 @@ pub fn expand<'s, 'a>(
         ArenaVec::from_iter_in(properties, &allocator),
         &builder.ast,
     ));
+    // Retained rules pair each alternative with its rule, so the flat classes below align.
+    let retained: Vec<(Option<&Rule<'a>>, &'a ObjectExpression<'a>)> = base
+        .and_then(|base| object(&base.value).ok())
+        .map(|value| (None, value))
+        .into_iter()
+        .chain(rules.iter().filter_map(|rule| {
+            let value = match &rule.bodies {
+                Some(bodies) => bodies
+                    .first()
+                    .and_then(|index| bindings.model(*index))
+                    .map(|model| model.body),
+                None => object(&rule.property.value).ok(),
+            }?;
+
+            Some((Some(rule), value))
+        }))
+        .collect();
+    let total: usize = axes.values().map(Vec::len).sum();
+    let (compounds, flat) = match (&selection, options.lynx) {
+        (Selection::Class(prefix), true) => {
+            let mut compounds: Vec<recipe::Matches> = Vec::new();
+            let mut flat: Vec<Option<Arc<str>>> = Vec::with_capacity(retained.len());
+
+            for (rule, _) in &retained {
+                let Some(rule) = rule else {
+                    flat.push(None);
+                    continue;
+                };
+
+                if rule.suffix.is_empty() {
+                    let (axis, choice) = rule
+                        .matches
+                        .first()
+                        .and_then(|(axis, choices)| Some((axis, choices.first()?)))
+                        .map_or(("", ""), |(axis, choice)| (&**axis, &**choice));
+
+                    flat.push(positions.class(prefix, axis, choice, None).map(Arc::from));
+                    continue;
+                }
+
+                flat.push(Some(Arc::from(class(
+                    prefix,
+                    total + compounds.len(),
+                    None,
+                ))));
+                compounds.push(rule.matches.clone());
+            }
+
+            ((!compounds.is_empty()).then_some(compounds), Some(flat))
+        }
+        _ => (None, None),
+    };
     let alternatives = named.is_empty().then(|| recipe::Definition {
         axes: axes
             .iter()
@@ -981,32 +1089,19 @@ pub fn expand<'s, 'a>(
             .iter()
             .map(|(axis, choice)| (Arc::clone(axis), choice.clone()))
             .collect(),
-        rules: base
-            .and_then(|base| object(&base.value).ok())
-            .map(|value| recipe::Rule {
-                matches: Vec::new(),
-                value,
+        rules: retained
+            .iter()
+            .map(|(rule, value)| recipe::Rule {
+                matches: rule.map(|rule| rule.matches.clone()).unwrap_or_default(),
+                value: *value,
             })
-            .into_iter()
-            .chain(rules.iter().filter_map(|rule| {
-                let value = match &rule.bodies {
-                    Some(bodies) => bodies
-                        .first()
-                        .and_then(|index| bindings.model(*index))
-                        .map(|model| model.body),
-                    None => object(&rule.property.value).ok(),
-                }?;
-
-                Some(recipe::Rule {
-                    matches: rule.matches.clone(),
-                    value,
-                })
-            }))
             .collect(),
     });
     let dynamic = !payloads.is_empty();
     let recipe = runtime::Definition {
         axes,
+        class_list,
+        compounds,
         conditions: (!named.is_empty()).then(|| {
             named
                 .iter()
@@ -1032,6 +1127,7 @@ pub fn expand<'s, 'a>(
         bindings,
         body,
         dynamic_recipe,
+        flat,
         recipe,
         static_recipe,
         types,

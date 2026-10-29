@@ -473,7 +473,18 @@ impl Reader<'_> {
                         return Err(invalid("Invalid packed style condition."));
                     }
 
+                    let class = match get(rule, "class") {
+                        Data::Undefined => None,
+                        _ if self.version < 37 => {
+                            return Err(invalid(
+                                "Flat recipe rules require contract version 37 or later.",
+                            ));
+                        }
+                        value => Some(string(value)?),
+                    };
+
                     rules.push(Rule {
+                        class,
                         condition: condition.filter(|condition| !condition.is_empty()),
                         style: self.style(get(rule, "style"), depth + 1)?,
                     });
@@ -1113,6 +1124,12 @@ fn write_style(
             }
 
             output.push('{');
+
+            if let Some(class) = &rule.class {
+                output.push_str("\"class\":");
+                js::write_string(output, class);
+                output.push(',');
+            }
 
             if let Some(condition) = &rule.condition {
                 output.push_str("\"condition\":");

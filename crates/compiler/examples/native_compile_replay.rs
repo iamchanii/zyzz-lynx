@@ -536,6 +536,8 @@ fn runtime_recipe<'j>(decoder: &mut Decoder<'j>, node: &'j Json) -> Outcome<runt
 
     Ok(runtime::Definition {
         axes,
+        class_list: present(decoder, node, "classList").is_some(),
+        compounds: None,
         conditions: present(decoder, node, "conditions")
             .map(|conditions| decoder.strings(conditions))
             .transpose()?,

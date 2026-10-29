@@ -4,13 +4,16 @@ import * as Path from 'node:path'
 import * as Unplugin from '../unplugin/index.js'
 
 /**
- * Compiles project sources and serves the combined stylesheet as the `zyzz.css` module.
+ * Compiles project sources for the Lynx target and serves the combined stylesheet as the
+ * `zyzz.css` module.
  *
  * Import `zyzz.css` from the application entry so Lynx bundles the styles.
  * A relative `options.root` resolves from the Rspeedy project root, which is also the default.
  * The transform runs before every other loader, including `enforce: 'pre'` loaders.
+ * Every environment compiles for the Lynx template encoder, which keeps only flat class rules,
+ * so recipes select with classes and emit one rule per choice and compound.
  */
-export function zyzz(options: Unplugin.Options = {}): RsbuildPlugin {
+export function zyzz(options: zyzz.Options = {}): RsbuildPlugin {
   return {
     name: 'zyzz',
     setup(api) {
@@ -18,7 +21,7 @@ export function zyzz(options: Unplugin.Options = {}): RsbuildPlugin {
 
       api.modifyRspackConfig((config) => {
         // Environments compile concurrently, so each receives its own graph state.
-        const plugin = Unplugin.rspack({ ...options, root })
+        const plugin = Unplugin.rspack({ ...options, root, target: 'lynx' })
 
         config.plugins.push({
           apply(compiler: Rspack.Compiler) {
@@ -44,4 +47,10 @@ export function zyzz(options: Unplugin.Options = {}): RsbuildPlugin {
       })
     },
   }
+}
+
+/** Rspeedy plugin contracts. */
+export declare namespace zyzz {
+  /** Portable build configuration without the target, which is always Lynx. */
+  type Options = Omit<Unplugin.Options, 'target'>
 }

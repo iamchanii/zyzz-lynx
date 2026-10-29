@@ -92,6 +92,9 @@ pub struct Options {
     /// Publishes only configuration catalogs as contracts, for hosts that read module code,
     /// stylesheets, and catalogs but never publish contracts.
     pub lean: bool,
+    /// Compiles web modules for the Lynx template encoder, which keeps only flat class rules.
+    /// Recipes then select with classes and emit one rule per choice and compound.
+    pub lynx: bool,
     /// Complete source graph keyed by stable package-relative module identities.
     pub modules: Map<Arc<str>>,
     /// Native output context. `None` compiles web modules and CSS.
@@ -387,6 +390,7 @@ struct Cache {
     extracted: Map<Arc<Module>>,
     lean: bool,
     libraries: Map<Arc<Library>>,
+    lynx: bool,
     native: Option<NativeOptions>,
     owners: Arc<[(Arc<str>, usize)]>,
     referenced: Option<Arc<FxHashSet<Arc<str>>>>,
@@ -546,6 +550,7 @@ fn build(options: &Options, cache: Option<&Cache>) -> Result<Option<Cache>> {
             && cache.shared == options.shared
             && cache.entry.is_none() == options.entry.is_none()
             && cache.lean == options.lean
+            && cache.lynx == options.lynx
             && cache.references == options.references
     });
     let mut ids: Vec<Arc<str>> = options.modules.keys().cloned().collect();
@@ -1917,6 +1922,8 @@ impl<'p, 'a> Build<'p, 'a> {
                 source,
                 target: if options.native.is_some() {
                     Target::Native
+                } else if options.lynx {
+                    Target::Lynx
                 } else {
                     Target::Web
                 },
@@ -3321,6 +3328,7 @@ impl Build<'_, '_> {
             extracted: self.extracted,
             lean: options.lean,
             libraries: self.libraries,
+            lynx: options.lynx,
             native: Some(native.clone()),
             owners: Arc::from([]),
             referenced: None,
@@ -4436,6 +4444,7 @@ impl Build<'_, '_> {
             extracted: self.extracted,
             lean: options.lean,
             libraries: self.libraries,
+            lynx: options.lynx,
             native: None,
             owners: owner_signature,
             referenced,

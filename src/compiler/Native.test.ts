@@ -2337,6 +2337,15 @@ card().className;
       Native.compile({
         moduleId: 'bad.ts',
         colorScheme: 'light',
+        source: `import {variants} from 'zyzz';export const card=variants({selection:'className',variants:{tone:{quiet:{opacity:0.5}}}});`,
+      }),
+    ).toThrowErrorMatchingInlineSnapshot(
+      `[Native.CompileError: Native source compilation does not support className selection.]`,
+    )
+    expect(() =>
+      Native.compile({
+        moduleId: 'bad.ts',
+        colorScheme: 'light',
         source: `import {style} from 'zyzz';export const card=style({':hover':{opacity:0.5}});`,
       }),
     ).toThrowErrorMatchingInlineSnapshot(

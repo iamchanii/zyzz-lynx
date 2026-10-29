@@ -63,10 +63,10 @@ Transform.compile({ compiler: false, moduleId: 'app/Card.tsx', source })
 
 ### options.target
 
-- **Type:** `'web' | 'native'{:ts}`
+- **Type:** `'lynx' | 'web' | 'native'{:ts}`
 - **Default:** `'web'{:ts}`
 
-Inherited from [`Source.extract`](/docs/api/compiler/namespaces/Source#optionstarget). Only `'web'` is supported, and `'native'` throws a plain `Error` that points to [`Native.compile`](/docs/api/compiler/namespaces/Native).
+Inherited from [`Source.extract`](/docs/api/compiler/namespaces/Source#optionstarget). `'lynx'` emits each recipe choice and compound as one flat class rule for the Lynx template encoder, and `'native'` throws a plain `Error` that points to [`Native.compile`](/docs/api/compiler/namespaces/Native).
 
 ```ts /target: 'native'/
 // Throws: Use Native.compile for native source output.

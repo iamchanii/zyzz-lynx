@@ -599,6 +599,7 @@ impl Decoder {
 
                 for (condition, style) in rules {
                     output.push(Rule {
+                        class: None,
                         condition: condition.map(|condition| self.intern(condition)),
                         style: self.style(style, validate)?,
                     });
@@ -1711,7 +1712,14 @@ impl<'de> Visitor<'de> for RuleSeed<'_> {
             })?
             .ok_or_else(|| de::Error::custom("rules must be pairs"))?;
 
-        Ok((Rule { condition, style }, invalid))
+        Ok((
+            Rule {
+                class: None,
+                condition,
+                style,
+            },
+            invalid,
+        ))
     }
 }
 

@@ -158,8 +158,10 @@ Native only. The host's resolution of every static import in [`options.modules`]
 import { transformSync } from '@babel/core'
 import { zyzz } from 'zyzz/babel'
 
-const card = "import { style } from './zyzz.config.js'\nexport const card = style({ padding: 'md' })"
-const config = "import { defineConfig } from 'zyzz'\nexport const { style } = defineConfig({ vars: { spacing: { md: '16px' } } })"
+const card =
+  "import { style } from './zyzz.config.js'\nexport const card = style({ padding: 'md' })"
+const config =
+  "import { defineConfig } from 'zyzz'\nexport const { style } = defineConfig({ vars: { spacing: { md: '16px' } } })"
 const modules = { 'app/Card.ts': card, 'app/zyzz.config.ts': config }
 // [!code hl:5]
 // Resolves the relative import and leaves `zyzz` external
@@ -170,7 +172,9 @@ const imports = {
 
 const result = transformSync(card, {
   filename: 'Card.ts',
-  plugins: [[zyzz, { imports, moduleId: 'app/Card.ts', modules, platform: 'ios' }]],
+  plugins: [
+    [zyzz, { imports, moduleId: 'app/Card.ts', modules, platform: 'ios' }],
+  ],
   presets: ['@babel/preset-typescript'],
 })
 ```
@@ -185,7 +189,9 @@ Native only. Serialized `.zyzz.json` contracts keyed by host-resolved module ID,
 // [!code hl:2]
 // The contract published beside a package's compiled entry
 const contracts = { 'ui/index.js': uiContract }
-const plugins = [[zyzz, { contracts, imports, modules, moduleId, platform: 'ios' }]]
+const plugins = [
+  [zyzz, { contracts, imports, modules, moduleId, platform: 'ios' }],
+]
 ```
 
 ## Returns

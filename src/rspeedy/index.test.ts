@@ -8,20 +8,24 @@ import * as Path from 'node:path'
 import { describe, expect, test } from 'vite-plus/test'
 import { zyzz } from 'zyzz/rspeedy'
 
+type Rule =
+  | {
+      readonly type?: 'StyleRule' | undefined
+      readonly selectorText: { readonly value: string }
+      readonly style: readonly {
+        readonly name: string
+        readonly value: string
+      }[]
+    }
+  | {
+      readonly type: 'MediaRule'
+      readonly prelude: { readonly value: string }
+      readonly rules: readonly Rule[]
+    }
+
 type Template = {
   readonly css: {
-    readonly cssMap: Readonly<
-      Record<
-        string,
-        readonly {
-          readonly selectorText: { readonly value: string }
-          readonly style: readonly {
-            readonly name: string
-            readonly value: string
-          }[]
-        }[]
-      >
-    >
+    readonly cssMap: Readonly<Record<string, readonly Rule[]>>
   }
   readonly lepusCode: { readonly root: string }
 }
@@ -72,13 +76,14 @@ async function template(root: string) {
     await Fs.readFile(Path.join(root, 'dist/.lynx/main/tasm.json'), 'utf8'),
   ) as Template
 
+  // Media rules nest the style rules the encoder kept under them.
+  const print = (rule: Rule): string =>
+    rule.type === 'MediaRule'
+      ? `@media ${rule.prelude.value} { ${rule.rules.map(print).join(' ')} }`
+      : `${rule.selectorText.value} { ${rule.style.map((declaration) => `${declaration.name}: ${declaration.value}`).join('; ')} }`
+
   return {
-    css: Object.values(template.css.cssMap)
-      .flat()
-      .map(
-        (rule) =>
-          `${rule.selectorText.value} { ${rule.style.map((declaration) => `${declaration.name}: ${declaration.value}`).join('; ')} }`,
-      ),
+    css: Object.values(template.css.cssMap).flat().map(print),
     mainThread: template.lepusCode.root,
   }
 }
@@ -336,6 +341,111 @@ describe('zyzz', () => {
       expect(
         mainThread.includes('globalThis.lateLoaded'),
       ).toMatchInlineSnapshot(`true`)
+    } finally {
+      await Fs.rm(root, { force: true, recursive: true })
+    }
+  }, 60_000)
+
+  test('encodes recipe choices, compounds, and compositions as flat class rules', async () => {
+    const root = await fixture()
+    try {
+      await Fs.writeFile(
+        Path.join(root, 'src/App.tsx'),
+        `import { cx, style, variants } from 'zyzz'
+
+export function App(props: { tone?: 'neutral' | 'success' }) {
+  return (
+    <view {...styles.card({ size: 'large', tone: props.tone })}>
+      <text className={styles.badge({ tone: props.tone, className: 'extra' })}>Hello</text>
+      <text {...cx(styles.card({ size: 'small', tone: 'success' }), styles.quiet())}>Quiet</text>
+    </view>
+  )
+}
+
+namespace styles {
+  export const card = variants({
+    base: { padding: '2px' },
+    compoundVariants: [{ style: { opacity: 0.5 }, when: { size: ['large', 'small'], tone: 'success' } }],
+    defaultVariants: { tone: 'neutral' },
+    variants: {
+      size: { large: { height: '40px', '@media (min-width: 1px)': { width: '40px' } }, small: { height: '20px' } },
+      tone: { neutral: { color: 'rgb(0, 0, 0)' }, success: { color: 'rgb(0, 170, 0)' } },
+    },
+  })
+
+  export const badge = variants({
+    base: { fontSize: '12px' },
+    compoundVariants: [{ style: { fontWeight: 700 }, when: { tone: 'success' } }],
+    selection: 'className',
+    variants: { tone: { neutral: {}, success: { color: 'rgb(0, 170, 0)' } } },
+  })
+
+  export const quiet = style({ opacity: 1 })
+}
+`,
+      )
+
+      // The composition reads the runtime helper, which the fixture resolves from the repository.
+      const result = await (
+        await create(root, {
+          source: {
+            alias: { 'zyzz/runtime': Path.resolve('src/runtime/index.ts') },
+            entry: { main: './src/index.tsx' },
+          },
+          tools: {
+            rspack: { resolve: { extensionAlias: { '.js': ['.ts', '.js'] } } },
+          },
+        })
+      ).build()
+      await result.close()
+
+      // Every rule reaches the template with its declarations: one class per choice and
+      // compound, at-rules outside the class, and composition copies under their own prefix.
+      const { css, mainThread } = await template(root)
+      expect(css).toMatchInlineSnapshot(`
+        [
+          ".z_i6Fywm0 { padding: 2px }",
+          ".zvet-RFk250 { height: 40px }",
+          "@media (width>=1px) { .zvet-RFk250 { width: 40px } }",
+          ".zvet-RFk251 { height: 20px }",
+          ".zvet-RFk252 { color: #000 }",
+          ".zvet-RFk253 { color: #0a0 }",
+          ".zvet-RFk254 { opacity: .5 }",
+          ".z_i6Fywm1 { font-size: 12px }",
+          ".zv7eXG394G1 { color: #0a0 }",
+          ".zv7eXG394G2 { font-weight: 700 }",
+          ".z_i6Fywm2 { opacity: 1 }",
+          ".z_i6Fywm3 { padding: 2px }",
+          ".zv27DIkWrC0 { height: 40px }",
+          "@media (width>=1px) { .zv27DIkWrC0 { width: 40px } }",
+          ".zv27DIkWrC1 { height: 20px }",
+          ".zv27DIkWrC2 { color: #000 }",
+          ".zv27DIkWrC3 { color: #0a0 }",
+          ".zv27DIkWrC4 { opacity: .5 }",
+          ".z_i6Fywm4 { opacity: 1 }",
+        ]
+      `)
+      // The composition renames the recipe's choice classes to its own copies.
+      expect(
+        mainThread
+          .replace(/\s+/g, '')
+          .match(/"renames":\[\[\["[\w-]+","[\w-]+"\]\]\]/g),
+      ).toMatchInlineSnapshot(`
+        [
+          ""renames":[[["zvet-RFk25","zv27DIkWrC"]]]",
+        ]
+      `)
+      expect(mainThread.match(/" zv[\w-]+"/g)).toMatchInlineSnapshot(`
+        [
+          "" zvet-RFk250"",
+          "" zvet-RFk251"",
+          "" zvet-RFk252"",
+          "" zvet-RFk253"",
+          "" zvet-RFk254"",
+          "" zv7eXG394G1"",
+          "" zv7eXG394G2"",
+        ]
+      `)
     } finally {
       await Fs.rm(root, { force: true, recursive: true })
     }

@@ -88,6 +88,7 @@ impl Selection<'_, '_> {
                     }
 
                     Some(Rule {
+                        class: None,
                         condition: if index.is_some() {
                             None
                         } else {
