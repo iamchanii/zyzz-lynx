@@ -226,11 +226,14 @@ describe('untransformed example', async () => {
     new URL('./testing.mdx', import.meta.url),
     'utf8',
   )
-  const example = source.match(/```ts title="Badge\.test\.ts"\n(.*?)\n```/s)
+  const example = source.match(
+    /```ts title="Badge\.test\.ts"\n(.*?)\n```/s,
+  )?.[1]
+  if (!example) throw new Error('Missing the Badge.test.ts example.')
   const file = `${directory}/Badge.test.ts`
 
-  Fs.mkdirSync(directory, { recursive: true })
   // The example runs as written, without the transform, under this suite's runner.
-  Fs.writeFileSync(file, example![1]!.replace("'vitest'", "'vite-plus/test'"))
+  Fs.writeFileSync(file, example.replace("'vitest'", "'vite-plus/test'"))
   await import(/* @vite-ignore */ file)
+  Fs.rmSync(file)
 })
