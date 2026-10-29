@@ -5123,6 +5123,40 @@ namespace styles {
         `[Source.ExtractError: App.tsx:108: className selection does not support dynamic choices.]`,
       )
     })
+
+    test('applies a compound without conditions to every selection', async () => {
+      const output = Transform.compile({
+        moduleId: 'App.tsx',
+        source: `import { variants } from 'zyzz'
+export const App = () => <main><span className={styles.badge({ tone: 'blue' })}>badge</span></main>
+namespace styles {
+  export const badge = variants({
+    compoundVariants: [{ style: { paddingLeft: '2px' }, when: {} }],
+    selection: 'className',
+    variants: { tone: { blue: { color: 'rgb(0, 0, 255)' } } },
+  })
+}`,
+        target: 'lynx',
+      })
+
+      const rendered = await Wrappers.render({
+        css: output.css,
+        entry: 'App.tsx',
+        modules: { 'App.tsx': output.code },
+      })
+
+      expect(rendered.elements).toMatchInlineSnapshot(`
+        [
+          {
+            "borderLeftWidth": "0px",
+            "className": "zv9WvyhNQ-0 zv9WvyhNQ-1",
+            "color": "rgb(0, 0, 255)",
+            "paddingLeft": "2px",
+            "tag": "span",
+          },
+        ]
+      `)
+    })
   })
 })
 

@@ -523,6 +523,11 @@ fn write_class_selector(
     for (index, matches) in compounds.iter().enumerate() {
         output.push_str("if(");
 
+        // A compound without conditions matches every selection, as in `Recipe.create`.
+        if matches.is_empty() {
+            output.push_str("true");
+        }
+
         for (position, (axis, choices)) in matches.iter().enumerate() {
             let Some(slot) = recipe.axes.keys().position(|name| name == axis) else {
                 continue;
