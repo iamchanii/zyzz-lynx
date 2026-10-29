@@ -82,6 +82,21 @@ Every emitted rule selects one class, so a compound keeps the specificity of a c
 - **`conditions`:** A compile error. Nest `@media` queries inside the choice styles instead.
 - **Dynamic choices:** Supported with spreads, which carry the bound variables in `style`, and rejected by `selection: 'className'`.
 
+## Lynx Units
+
+Lengths accept the Lynx `rpx` and `sp` units, which the plugin emits as authored. A web build reports them in style declarations other than custom properties as invalid literals.
+
+```ts title="src/Map.styles.ts"
+import { style } from 'zyzz'
+
+export const pin = style({
+  // [!code hl:3]
+  // Emits margin-top:-6.4sp and width:48rpx
+  marginTop: '-6.4sp',
+  width: '48rpx',
+})
+```
+
 ## Loader Order
 
 The plugin rewrites each module before any other loader, including `enforce: 'pre'` loaders from other plugins or `tools.rspack`. Those loaders receive the compiled module.

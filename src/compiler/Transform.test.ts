@@ -5157,6 +5157,52 @@ namespace styles {
         ]
       `)
     })
+
+    test('emits sp and rpx lengths and rejects them on the web target', () => {
+      const source = `import { style } from 'zyzz'
+export const props = style({ marginTop: '-6.4sp', paddingLeft: 'calc(10rpx + 1px)', '@media (width >= 1px)': { fontSize: '14sp' } })()`
+
+      expect(
+        Transform.compile({ moduleId: 'App.tsx', source, target: 'lynx' }).css,
+      ).toMatchInlineSnapshot(`
+        ".z_l0kPgl0{margin-top:-6.4sp;}
+        .z_l0kPgl1{padding-left:calc(10rpx + 1px);}
+        @media (width >= 1px){.z_l0kPgl2{font-size:14sp;}}"
+      `)
+
+      expect(() => Transform.compile({ moduleId: 'App.tsx', source }))
+        .toThrowErrorMatchingInlineSnapshot(`
+        [Source.ExtractError: App.tsx:69: The \`sp\` unit requires the lynx target.
+        App.tsx:92: The \`rpx\` unit requires the lynx target.
+        App.tsx:150: The \`sp\` unit requires the lynx target.]
+      `)
+    })
+
+    test('reports web sp values at their location, not in strings or urls', () => {
+      expect(() =>
+        Transform.compile({
+          moduleId: 'App.tsx',
+          source: `import { style } from 'zyzz'
+export const props = style({ backgroundImage: 'url(/a/10sp.png)', content: '" 10sp "', marginTop: '-6.4sp' })()`,
+        }),
+      ).toThrowErrorMatchingInlineSnapshot(
+        `[Source.ExtractError: App.tsx:127: The \`sp\` unit requires the lynx target.]`,
+      )
+    })
+
+    test('rejects Lynx units in breakpoints', () => {
+      expect(() =>
+        Transform.compile({
+          moduleId: 'App.tsx',
+          source: `import { Config } from 'zyzz'
+const zyzz = Config.create({ vars: { breakpoint: { md: '300rpx' } } })
+export const props = zyzz.style({ '@media md': { color: 'red' } })()`,
+          target: 'lynx',
+        }),
+      ).toThrowErrorMatchingInlineSnapshot(
+        `[Error: ["breakpoint","md"]: Expected a named nonnegative length threshold.]`,
+      )
+    })
   })
 })
 

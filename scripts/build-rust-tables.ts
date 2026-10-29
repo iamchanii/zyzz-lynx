@@ -214,6 +214,9 @@ pub static GLOBALS: &[&str] = ${strings(tables.Literal.globals)};
 /// Length units in authored order.
 pub static LENGTH_UNITS: &[&str] = ${strings(tables.Literal.lengthUnits)};
 
+/// Lynx length units, which the web target rejects.
+pub static LYNX_UNITS: &[&str] = ${strings(tables.Literal.lynxUnits)};
+
 /// Named colors in authored order.
 pub static NAMED_COLORS: &[&str] = ${strings(tables.Literal.namedColors)};
 

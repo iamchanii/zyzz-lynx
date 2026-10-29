@@ -4,7 +4,7 @@ use indexmap::IndexMap;
 use rustc_hash::FxBuildHasher;
 
 use crate::error::{Error, Result};
-use crate::generated::literal::LENGTH_UNITS;
+use crate::generated::literal::{LENGTH_UNITS, LYNX_UNITS};
 use crate::js;
 
 /// Query thresholds declared by a theme.
@@ -18,7 +18,8 @@ pub struct Metadata {
     pub container_names: Vec<String>,
 }
 
-/// Whether a value is a positive-signed number followed by a length unit other than `%`.
+/// Whether a value is a positive-signed number followed by a length unit other than `%` or a
+/// Lynx unit, which the CSS query grammar lacks.
 pub fn threshold(value: &str) -> bool {
     let length = js::css_number_prefix(value, b"+");
 
@@ -34,6 +35,7 @@ pub fn threshold(value: &str) -> bool {
         && js::to_number(number).is_finite()
         && LENGTH_UNITS
             .iter()
+            .filter(|candidate| !LYNX_UNITS.contains(candidate))
             .any(|candidate| candidate.eq_ignore_ascii_case(unit))
 }
 

@@ -23,7 +23,9 @@ export function threshold(value: unknown): value is string {
     Literal.lengthUnits.some(
       (unit) => unit.toLowerCase() === match[2]!.toLowerCase(),
     ) &&
-    match[2] !== '%'
+    match[2] !== '%' &&
+    // The CSS query grammar has no Lynx units.
+    !(Literal.lynxUnits as readonly string[]).includes(match[2]!.toLowerCase())
   )
 }
 

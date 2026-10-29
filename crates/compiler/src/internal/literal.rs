@@ -1,7 +1,7 @@
 //! Classifies literal declaration values against the generated property rule table.
 
 use crate::generated::literal::{
-    self, GLOBALS, Kind, LENGTH_UNITS, NAMED_COLORS, Rule, SYSTEM_COLORS,
+    self, GLOBALS, Kind, LENGTH_UNITS, LYNX_UNITS, NAMED_COLORS, Rule, SYSTEM_COLORS,
 };
 use crate::internal::lexical;
 use crate::js;
@@ -143,6 +143,64 @@ pub fn is_color_keyword(folded: &str) -> bool {
         .iter()
         .chain(SYSTEM_COLORS)
         .any(|color| color.eq_ignore_ascii_case(folded))
+}
+
+/// The first Lynx unit a value's dimension carries, such as `sp` in `calc(-6.4sp + 1px)`.
+///
+/// Quoted strings and `url()` arguments carry no dimensions, so they are skipped.
+pub fn lynx_unit(value: &str) -> Option<&'static str> {
+    let bytes = value.as_bytes();
+    let mut start = 0;
+    let mut index = 0;
+
+    while index <= bytes.len() {
+        let byte = bytes.get(index).copied();
+
+        if byte.is_some_and(|byte| {
+            !byte.is_ascii_whitespace()
+                && !matches!(byte, b'(' | b')' | b',' | b'/' | b'*')
+                && byte != b'"'
+                && byte != b'\''
+        }) {
+            index += 1;
+            continue;
+        }
+
+        let word = value.get(start..index).unwrap_or_default();
+        let length = js::css_number_prefix(word, b"+-");
+
+        if length > 0
+            && let Some(unit) = LYNX_UNITS.iter().find(|candidate| {
+                word.get(length..)
+                    .is_some_and(|unit| candidate.eq_ignore_ascii_case(unit))
+            })
+        {
+            return Some(unit);
+        }
+
+        // Skips a quoted string or an unquoted `url()` argument to its closing delimiter.
+        let close = match byte {
+            Some(quote @ (b'"' | b'\'')) => Some(quote),
+            Some(b'(') if word.eq_ignore_ascii_case("url") => Some(b')'),
+            _ => None,
+        };
+
+        index += 1;
+
+        if let Some(close) = close {
+            while let Some(&next) = bytes.get(index) {
+                index += if next == b'\\' { 2 } else { 1 };
+
+                if next == close {
+                    break;
+                }
+            }
+        }
+
+        start = index;
+    }
+
+    None
 }
 
 /// Whether a value is a number with a CSS length, angle, time, flex, or resolution unit.

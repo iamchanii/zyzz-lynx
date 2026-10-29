@@ -11645,9 +11645,12 @@ pub static GLOBALS: &[&str] = &["inherit", "initial", "revert", "revert-layer", 
 pub static LENGTH_UNITS: &[&str] = &[
     "%", "cap", "ch", "cm", "cqb", "cqh", "cqi", "cqmax", "cqmin", "cqw", "dvb", "dvh", "dvi",
     "dvmax", "dvmin", "dvw", "em", "ex", "ic", "in", "lh", "lvb", "lvh", "lvi", "lvmax", "lvmin",
-    "lvw", "mm", "pc", "pt", "px", "q", "Q", "rcap", "rch", "rem", "rex", "ric", "rlh", "svb",
-    "svh", "svi", "svmax", "svmin", "svw", "vb", "vh", "vi", "vmax", "vmin", "vw",
+    "lvw", "mm", "pc", "pt", "px", "q", "Q", "rcap", "rch", "rem", "rex", "ric", "rlh", "rpx",
+    "sp", "svb", "svh", "svi", "svmax", "svmin", "svw", "vb", "vh", "vi", "vmax", "vmin", "vw",
 ];
+
+/// Lynx length units, which the web target rejects.
+pub static LYNX_UNITS: &[&str] = &["rpx", "sp"];
 
 /// Named colors in authored order.
 pub static NAMED_COLORS: &[&str] = &[

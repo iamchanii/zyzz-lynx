@@ -860,6 +860,7 @@ struct Module<'m, 'a> {
     strings: &'m Strings<'a>,
     styles: &'m [Arc<NamedStyle>],
     variables: &'m Variables<'a>,
+    web: bool,
 }
 
 /// Authored keys and values of one extraction, so each repeated spelling shares one allocation.
@@ -1058,6 +1059,12 @@ impl<'a> Converter<'_, '_, '_, 'a> {
             }
 
             let input = match value {
+                // The general path records the value location the web unit check reports.
+                Expression::StringLiteral(literal)
+                    if module.web && literal::lynx_unit(&literal.value).is_some() =>
+                {
+                    return None;
+                }
                 Expression::StringLiteral(literal) => {
                     Data::String(module.strings.get(literal.value.as_str()))
                 }
@@ -1959,9 +1966,39 @@ impl<'a> Converter<'_, '_, '_, 'a> {
         })
     }
 
-    /// Checks variable values and conditions of a validated style.
+    /// Checks variable values, target units, and conditions of a validated style.
     fn validate(&mut self, style: &NamedStyle, path: &[Arc<str>]) {
         for declaration in &style.declarations {
+            if self.module.web
+                && !declaration.property.starts_with("--")
+                && let Some(unit) = match &declaration.value {
+                    style::Value::Expression(expression) => {
+                        expression.parts.iter().find_map(|part| match part {
+                            Part::Text(text) => literal::lynx_unit(text),
+                            _ => None,
+                        })
+                    }
+                    style::Value::String(text) => literal::lynx_unit(text),
+                    _ => None,
+                }
+            {
+                let location = self
+                    .locations
+                    .iter()
+                    .find(|(_, location)| {
+                        location.len() == path.len() + 1
+                            && location.starts_with(path)
+                            && location.last() == Some(&declaration.property)
+                    })
+                    .map_or(self.call.span, |(span, _)| *span);
+
+                self.reporter.report(
+                    Code::InvalidLiteral,
+                    format!("The `{unit}` unit requires the lynx target."),
+                    Some(location),
+                );
+            }
+
             if let style::Value::Token(reference) = &declaration.value
                 && reference.contract.variable_set
                 && literal::rule(&declaration.property)
@@ -2758,6 +2795,7 @@ pub fn extract<'a>(allocator: &'a Allocator, options: &Options<'_, 'a>) -> Resul
             strings: &strings,
             styles: &styles,
             variables: &variables,
+            web: options.target == Target::Web,
         };
         let slots = match (&expanded, &dynamic) {
             (Some(expanded), _) => Some(Bindings::Payloads(&expanded.bindings)),
