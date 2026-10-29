@@ -25,6 +25,8 @@ The subset covers layout, spacing, borders, colors, text, images, and scalars. S
 - **Text:** Mapped font families, sizes, styles, weights, `fontVariant`, letter spacing, line height, alignment, decoration, case, and selection.
 - **Images and scalars:** `objectFit`, `backfaceVisibility`, `opacity` from 0 to 1, and integer `zIndex`.
 
+Numeric strings on number properties and `aspectRatio`, such as `opacity: '0'` or `fontWeight: '700'`, compile to their numbers.
+
 ```ts
 import { style } from 'zyzz'
 
@@ -87,7 +89,7 @@ const fill = style({
 
 ## Line Height
 
-A numeric `lineHeight` multiplies the `fontSize` in the same style, and compiles to an absolute length. Without a `fontSize` in that style, compilation fails, since native text has no inherited size to multiply.
+A numeric `lineHeight`, or a nonzero numeric string such as `'1.5'`, multiplies the `fontSize` in the same style, and compiles to an absolute length. Without a `fontSize` in that style, compilation fails, since native text has no inherited size to multiply.
 
 ```ts
 import { style } from 'zyzz'

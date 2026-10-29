@@ -183,7 +183,9 @@ export function create(
         const value = values.length === 1 ? values[0]! : values.join('')
         const { property } = step
         if (property === 'lineHeight') {
-          lineHeight = value
+          // A nonzero numeric string is a multiplier, as in CSS. Zero stays a length.
+          lineHeight =
+            (typeof value === 'string' && Scalar.number(value)) || value
           continue
         }
         const converted = Scalar.convert(

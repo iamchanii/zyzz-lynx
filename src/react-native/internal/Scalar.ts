@@ -123,6 +123,13 @@ export type Options = {
     | undefined
 }
 
+/** Reads a numeric string, matching the shared `${number}` spelling of number properties. */
+export function number(value: string): number | undefined {
+  return /^[+-]?(?:\d+(?:\.\d+)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(value)
+    ? Number(value)
+    : undefined
+}
+
 /** Converts a validated property domain using explicit unit and font mappings. */
 export function convert(
   kind: (typeof properties)[keyof typeof properties],
@@ -130,17 +137,17 @@ export function convert(
   options: Options,
   path: readonly string[],
 ): number | string {
-  // Numeric strings match the shared `${number}` spelling and convert as their numbers.
   if (
     typeof value === 'string' &&
     (kind === 'integer' ||
       kind === 'number' ||
       kind === 'opacity' ||
       kind === 'ratio' ||
-      kind === 'weight') &&
-    /^[+-]?(?:\d+(?:\.\d+)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(value)
-  )
-    return convert(kind, Number(value), options, path)
+      kind === 'weight')
+  ) {
+    const numeric = number(value)
+    if (numeric !== undefined) return convert(kind, numeric, options, path)
+  }
 
   if (Array.isArray(kind)) {
     if (typeof value !== 'string' || !kind.includes(value))

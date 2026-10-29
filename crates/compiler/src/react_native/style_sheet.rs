@@ -743,7 +743,13 @@ impl Context<'_> {
 
         match property {
             "lineHeight" => {
-                *line_height = Some(value);
+                // A nonzero numeric string is a multiplier, as in CSS. Zero stays a length.
+                let multiplier = match &value {
+                    Value::String(text) => scalar::number(text).filter(|number| *number != 0.0),
+                    Value::Number(_) => None,
+                };
+
+                *line_height = Some(multiplier.map_or(value, Value::Number));
             }
             "fontVariant" => {
                 output.insert("fontVariant", self.font_variant(&value)?);

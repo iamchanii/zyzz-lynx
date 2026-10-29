@@ -372,7 +372,15 @@ pub fn finite(options: &native_dynamic::Options) -> Result<native_static::Option
                     steps.push(native_static::Step::LineHeight(*number));
                     continue;
                 }
-                [native_dynamic::Part::String(text)] => Arc::clone(text),
+                [native_dynamic::Part::String(text)] => {
+                    // A nonzero numeric string is a multiplier, as in CSS. Zero stays a length.
+                    if let Some(number) = scalar::number(text).filter(|number| *number != 0.0) {
+                        steps.push(native_static::Step::LineHeight(number));
+                        continue;
+                    }
+
+                    Arc::clone(text)
+                }
                 parts => {
                     let mut text = String::new();
 

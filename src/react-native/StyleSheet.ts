@@ -212,7 +212,9 @@ export function compile<
                 options,
               )
               if (property === 'lineHeight') {
-                lineHeight = value
+                // A nonzero numeric string is a multiplier, as in CSS. Zero stays a length.
+                lineHeight =
+                  (typeof value === 'string' && Scalar.number(value)) || value
                 continue
               }
               if (property === 'fontVariant') {
