@@ -1792,6 +1792,58 @@ describe('compile', () => {
     )
   })
 
+  test('converts numeric strings in numeric native domains', async () => {
+    const output = Native.compile({
+      moduleId: 'numeric.ts',
+      colorScheme: 'light',
+      source:
+        "import {style,variants} from 'zyzz'; const fade=style((values:{alpha:`${number}`})=>({opacity:values.alpha})); const text=variants({variants:{size:{body:{fontSize:'16px',lineHeight:'1.5'}}}}); export const results=[style({aspectRatio:'1.5',flexGrow:'+.5',fontWeight:'700',opacity:'0',zIndex:'10'})(),style({fontSize:'16px',lineHeight:'1.5'})(),text({size:'body'}),fade({alpha:'0'})];",
+    })
+
+    expect((await execute(output.code)).results).toMatchInlineSnapshot(`
+      [
+        {
+          "style": {
+            "aspectRatio": 1.5,
+            "flexGrow": 0.5,
+            "fontWeight": 700,
+            "opacity": 0,
+            "zIndex": 10,
+          },
+        },
+        {
+          "style": {
+            "fontSize": 16,
+            "lineHeight": 24,
+          },
+        },
+        {
+          "style": {
+            "fontSize": 16,
+            "lineHeight": 24,
+          },
+        },
+        {
+          "style": {
+            "opacity": 0,
+          },
+        },
+      ]
+    `)
+
+    expect(() =>
+      Native.compile({
+        moduleId: 'invalid.ts',
+        colorScheme: 'light',
+        source:
+          "import {style} from 'zyzz'; export const results=style({opacity:'1.5'})();",
+      }),
+    ).toThrowErrorMatchingInlineSnapshot(`
+      [StyleSheet.CompileError: ["default","light","0","opacity"]: Unsupported native numeric value.
+      ["default","dark","0","opacity"]: Unsupported native numeric value.]
+    `)
+  })
+
   test('executes imported and packed dynamic contracts without publisher source', async () => {
     const directory = await Fs.mkdtemp(Path.resolve('.fixture-native-payload-'))
     try {

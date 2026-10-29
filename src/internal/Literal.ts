@@ -297,6 +297,7 @@ type Value<rule extends Rule> =
         : rule extends { kind: 'ratio' }
           ?
               | number
+              | `${number}`
               | Calculation
               | 'auto'
               | `auto ${string}`
@@ -357,6 +358,7 @@ type Value<rule extends Rule> =
                               ? Listed<
                                   | Calculation
                                   | number
+                                  | `${number}`
                                   | Keywords<rule>
                                   | (rule extends { length: true }
                                       ? Length

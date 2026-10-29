@@ -459,19 +459,20 @@ describe('defineConfig', () => {
       mappings: { fontWeight: [] },
       vars: { fontWeight: { medium: '500' } },
     })
-    // @ts-expect-error Numeric strings are not fontWeight values.
     defineConfig({ vars: { fontWeight: { medium: '500' } } })
+    // @ts-expect-error Unknown keywords are not fontWeight values.
+    defineConfig({ vars: { fontWeight: { medium: 'heavy' } } })
     defineConfig({
       mappings: { weight: ['fontWeight'] },
       // @ts-expect-error Mapped categories check their weights too.
-      vars: { weight: { medium: '500' } },
+      vars: { weight: { medium: 'heavy' } },
     })
     defineConfig({
       defaultVars: 'base',
       // @ts-expect-error Each catalog set checks its weights.
-      vars: { base: { fontWeight: { medium: '500' } } },
+      vars: { base: { fontWeight: { medium: 'heavy' } } },
     })
     // @ts-expect-error Reusable sets check their weights when configured.
-    defineConfig({ vars: defineVars({ fontWeight: { medium: '500' } }) })
+    defineConfig({ vars: defineVars({ fontWeight: { medium: 'heavy' } }) })
   })
 })

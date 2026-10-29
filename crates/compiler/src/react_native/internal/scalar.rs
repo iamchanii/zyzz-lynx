@@ -121,6 +121,11 @@ pub struct Flex {
     pub shrink: f64,
 }
 
+/// Reads a numeric string, matching the shared `${number}` spelling of number properties.
+pub fn number(text: &str) -> Option<f64> {
+    FACTOR.matches(text).then(|| js::to_number(text))
+}
+
 /// Converts a validated property domain using explicit unit and font mappings.
 ///
 /// Shorthand domains (`box`, `boxOffset`, `boxSigned`, and `flex`) validate every part and return
@@ -130,6 +135,16 @@ pub struct Flex {
 ///
 /// Returns the TypeScript message describing the rejected value.
 pub fn convert(kind: Kind, value: &Value, options: &Options) -> Result<Value> {
+    if let Value::String(text) = value
+        && matches!(
+            kind,
+            Kind::Integer | Kind::Number | Kind::Opacity | Kind::Ratio | Kind::Weight
+        )
+        && let Some(number) = number(text)
+    {
+        return convert(kind, &Value::Number(number), options);
+    }
+
     match kind {
         Kind::Keywords(keywords) => match value {
             Value::String(text) if keywords.contains(&&**text) => {

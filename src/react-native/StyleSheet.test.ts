@@ -1119,6 +1119,67 @@ describe('compile', () => {
     ).toMatchInlineSnapshot(`true`)
   })
 
+  test('converts numeric strings in numeric native domains', () => {
+    const styles = Style.define({
+      card: {
+        aspectRatio: '1.5',
+        flexGrow: '+.5',
+        fontWeight: '700',
+        opacity: '0',
+        zIndex: '10',
+      },
+      label: { fontSize: '16px', lineHeight: '1.5' },
+      line: { lineHeight: '0' },
+    })
+    const output = StyleSheet.compile({ styles })
+
+    const selected = StyleSheet.select(output.styles, {
+      colorScheme: 'light',
+      set: 'default',
+    })
+
+    expect(selected.card).toMatchInlineSnapshot(`
+      {
+        "aspectRatio": 1.5,
+        "flexGrow": 0.5,
+        "fontWeight": 700,
+        "opacity": 0,
+        "zIndex": 10,
+      }
+    `)
+    // A nonzero numeric line height multiplies the font size, and zero stays a length.
+    expect(selected.label).toMatchInlineSnapshot(`
+      {
+        "fontSize": 16,
+        "lineHeight": 24,
+      }
+    `)
+    expect(selected.line).toMatchInlineSnapshot(`
+      {
+        "lineHeight": 0,
+      }
+    `)
+    expect(Css.compile({ styles }).css).toMatchInlineSnapshot(`
+      ".z_0{aspect-ratio:1.5;}
+      .z_1{flex-grow:+.5;}
+      .z_2{font-weight:700;}
+      .z_3{opacity:0;}
+      .z_4{z-index:10;}
+      .z_5{font-size:16px;}
+      .z_6{line-height:1.5;}
+      .z_7{line-height:0;}"
+    `)
+
+    expect(() =>
+      StyleSheet.compile({
+        styles: Style.define({ card: { opacity: '1.5' } }),
+      }),
+    ).toThrowErrorMatchingInlineSnapshot(`
+      [StyleSheet.CompileError: ["default","light","card","opacity"]: Unsupported native numeric value.
+      ["default","dark","card","opacity"]: Unsupported native numeric value.]
+    `)
+  })
+
   test('rejects automatic aspect ratios instead of guessing an intrinsic size', () => {
     const styles = Style.define({ image: { aspectRatio: 'auto' } })
 

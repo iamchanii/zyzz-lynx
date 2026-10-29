@@ -347,14 +347,14 @@ defineConfig({
 
 At runtime, the same mistakes throw `Config.InvalidError`, as do invalid layer names. Invalid variable values throw `Vars.InvalidError`.
 
-Weights in the `fontWeight` category, or in a category mapped to `fontWeight`, must be numbers from 1 to 1000 or `fontWeight` keywords. A numeric string fails type checking and throws `Config.InvalidError`.
+Weights in the `fontWeight` category, or in a category mapped to `fontWeight`, must be numbers from 1 to 1000, numeric strings such as `'500'`, or `fontWeight` keywords. Any other string fails type checking and throws `Config.InvalidError`.
 
 ```ts twoslash
 // @errors: 2322
 import { defineConfig } from 'zyzz'
 
-// Weights are numbers, such as 500
-defineConfig({ vars: { fontWeight: { medium: '500' } } })
+// Weights are numbers, numeric strings, or keywords such as bold
+defineConfig({ vars: { fontWeight: { medium: 'heavy' } } })
 ```
 
 ## React Native
