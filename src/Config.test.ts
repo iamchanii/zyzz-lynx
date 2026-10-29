@@ -291,7 +291,7 @@ export const third=configured.style({width:'calc(1px /* ] */ + 2px) !custom'});`
     expect(() =>
       PublicConfig.create({
         id: 'dotted-weight',
-        vars: { fontWeight: { 'medium.5': '500' } },
+        vars: { fontWeight: { 'medium.5': 'heavy' } },
       } as never),
     ).toThrowErrorMatchingInlineSnapshot(
       `[Config.InvalidError: Font weight token fontWeight.medium.5 must be a number from 1 to 1000 or a fontWeight keyword, such as 500.]`,
@@ -1082,13 +1082,13 @@ describe('defineConfig', () => {
     }
 
     expect(() =>
-      compile(`{vars:{fontWeight:{regular:'400',medium:'500'}}}`),
+      compile(`{vars:{fontWeight:{regular:'heavy',medium:'500'}}}`),
     ).toThrowErrorMatchingInlineSnapshot(
       `[Source.ExtractError: config.ts:56: Font weight token fontWeight.regular must be a number from 1 to 1000 or a fontWeight keyword, such as 500.]`,
     )
     expect(() =>
       compile(
-        `{mappings:{weight:['fontWeight']},vars:{weight:{medium:'500'}}}`,
+        `{mappings:{weight:['fontWeight']},vars:{weight:{medium:'heavy'}}}`,
       ),
     ).toThrowErrorMatchingInlineSnapshot(
       `[Source.ExtractError: config.ts:56: Font weight token weight.medium must be a number from 1 to 1000 or a fontWeight keyword, such as 500.]`,
@@ -1096,7 +1096,7 @@ describe('defineConfig', () => {
     expect(() =>
       defineConfig({
         id: 'weights',
-        vars: { fontWeight: { regular: '400', medium: '500' } },
+        vars: { fontWeight: { regular: 'heavy', medium: '500' } },
       } as never),
     ).toThrowErrorMatchingInlineSnapshot(
       `[Config.InvalidError: Font weight token fontWeight.regular must be a number from 1 to 1000 or a fontWeight keyword, such as 500.]`,
@@ -1105,7 +1105,7 @@ describe('defineConfig', () => {
       defineConfig({
         id: 'weights',
         mappings: { weight: ['fontWeight'] },
-        vars: { weight: { medium: '500' } },
+        vars: { weight: { medium: 'heavy' } },
       } as never),
     ).toThrowErrorMatchingInlineSnapshot(
       `[Config.InvalidError: Font weight token weight.medium must be a number from 1 to 1000 or a fontWeight keyword, such as 500.]`,
@@ -1119,6 +1119,18 @@ describe('defineConfig', () => {
       ".z-theme-theme{--z-fontWeight-medium:500;}
       .z_Zf5JrJ0{font-weight:var(--z-fontWeight-medium,500);}"
     `)
+
+    // Numeric strings are font weights, as in style declarations.
+    const spelled = compile(`{vars:{fontWeight:{medium:'500'}}}`)
+
+    expect(spelled.modules['app.ts']!.css).toMatchInlineSnapshot(`
+      ".z-theme-theme{--z-fontWeight-medium:500;}
+      .z_Zf5JrJ0{font-weight:var(--z-fontWeight-medium,500);}"
+    `)
+    expect(
+      defineConfig({ id: 'weights', vars: { fontWeight: { medium: '500' } } })
+        .vars.fontWeight.medium.value,
+    ).toMatchInlineSnapshot(`"500"`)
     expect(() =>
       compile(`{vars:{fontWeight:{medium:500}}}`, '600'),
     ).toThrowErrorMatchingInlineSnapshot(

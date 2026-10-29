@@ -287,6 +287,12 @@ export function acceptsReference(
         (value === 0 && Binding.accepts('length', property))
       )
     }
+    // Numeric strings check as their numbers, matching the shared `${number}` spelling.
+    if (
+      Literal.rule(property)?.kind === 'number' &&
+      /^[+-]?(?:\d*\.\d+|\d+)(?:[eE][+-]?\d+)?$/.test(value)
+    )
+      return check(Number(value))
     if (reference.group === 'color') return Binding.accepts('color', property)
     if (reference.group === 'spacing')
       return (

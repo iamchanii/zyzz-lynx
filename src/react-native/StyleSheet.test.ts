@@ -1119,6 +1119,48 @@ describe('compile', () => {
     ).toMatchInlineSnapshot(`true`)
   })
 
+  test('converts numeric strings in numeric native domains', () => {
+    const styles = Style.define({
+      card: {
+        aspectRatio: '1.5',
+        flexGrow: '+.5',
+        fontWeight: '700',
+        opacity: '0',
+        zIndex: '10',
+      },
+    })
+    const output = StyleSheet.compile({ styles })
+
+    expect(
+      StyleSheet.select(output.styles, { colorScheme: 'light', set: 'default' })
+        .card,
+    ).toMatchInlineSnapshot(`
+      {
+        "aspectRatio": 1.5,
+        "flexGrow": 0.5,
+        "fontWeight": 700,
+        "opacity": 0,
+        "zIndex": 10,
+      }
+    `)
+    expect(Css.compile({ styles }).css).toMatchInlineSnapshot(`
+      ".z_0{aspect-ratio:1.5;}
+      .z_1{flex-grow:+.5;}
+      .z_2{font-weight:700;}
+      .z_3{opacity:0;}
+      .z_4{z-index:10;}"
+    `)
+
+    expect(() =>
+      StyleSheet.compile({
+        styles: Style.define({ card: { opacity: '1.5' } }),
+      }),
+    ).toThrowErrorMatchingInlineSnapshot(`
+      [StyleSheet.CompileError: ["default","light","card","opacity"]: Unsupported native numeric value.
+      ["default","dark","card","opacity"]: Unsupported native numeric value.]
+    `)
+  })
+
   test('rejects automatic aspect ratios instead of guessing an intrinsic size', () => {
     const styles = Style.define({ image: { aspectRatio: 'auto' } })
 

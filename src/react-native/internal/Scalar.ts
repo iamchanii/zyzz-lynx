@@ -130,6 +130,18 @@ export function convert(
   options: Options,
   path: readonly string[],
 ): number | string {
+  // Numeric strings match the shared `${number}` spelling and convert as their numbers.
+  if (
+    typeof value === 'string' &&
+    (kind === 'integer' ||
+      kind === 'number' ||
+      kind === 'opacity' ||
+      kind === 'ratio' ||
+      kind === 'weight') &&
+    /^[+-]?(?:\d+(?:\.\d+)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(value)
+  )
+    return convert(kind, Number(value), options, path)
+
   if (Array.isArray(kind)) {
     if (typeof value !== 'string' || !kind.includes(value))
       fail('unsupported_value', 'Unsupported native keyword.', path)

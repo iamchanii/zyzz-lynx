@@ -656,8 +656,8 @@ describe('style', () => {
     style({ alignSelf: 'space-between' })
     // @ts-expect-error Overflow accepts only its standard scalar keywords.
     style({ overflow: 'none' })
-    // @ts-expect-error Order is numeric, including its importance-string form.
-    style({ order: '2' })
+    // @ts-expect-error Order is an integer, including its string form.
+    style({ order: '2.5' })
     // @ts-expect-error Sizing spellings remain checked through importance.
     style({ flexBasis: '0x10px !important' })
   })
@@ -1636,6 +1636,24 @@ describe('compound', () => {
       style({ columnCount: '+00 !important' })
       // @ts-expect-error A trailing decimal point does not form a complete CSS number.
       style({ opacity: '1. !important' })
+    })
+
+    test('accepts numeric strings for number and ratio properties', () => {
+      style({
+        aspectRatio: '1.5',
+        flexGrow: '+.5',
+        fontWeight: '700',
+        opacity: '0',
+        zIndex: '10',
+      })
+      // @ts-expect-error A trailing decimal point does not form a complete CSS number.
+      style({ opacity: '1.' })
+      // @ts-expect-error JavaScript radix spellings are not CSS numbers.
+      style({ fontWeight: '0x10' })
+      // @ts-expect-error Numeric strings retain the property's minimum.
+      style({ fontWeight: '0' })
+      // @ts-expect-error Numeric strings retain integer constraints.
+      style({ zIndex: '1.5' })
     })
 
     test('retains CSS integer spelling in grid indexes and named spans', () => {

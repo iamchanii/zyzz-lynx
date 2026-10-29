@@ -99,6 +99,19 @@ const card = style({
 })
 ```
 
+The same properties, and `aspectRatio`, accept CSS number spellings as strings, such as values exported by token packages. The CSS output keeps the authored spelling, and React Native converts the string to its number. Integer and range limits still apply.
+
+```ts
+import { style } from 'zyzz'
+
+const card = style({
+  // [!code hl:3]
+  aspectRatio: '1.5',
+  fontWeight: '700',
+  opacity: '0',
+})
+```
+
 ## Keywords
 
 Every property accepts the CSS-wide keywords `inherit`, `initial`, `revert`, `revert-layer`, and `unset`, in addition to its own keywords.

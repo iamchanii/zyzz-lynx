@@ -15,6 +15,7 @@ use crate::internal::binding::{self, Domain};
 use crate::internal::literal::{self, Scalar};
 use crate::internal::query;
 use crate::internal::theme;
+use crate::js;
 
 /// An ordered string-keyed map.
 pub type Map<V> = IndexMap<Arc<str>, V, FxBuildHasher>;
@@ -410,6 +411,14 @@ fn check(reference: &Reference, value: &Value, property: &str) -> bool {
         }
         Value::String(text) => {
             let rule = literal::rule(property);
+
+            // Numeric strings check as their numbers, matching the shared `${number}` spelling.
+            if rule.is_some_and(|rule| rule.kind == rules::Kind::Number)
+                && !text.is_empty()
+                && js::css_number_prefix(text, b"+-") == text.len()
+            {
+                return check(reference, &Value::Number(js::to_number(text)), property);
+            }
 
             if reference.group == "color" {
                 return binding::accepts(Domain::Color, property);

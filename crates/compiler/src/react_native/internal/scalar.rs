@@ -130,6 +130,17 @@ pub struct Flex {
 ///
 /// Returns the TypeScript message describing the rejected value.
 pub fn convert(kind: Kind, value: &Value, options: &Options) -> Result<Value> {
+    // Numeric strings match the shared `${number}` spelling and convert as their numbers.
+    if let Value::String(text) = value
+        && matches!(
+            kind,
+            Kind::Integer | Kind::Number | Kind::Opacity | Kind::Ratio | Kind::Weight
+        )
+        && FACTOR.matches(text)
+    {
+        return convert(kind, &Value::Number(js::to_number(text)), options);
+    }
+
     match kind {
         Kind::Keywords(keywords) => match value {
             Value::String(text) if keywords.contains(&&**text) => {

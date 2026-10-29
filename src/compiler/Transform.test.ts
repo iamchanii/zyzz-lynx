@@ -2088,7 +2088,7 @@ describe('compile', () => {
       Transform.compile({
         moduleId: 'example/dotted-weight.ts',
         source:
-          "import { defineConfig } from 'zyzz';\nconst { style } = defineConfig({vars:{fontWeight:{'medium.5':'500'}}});\nexport const props = style({fontWeight:'medium.5'})();",
+          "import { defineConfig } from 'zyzz';\nconst { style } = defineConfig({vars:{fontWeight:{'medium.5':'heavy'}}});\nexport const props = style({fontWeight:'medium.5'})();",
       }),
     ).toThrowErrorMatchingInlineSnapshot(
       `[Source.ExtractError: example/dotted-weight.ts:55: Font weight token fontWeight.medium.5 must be a number from 1 to 1000 or a fontWeight keyword, such as 500.]`,
