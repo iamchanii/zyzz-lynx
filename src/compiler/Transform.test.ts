@@ -5170,9 +5170,8 @@ export const props = style({ marginTop: '-6.4sp', paddingLeft: 'calc(10rpx + 1px
         @media (width >= 1px){.z_l0kPgl2{font-size:14sp;}}"
       `)
 
-      expect(() =>
-        Transform.compile({ moduleId: 'App.tsx', source }),
-      ).toThrowErrorMatchingInlineSnapshot(`
+      expect(() => Transform.compile({ moduleId: 'App.tsx', source }))
+        .toThrowErrorMatchingInlineSnapshot(`
         [Source.ExtractError: App.tsx:69: The \`sp\` unit requires the lynx target.
         App.tsx:92: The \`rpx\` unit requires the lynx target.
         App.tsx:150: The \`sp\` unit requires the lynx target.]
