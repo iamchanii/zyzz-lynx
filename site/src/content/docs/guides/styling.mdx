@@ -93,7 +93,7 @@ style({ flexDirection: '' })
 //                      ^|
 ```
 
-The compiler reads definitions without running application code. Literal values, local `const` records, and typed callbacks qualify. Source that skipped the transform still runs static definitions, but calls that need a stable identity throw. See [Untransformed Tests](/docs/guides/testing#untransformed-tests).
+The compiler reads definitions without running application code. Literal values, local `const` records, and typed callbacks qualify. Source that skipped the transform still runs static definitions. Empty, dynamic, and other identity-bearing calls throw unless they receive an explicit `id`. See [Untransformed Tests](/docs/guides/testing#untransformed-tests).
 
 ### Apply the Style
 

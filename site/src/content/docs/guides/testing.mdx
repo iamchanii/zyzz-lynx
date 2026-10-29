@@ -85,7 +85,7 @@ A Node environment applies no CSS, so it cannot check layout, cascade, or comput
 
 ## Untransformed Tests
 
-A runner without the transform executes authoring calls as written. Static `style` definitions, config helpers without variable sets, and `cx` still return props. Their content-derived class names differ from compiled ones, so compare an element's props with the same style call rather than a fixed string.
+A runner without the transform executes authoring calls as written. Static `style` definitions, config helpers without variable sets, and `cx` still return props. Their content-derived class names differ from compiled ones, so compare an element's props with the same `style` or `cx` call rather than a fixed string.
 
 Calls that name CSS outside one static class need a stable identity: dynamic and empty styles, `variants`, `variable`, configs with variable sets, and stylesheet declarations such as `keyframes`. Without the transform they throw unless they receive an explicit `id`, which a config takes in `defineConfig`.
 
