@@ -119,7 +119,7 @@ describe('/docs/guides/testing', () => {
       .allTextContents()
     for (const heading of headings) expect(markdown).toContain(heading)
     const blocks = await page.locator('article pre code').allTextContents()
-    expect(blocks).toHaveLength(10)
+    expect(blocks).toHaveLength(11)
     for (const block of blocks) expect(markdown).toContain(block.trim())
     const paragraphs = await page
       .locator('article p, article li')
@@ -219,4 +219,18 @@ createRoot(document.getElementById('root')!).render(${component})`,
   } finally {
     await browser.close()
   }
+})
+
+describe('untransformed example', async () => {
+  const source = Fs.readFileSync(
+    new URL('./testing.mdx', import.meta.url),
+    'utf8',
+  )
+  const example = source.match(/```ts title="Badge\.test\.ts"\n(.*?)\n```/s)
+  const file = `${directory}/Badge.test.ts`
+
+  Fs.mkdirSync(directory, { recursive: true })
+  // The example runs as written, without the transform, under this suite's runner.
+  Fs.writeFileSync(file, example![1]!.replace("'vitest'", "'vite-plus/test'"))
+  await import(/* @vite-ignore */ file)
 })
