@@ -65,9 +65,9 @@ export declare namespace zyzz {
   /** Portable build configuration without the target, which is always Lynx. */
   type Options = Omit<Unplugin.Options, 'target'> & {
     /**
-     * Imports `zyzz.css` before the modules of every entry in every environment. A manual
-     * import of `zyzz.css` stays safe and no longer decides the stylesheet's position.
-     * Defaults to false.
+     * Imports `zyzz.css` before the modules of every entry in every environment, after any
+     * configured `source.preEntry` modules. A manual import of `zyzz.css` stays safe and no
+     * longer decides the stylesheet's position. Defaults to false.
      */
     readonly inject?: boolean | undefined
   }
