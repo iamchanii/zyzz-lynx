@@ -1896,6 +1896,108 @@ export const html = variants({
       }
     })
 
+    test('numbers array-index choice names in Object.keys order, compiled and uncompiled', async () => {
+      const source = `import { cx, variants } from 'zyzz'
+export const level = variants({
+  selection: 'class',
+  base: { color: 'black' },
+  variants: {
+    level: {
+      tint: (values: { color: string }) => ({ color: values.color }),
+      '10': { color: 'green' },
+      '2': { color: 'blue' },
+      '1': { color: 'red' },
+    },
+  },
+  defaultVariants: { level: '1' },
+}, { id: 'level' })
+export const composed = (value: '1' | '2' | '10') => cx(level({ level: value }))`
+      const compiled = Graph.compile({ modules: { 'app.ts': source } })
+      const uncompiled = Graph.compile({
+        compiler: false,
+        modules: { 'app.ts': source },
+      })
+      const code = await Packed.bundle({
+        entry: 'app.ts',
+        modules: { 'app.ts': compiled.modules['app.ts']!.code },
+      })
+      const authored = await Packed.bundle({
+        entry: 'app.ts',
+        modules: { 'app.ts': source },
+      })
+
+      // Lynx selects with classes by default and compiles the same choice names.
+      expect(
+        Graph.compile({ modules: { 'app.ts': source }, target: 'lynx' })
+          .modules['app.ts']!.css,
+      ).toMatchInlineSnapshot(`
+        ".z_Zf5JrJ0{color:black;}
+        .zv4AYnAtnf0{color:red;}
+        .zv4AYnAtnf1{color:blue;}
+        .zv4AYnAtnf2{color:green;}
+        .zv4AYnAtnf3{color:var(--z-level-1-3-0-color);}
+        .z_Zf5JrJ1{color:black;}
+        .zvdFyJpabT0{color:red;}
+        .zvdFyJpabT1{color:blue;}
+        .zvdFyJpabT2{color:green;}
+        .zvdFyJpabT3{color:var(--z-level-1-3-0-color);}"
+      `)
+
+      const browser = await chromium.launch({
+        headless: true,
+        args: ['--no-sandbox'],
+      })
+
+      try {
+        const page = await browser.newPage()
+        // Compiled and uncompiled CSS share the choice classes under distinct base classes.
+        await page.setContent(
+          `<style>${compiled.modules['app.ts']!.css}</style><style>${uncompiled.modules['app.ts']!.css}</style><button>Button</button>`,
+        )
+        await page.addScriptTag({ content: code + ';globalThis.App=Fixture;' })
+        await page.addScriptTag({
+          content: authored + ';globalThis.Authored=Fixture;',
+        })
+        await page.evaluate(`window.apply = (props) => {
+          const element = document.querySelector('button');
+          element.className = props.className;
+          element.style.cssText = '';
+          for (const [name, value] of Object.entries(props.style ?? {})) element.style.setProperty(name, value);
+          return getComputedStyle(element).color;
+        }`)
+
+        for (const library of ['App', 'Authored']) {
+          expect(
+            await page.evaluate(
+              `['1', '2', '10'].map((value) => apply(${library}.level({ level: value })))`,
+            ),
+          ).toMatchInlineSnapshot(`
+            [
+              "rgb(255, 0, 0)",
+              "rgb(0, 0, 255)",
+              "rgb(0, 128, 0)",
+            ]
+          `)
+          expect(
+            await page.evaluate(
+              `[apply(${library}.level()), apply(${library}.level({ level: { tint: { color: 'orange' } } }))]`,
+            ),
+          ).toMatchInlineSnapshot(`
+            [
+              "rgb(255, 0, 0)",
+              "rgb(255, 165, 0)",
+            ]
+          `)
+        }
+
+        expect(
+          await page.evaluate(`apply(App.composed('10'))`),
+        ).toMatchInlineSnapshot(`"rgb(0, 128, 0)"`)
+      } finally {
+        await browser.close()
+      }
+    })
+
     test('replaces repeated packed applications in cx through contract ownership', async () => {
       const publisher = Graph.compile({
         modules: {
@@ -2105,7 +2207,7 @@ export const initialized = renderToStaticMarkup(<button {...classes.button({ var
       }
     })
 
-    test('rejects unknown selection modes and choice names that Object.keys reorders', () => {
+    test('rejects unknown selection modes and condition names that Object.keys reorders', () => {
       expect(() =>
         Source.extract({
           moduleId: 'recipe.ts',
@@ -2113,14 +2215,6 @@ export const initialized = renderToStaticMarkup(<button {...classes.button({ var
         }),
       ).toThrowErrorMatchingInlineSnapshot(
         `[Source.ExtractError: recipe.ts:51: Recipe selection must be 'attribute', 'class', or 'className'.]`,
-      )
-      expect(() =>
-        Source.extract({
-          moduleId: 'recipe.ts',
-          source: `import {variants} from 'zyzz'; variants({selection:'class',variants:{size:{'2':{color:'red'},'1':{color:'blue'}}}})`,
-        }),
-      ).toThrowErrorMatchingInlineSnapshot(
-        `[Source.ExtractError: recipe.ts:75: Class-selection choice names cannot be array indexes or __proto__.]`,
       )
       expect(() =>
         Source.extract({

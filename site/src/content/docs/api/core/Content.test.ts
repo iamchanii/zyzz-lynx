@@ -248,9 +248,12 @@ describe('variants API page', () => {
     `)
   })
 
-  test('compiles the base, choices, and dynamic choices', async () => {
+  test('compiles the base, choices, dynamic choices, and numeric choices', async () => {
     const [base] = await examples('variants', 'definition.base')
-    const [boolean, dynamic] = await examples('variants', 'definition.variants')
+    const [boolean, dynamic, numeric] = await examples(
+      'variants',
+      'definition.variants',
+    )
 
     expect(css(base!.source)).toMatchInlineSnapshot(`
       ".z_0{border-radius:6px;}
@@ -265,6 +268,11 @@ describe('variants API page', () => {
     expect(css(dynamic!.source)).toMatchInlineSnapshot(`
       ".z_0{&:where([data-size="compact"]){padding:4px;}}
       .z_1{&:where([data-size="custom"]){padding:var(--z-3oDDjY-button-1-1-0-padding);}}"
+    `)
+    expect(css(numeric!.source)).toMatchInlineSnapshot(`
+      ".z_0{&:where(.zv8A0iQkK30){color:blue;}}
+      .z_1{&:where(.zv8A0iQkK31){color:orange;}}
+      .z_2{&:where(.zv8A0iQkK32){color:red;}}"
     `)
   })
 

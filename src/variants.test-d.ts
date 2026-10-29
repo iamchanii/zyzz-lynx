@@ -1,7 +1,7 @@
 /** Verifies recipe inference and rejected authoring through the public entrypoint. @module */
 import type { CSSProperties } from 'react'
 import { describe, expectTypeOf, test } from 'vite-plus/test'
-import { Config as PublicConfig, type style, variants } from 'zyzz'
+import { Config as PublicConfig, type Props, type style, variants } from 'zyzz'
 import * as Theme from './internal/Theme.js'
 import * as Config from './internal/Configuration.js'
 
@@ -123,6 +123,24 @@ describe('variants', () => {
     void button()['data-size']
     // @ts-expect-error Selection names one of the two modes.
     variants({ selection: 'classes', variants: { size: { sm: {} } } })
+  })
+
+  test('infers array-index choice names as string choices', () => {
+    const temperature = variants({
+      selection: 'class',
+      variants: {
+        level: { '10': { color: 'green' }, '2': {}, '1': { color: 'red' } },
+      },
+      defaultVariants: { level: '1' },
+    })
+
+    expectTypeOf<Props.Variants<typeof temperature>['level']>().toEqualTypeOf<
+      '1' | '10' | '2' | null | undefined
+    >()
+    // @ts-expect-error Choices are string names, not numbers.
+    temperature({ level: 1 })
+    // @ts-expect-error Unknown choice.
+    temperature({ level: '3' })
   })
 
   test('returns the class list string for className selection', () => {

@@ -590,7 +590,7 @@ pub fn expand<'s, 'a>(
                 ));
             }
 
-            let choices = entries(&property.value)?;
+            let mut choices = entries(&property.value)?;
 
             if choices.is_empty() {
                 return Err(invalid(
@@ -612,17 +612,20 @@ pub fn expand<'s, 'a>(
                     ));
                 }
 
-                // Uncompiled authoring numbers choices in `Object.keys` order, which moves array
-                // indexes first and omits `__proto__`, so class names would not match.
-                if matches!(selection, Selection::Class(_))
-                    && (js::array_index(key).is_some() || key == "__proto__")
-                {
+                // Uncompiled authoring numbers choices in `Object.keys` order, which omits
+                // `__proto__`, so class names would not match.
+                if matches!(selection, Selection::Class(_)) && key == "__proto__" {
                     return Err(invalid(
-                        "Class-selection choice names cannot be array indexes or __proto__.",
+                        "Class-selection choice names cannot be __proto__.",
                         property.span,
                     ));
                 }
             }
+
+            // Choices take JavaScript own-property order, which lists array indexes first, so
+            // class names and payload slots match the `Object.keys` positions of uncompiled
+            // authoring. Choices of one axis never match together, so their rule order is free.
+            choices.sort_by_key(|(key, _)| js::array_index(key).map_or((1, 0), |index| (0, index)));
 
             let names: Vec<Arc<str>> = choices
                 .iter()

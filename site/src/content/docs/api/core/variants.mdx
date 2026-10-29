@@ -101,6 +101,27 @@ const button = variants({
 })
 ```
 
+Numeric choice names such as `'1'` are string choices, and applications select them as strings. The recipe lists array-index names first in ascending order, as JavaScript objects do. Choices of one axis never match together, so this order leaves precedence unchanged.
+
+```ts
+import { variants } from 'zyzz'
+
+const temperature = variants({
+  selection: 'class',
+  variants: {
+    // [!code hl:5]
+    level: {
+      '10': { color: 'red' },
+      '2': { color: 'orange' },
+      '1': { color: 'blue' },
+    },
+  },
+})
+
+// Selects the `10` choice by its string name
+temperature({ level: '10' })
+```
+
 ### definition.defaultVariants
 
 - **Type:** `{ [axis: string]: choice }{:ts}`
