@@ -9,7 +9,7 @@ import { style } from 'zyzz'
 import { customMedia } from 'zyzz/web'
 
 // [!code hl:2]
-// Emits `@custom-media --z-custommedia-compact (width < 40rem);`
+// Emits `@custom-media --z-custommedia-oRwC0_-compact (width < 40rem);`
 const compact = customMedia('(width < 40rem)')
 
 export function Sidebar() {
@@ -20,7 +20,7 @@ namespace styles {
   export const sidebar = style({
     display: 'block',
     // [!code hl:2]
-    // Emits `@media (--z-custommedia-compact){…}`
+    // Emits `@media (--z-custommedia-oRwC0_-compact){…}`
     [compact]: { display: 'none' },
   })
 }
@@ -54,7 +54,7 @@ export const wideHover = customMedia('(width >= 64rem) and (hover: hover)')
 - **Type:** `string{:ts}`
 - **Default:** `undefined{:ts}`
 
-A fixed identity, which replaces the name derived from the binding. It also separates two modules that declare the same binding name. Without a compiler transform, a call requires it.
+A fixed identity, which replaces the name derived from the module and binding. The name then stays the same when the declaring file moves. Without a compiler transform, a call requires it.
 
 ```ts /{ id: 'compact' }/
 // Returns '@media (--z-custommediaid-compact)'
@@ -78,7 +78,7 @@ const print = customMedia('print')
 export const link = style({
   color: 'blue',
   // [!code hl:2]
-  // Emits `@media (--z-custommedia-print){…&:hover{…}}`
+  // Emits `@media (--z-custommedia-3oDDjY-print){…&:hover{…}}`
   ':hover': { [print]: { textDecoration: 'none' } },
 })
 ```

@@ -195,10 +195,10 @@ describe('keyframes API page', () => {
     const output = compile(overview!)
 
     expect(output.shared).toMatchInlineSnapshot(
-      `"@keyframes z-k-enter{from{opacity:0;}to{opacity:1;}}"`,
+      `"@keyframes z-k-3PBZzK-enter{from{opacity:0;}to{opacity:1;}}"`,
     )
     expect(output.css).toMatchInlineSnapshot(`
-      ".z_3PBZzK0{animation-name:z-k-enter;}
+      ".z_3PBZzK0{animation-name:z-k-3PBZzK-enter;}
       .z_3PBZzK1{animation-duration:200ms;}"
     `)
   })
@@ -208,13 +208,13 @@ describe('keyframes API page', () => {
     const [grouped] = await examples('keyframes', 'frames[atRule]')
 
     expect(compile(list!).shared).toMatchInlineSnapshot(
-      `"@keyframes z-k-pulse{0%, 100%{opacity:1;}50%{opacity:0.5;}}"`,
+      `"@keyframes z-k-3oDDjY-pulse{0%, 100%{opacity:1;}50%{opacity:0.5;}}"`,
     )
     expect(compile(ranges!).shared).toMatchInlineSnapshot(
-      `"@keyframes z-k-reveal{entry 0%{opacity:0;}entry 100%{opacity:1;}}"`,
+      `"@keyframes z-k-3oDDjY-reveal{entry 0%{opacity:0;}entry 100%{opacity:1;}}"`,
     )
     expect(compile(grouped!).shared).toMatchInlineSnapshot(
-      `"@layer animations{@keyframes z-k-fade{from{opacity:0;}to{opacity:1;}}}"`,
+      `"@layer animations{@keyframes z-k-3oDDjY-fade{from{opacity:0;}to{opacity:1;}}}"`,
     )
   })
 
@@ -322,13 +322,13 @@ describe('positionTry API page', () => {
     const output = compile(overview!)
 
     expect(output.shared).toMatchInlineSnapshot(
-      `"@position-try --z-positiontry-above{margin-bottom:0.5rem;position-area:top;}"`,
+      `"@position-try --z-positiontry-A9MjQ1-above{margin-bottom:0.5rem;position-area:top;}"`,
     )
     expect(output.css).toMatchInlineSnapshot(`
       ".z_A9MjQ10{position:absolute;}
       .z_A9MjQ11{position-anchor:--trigger;}
       .z_A9MjQ12{position-area:bottom;}
-      .z_A9MjQ13{position-try-fallbacks:--z-positiontry-above;}"
+      .z_A9MjQ13{position-try-fallbacks:--z-positiontry-A9MjQ1-above;}"
     `)
   })
 
@@ -337,10 +337,10 @@ describe('positionTry API page', () => {
     const [grouped] = await examples('positionTry', 'declarations[atRule]')
 
     expect(compile(end!).shared).toMatchInlineSnapshot(
-      `"@position-try --z-positiontry-end{position-area:right;max-width:240px;}"`,
+      `"@position-try --z-positiontry-3oDDjY-end{position-area:right;max-width:240px;}"`,
     )
     expect(compile(grouped!).shared).toMatchInlineSnapshot(
-      `"@layer overlays{@position-try --z-positiontry-above{position-area:top;}}"`,
+      `"@layer overlays{@position-try --z-positiontry-3oDDjY-above{position-area:top;}}"`,
     )
   })
 
@@ -357,10 +357,10 @@ describe('counterStyle API page', () => {
     const output = compile(overview!)
 
     expect(output.shared).toMatchInlineSnapshot(
-      `"@counter-style z-counterstyle-circled{suffix:" ";symbols:"①" "②" "③";system:fixed;}"`,
+      `"@counter-style z-counterstyle-QvnI2l-circled{suffix:" ";symbols:"①" "②" "③";system:fixed;}"`,
     )
     expect(output.css).toMatchInlineSnapshot(
-      `".z_QvnI2l0{list-style-type:z-counterstyle-circled;}"`,
+      `".z_QvnI2l0{list-style-type:z-counterstyle-QvnI2l-circled;}"`,
     )
   })
 
@@ -370,13 +370,13 @@ describe('counterStyle API page', () => {
     const [grouped] = await examples('counterStyle', 'descriptors[atRule]')
 
     expect(compile(cyclic!).shared).toMatchInlineSnapshot(
-      `"@counter-style z-counterstyle-thumbs{system:cyclic;symbols:"👍";suffix:" ";}"`,
+      `"@counter-style z-counterstyle-3oDDjY-thumbs{system:cyclic;symbols:"👍";suffix:" ";}"`,
     )
     expect(compile(extended!).shared).toMatchInlineSnapshot(
-      `"@counter-style z-counterstyle-parenthesized{system:extends decimal;suffix:") ";}"`,
+      `"@counter-style z-counterstyle-3oDDjY-parenthesized{system:extends decimal;suffix:") ";}"`,
     )
     expect(compile(grouped!).shared).toMatchInlineSnapshot(
-      `"@layer lists{@counter-style z-counterstyle-stars{system:cyclic;symbols:"*";}}"`,
+      `"@layer lists{@counter-style z-counterstyle-3oDDjY-stars{system:cyclic;symbols:"*";}}"`,
     )
   })
 
@@ -395,18 +395,18 @@ describe('customMedia API page', () => {
     const output = compile(overview!)
 
     expect(output.shared).toMatchInlineSnapshot(
-      `"@custom-media --z-custommedia-compact (width < 40rem);"`,
+      `"@custom-media --z-custommedia-oRwC0_-compact (width < 40rem);"`,
     )
     expect(output.css).toMatchInlineSnapshot(`
       ".z_oRwC0_0{display:block;}
-      @media (--z-custommedia-compact){.z_oRwC0_1{display:none;}}"
+      @media (--z-custommedia-oRwC0_-compact){.z_oRwC0_1{display:none;}}"
     `)
     expect(compile(combined!).shared).toMatchInlineSnapshot(
-      `"@custom-media --z-custommedia-wideHover (width >= 64rem) and (hover: hover);"`,
+      `"@custom-media --z-custommedia-3oDDjY-wideHover (width >= 64rem) and (hover: hover);"`,
     )
     expect(compile(nested!).css).toMatchInlineSnapshot(`
       ".z_3oDDjY0{color:blue;}
-      @media (--z-custommedia-print){.z_3oDDjY1{&:hover{text-decoration:none;}}}"
+      @media (--z-custommedia-3oDDjY-print){.z_3oDDjY1{&:hover{text-decoration:none;}}}"
     `)
   })
 
@@ -482,17 +482,17 @@ describe('fontPaletteValues API page', () => {
     const output = compile(overview!)
 
     expect(output.shared).toMatchInlineSnapshot(
-      `"@font-palette-values --z-fontpalettevalues-brand{base-palette:0;font-family:"Brand Icons";override-colors:0 #ff5500, 1 #111111;}"`,
+      `"@font-palette-values --z-fontpalettevalues-AfPZ6v-brand{base-palette:0;font-family:"Brand Icons";override-colors:0 #ff5500, 1 #111111;}"`,
     )
     expect(output.css).toMatchInlineSnapshot(`
       ".z_AfPZ6v0{font-family:"Brand Icons";}
-      .z_AfPZ6v1{font-palette:--z-fontpalettevalues-brand;}"
+      .z_AfPZ6v1{font-palette:--z-fontpalettevalues-AfPZ6v-brand;}"
     `)
     expect(compile(accent!).shared).toMatchInlineSnapshot(
-      `"@font-palette-values --z-fontpalettevalues-accent{font-family:"Brand Icons";override-colors:0 crimson;}"`,
+      `"@font-palette-values --z-fontpalettevalues-3oDDjY-accent{font-family:"Brand Icons";override-colors:0 crimson;}"`,
     )
     expect(compile(grouped!).shared).toMatchInlineSnapshot(
-      `"@layer fonts{@font-palette-values --z-fontpalettevalues-night{base-palette:dark;font-family:"Brand Icons";}}"`,
+      `"@layer fonts{@font-palette-values --z-fontpalettevalues-3oDDjY-night{base-palette:dark;font-family:"Brand Icons";}}"`,
     )
   })
 
@@ -509,10 +509,10 @@ describe('cssFunction API page', () => {
     const output = compile(overview!)
 
     expect(output.shared).toMatchInlineSnapshot(
-      `"@function --z-cssfunction-double(--size <length>) returns <length>{result:calc(var(--size) * 2);}"`,
+      `"@function --z-cssfunction-emUaHx-double(--size <length>) returns <length>{result:calc(var(--size) * 2);}"`,
     )
     expect(output.css).toMatchInlineSnapshot(
-      `".z_emUaHx0{width:--z-cssfunction-double(2rem);}"`,
+      `".z_emUaHx0{width:--z-cssfunction-emUaHx-double(2rem);}"`,
     )
   })
 
@@ -523,16 +523,16 @@ describe('cssFunction API page', () => {
     const [grouped] = await examples('cssFunction', 'options[atRule]')
 
     expect(compile(fluid!).shared).toMatchInlineSnapshot(
-      `"@function --z-cssfunction-fluid(--min <length>,--max <length>: 3rem) returns <length>{result:clamp(var(--min), 4vw, var(--max));}"`,
+      `"@function --z-cssfunction-3oDDjY-fluid(--min <length>,--max <length>: 3rem) returns <length>{result:clamp(var(--min), 4vw, var(--max));}"`,
     )
     expect(compile(tint!).shared).toMatchInlineSnapshot(
-      `"@function --z-cssfunction-tint(--color <color>) returns <color>{result:color-mix(in srgb, var(--color), white 20%);}"`,
+      `"@function --z-cssfunction-3oDDjY-tint(--color <color>) returns <color>{result:color-mix(in srgb, var(--color), white 20%);}"`,
     )
     expect(compile(gutter!).shared).toMatchInlineSnapshot(
-      `"@function --z-cssfunction-gutter(--size <length>) returns <length>{--base:var(--size);result:var(--base);@media (width >= 48rem){result:calc(var(--base) * 2);}}"`,
+      `"@function --z-cssfunction-3oDDjY-gutter(--size <length>) returns <length>{--base:var(--size);result:var(--base);@media (width >= 48rem){result:calc(var(--base) * 2);}}"`,
     )
     expect(compile(grouped!).shared).toMatchInlineSnapshot(
-      `"@layer functions{@function --z-cssfunction-half(--size <length>){result:calc(var(--size) / 2);}}"`,
+      `"@layer functions{@function --z-cssfunction-3oDDjY-half(--size <length>){result:calc(var(--size) / 2);}}"`,
     )
   })
 
@@ -570,7 +570,7 @@ describe('colorProfile API page', () => {
     })
 
     expect(output.sharedCss).toMatchInlineSnapshot(`
-      "@color-profile --z-colorprofile-swop {
+      "@color-profile --z-colorprofile-gW2-fM-swop {
         src:url("zyzz-asset:src%2Fswop.icc");
       }"
     `)
@@ -580,7 +580,7 @@ describe('colorProfile API page', () => {
       }
     `)
     expect(output.modules[overview!.name!]?.css).toMatchInlineSnapshot(
-      `".z_gW2-fM0{color:color(--z-colorprofile-swop 0 0.5 1 0);}"`,
+      `".z_gW2-fM0{color:color(--z-colorprofile-gW2-fM-swop 0 0.5 1 0);}"`,
     )
   })
 
@@ -596,18 +596,18 @@ describe('colorProfile API page', () => {
     const [grouped] = await examples('colorProfile', 'descriptors[atRule]')
 
     expect(compile(intent!).shared).toMatchInlineSnapshot(`
-      "@color-profile --z-colorprofile-photo {
+      "@color-profile --z-colorprofile-3oDDjY-photo {
         rendering-intent:perceptual;src:url("zyzz-asset:photo.icc");
       }"
     `)
     expect(compile(components!).shared).toMatchInlineSnapshot(`
-      "@color-profile --z-colorprofile-cmyk {
+      "@color-profile --z-colorprofile-3oDDjY-cmyk {
         components:cyan, magenta, yellow, black;src:url("zyzz-asset:cmyk.icc");
       }"
     `)
     expect(compile(grouped!).shared).toMatchInlineSnapshot(`
       "@media print {
-        @color-profile --z-colorprofile-press {
+        @color-profile --z-colorprofile-3oDDjY-press {
           src:url("zyzz-asset:press.icc");
         }
       }"
@@ -822,8 +822,8 @@ describe('At-Rule Contract page', () => {
     })
 
     expect(compile(named!).shared).toMatchInlineSnapshot(`
-      "@counter-style z-counterstyle-circled{system:fixed;symbols:"①" "②" "③";}
-      @position-try --z-positiontry-above{position-area:top;}"
+      "@counter-style z-counterstyle-iHRaLY-circled{system:fixed;symbols:"①" "②" "③";}
+      @position-try --z-positiontry-iHRaLY-above{position-area:top;}"
     `)
     expect(output.sharedCss).toMatchInlineSnapshot(`
       "@layer reset,base;

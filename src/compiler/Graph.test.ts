@@ -4762,7 +4762,7 @@ describe('stylesheets', () => {
           modules: { 'app.ts': `import 'a';import 'b';` },
         }),
       ).toThrowErrorMatchingInlineSnapshot(
-        `[Source.ExtractError: b/index.js:0: Conflicting animation identity: z-k-fade; supply distinct declaration ids.]`,
+        `[Source.ExtractError: b/index.js:0: Conflicting animation identity: z-k-r-SNdO-fade; supply distinct declaration ids.]`,
       )
 
       const source = `import 'zyzz/reset.css';import {Config} from 'zyzz';const config=Config.create({layers:['base','components']});import {global} from 'zyzz/web';global({'@layer components':{button:{fontSize:'24px'},img:{maxWidth:'none'}}});`
@@ -4905,11 +4905,41 @@ describe('stylesheets', () => {
       })
 
       expect(app.modules['app.ts']!.css).toMatchInlineSnapshot(
-        `".z_Zf5JrJ0{animation-name:z-k-fade;}"`,
+        `".z_Zf5JrJ0{animation-name:z-k-jMcVyE-fade;}"`,
       )
       expect(app.sharedCss).toMatchInlineSnapshot(
-        `"@keyframes z-k-fade{from{opacity:0;}to{opacity:1;}}"`,
+        `"@keyframes z-k-jMcVyE-fade{from{opacity:0;}to{opacity:1;}}"`,
       )
+    })
+
+    test('names equal named-rule bindings from different modules distinctly', () => {
+      const definitions = (from: number) =>
+        `import {keyframes,positionTry} from 'zyzz/web';export const enter=keyframes({from:{opacity:${from}},to:{opacity:1}});export const below=positionTry({positionArea:'bottom'});`
+
+      const result = Graph.compile({
+        modules: {
+          'app.ts': `import {below as sheetBelow,enter as sheetEnter} from './sheet.js';import {below as snackbarBelow,enter as snackbarEnter} from './snackbar.js';import {style} from 'zyzz';export namespace styles {
+  export const sheet = style({animationName:sheetEnter,positionTryFallbacks:sheetBelow})
+
+  export const snackbar = style({animationName:snackbarEnter,positionTryFallbacks:snackbarBelow})
+}`,
+          'sheet.ts': definitions(0),
+          'snackbar.ts': definitions(0.5),
+        },
+      })
+
+      expect(result.sharedCss).toMatchInlineSnapshot(`
+        "@keyframes z-k-d0fsg3-enter{from{opacity:0;}to{opacity:1;}}
+        @position-try --z-positiontry-d0fsg3-below{position-area:bottom;}
+        @keyframes z-k-B3AYCF-enter{from{opacity:0.5;}to{opacity:1;}}
+        @position-try --z-positiontry-B3AYCF-below{position-area:bottom;}"
+      `)
+      expect(result.modules['app.ts']!.css).toMatchInlineSnapshot(`
+        ".z_Zf5JrJ0{animation-name:z-k-d0fsg3-enter;}
+        .z_Zf5JrJ1{position-try-fallbacks:--z-positiontry-d0fsg3-below;}
+        .z_Zf5JrJ2{animation-name:z-k-B3AYCF-enter;}
+        .z_Zf5JrJ3{position-try-fallbacks:--z-positiontry-B3AYCF-below;}"
+      `)
     })
 
     test('preserves suffix URLs and rejects relative assets without a graph host', () => {
@@ -5013,7 +5043,7 @@ describe('stylesheets', () => {
       })
 
       expect(app.modules['app.ts']!.css).toMatchInlineSnapshot(
-        `".z_Zf5JrJ0{animation-name:z-k-fade;}"`,
+        `".z_Zf5JrJ0{animation-name:z-k-r-SNdO-fade;}"`,
       )
       expect(new Trace.TraceMap(app.sharedCssMap!).sourcesContent)
         .toMatchInlineSnapshot(`

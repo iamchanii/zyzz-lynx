@@ -9,7 +9,7 @@ import { style } from 'zyzz'
 import { positionTry } from 'zyzz/web'
 
 // [!code hl:2]
-// Emits `@position-try --z-positiontry-above{…}`
+// Emits `@position-try --z-positiontry-A9MjQ1-above{…}`
 const above = positionTry({ marginBottom: '0.5rem', positionArea: 'top' })
 
 export function Tooltip(props: Tooltip.Props) {
@@ -79,7 +79,7 @@ export const above = positionTry({
 - **Type:** `string{:ts}`
 - **Default:** `undefined{:ts}`
 
-A fixed identity, which replaces the name derived from the binding. It also separates two modules that declare the same binding name. Without a compiler transform, a call requires it.
+A fixed identity, which replaces the name derived from the module and binding. The name then stays the same when the declaring file moves. Without a compiler transform, a call requires it.
 
 ```ts /{ id: 'above' }/
 // Returns `--z-positiontryid-above`
@@ -95,7 +95,7 @@ positionTry({ positionArea: 'top' }, { id: 'above' })
 The generated dashed name. `positionTryFallbacks` and the `positionTry` shorthand accept it, as do custom properties through a `vars` assignment. Other properties reject it. Imports, re-exports, and packed libraries keep the same name. The compiler omits definitions that are neither exported nor referenced.
 
 ```ts /positionTryFallbacks: above/
-// Compiles to `position-try-fallbacks:--z-positiontry-above`
+// Compiles to `position-try-fallbacks:--z-positiontry-A9MjQ1-above`
 style({ positionTryFallbacks: above })
 ```
 

@@ -9,13 +9,13 @@ import { style } from 'zyzz'
 import { colorProfile } from 'zyzz/web'
 
 // [!code hl:2]
-// Emits `@color-profile --z-colorprofile-swop{…}`
+// Emits `@color-profile --z-colorprofile-gW2-fM-swop{…}`
 const swop = colorProfile({ src: 'url("./swop.icc")' })
 
 export namespace styles {
   export const ink = style({
     // [!code hl:2]
-    // Compiles to `color:color(--z-colorprofile-swop 0 0.5 1 0)`
+    // Compiles to `color:color(--z-colorprofile-gW2-fM-swop 0 0.5 1 0)`
     color: `color(${swop} 0 0.5 1 0)`,
   })
 }
@@ -99,7 +99,7 @@ export const press = colorProfile({
 - **Type:** `string{:ts}`
 - **Default:** `undefined{:ts}`
 
-A fixed identity, which replaces the name derived from the binding. It also separates two modules that declare the same binding name. Without a compiler transform, a call requires it.
+A fixed identity, which replaces the name derived from the module and binding. The name then stays the same when the declaring file moves. Without a compiler transform, a call requires it.
 
 ```ts /{ id: 'swop' }/
 // Returns `--z-colorprofileid-swop`
@@ -115,7 +115,7 @@ colorProfile({ src: 'url("./swop.icc")' }, { id: 'swop' })
 The generated dashed name, for the color space position of `color()`. Imports, re-exports, and packed libraries keep the same name.
 
 ```ts /${swop}/
-// Compiles to `color(--z-colorprofile-swop 0 0.5 1 0)`
+// Compiles to `color(--z-colorprofile-gW2-fM-swop 0 0.5 1 0)`
 style({ color: `color(${swop} 0 0.5 1 0)` })
 ```
 

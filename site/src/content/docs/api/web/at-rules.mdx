@@ -85,7 +85,7 @@ fontFace({
 
 ## Named References
 
-`colorProfile`, `counterStyle`, `cssFunction`, `customMedia`, `fontPaletteValues`, `keyframes`, and `positionTry` return references. Each name comes from the binding, such as `z-k-fade` for `const fade`, and survives imports and packed libraries. Two modules declaring the same binding fail compilation, so an `{ id }` argument renames one.
+`colorProfile`, `counterStyle`, `cssFunction`, `customMedia`, `fontPaletteValues`, `keyframes`, and `positionTry` return references. Each name combines a hash of the declaring module with the binding, such as `z-k-3PBZzK-enter` for `const enter`, and survives imports and packed libraries. Equal bindings in different modules get distinct names, and an `{ id }` argument fixes one.
 
 References keep their domains in TypeScript, so a palette cannot become an animation name. The compiler omits named definitions that are neither exported nor referenced.
 
@@ -93,7 +93,7 @@ References keep their domains in TypeScript, so a palette cannot become an anima
 import { counterStyle, positionTry } from 'zyzz/web'
 
 // [!code hl:3]
-// Emits `@counter-style z-counterstyle-circled{…}` and `@position-try --z-positiontry-above{…}`
+// Emits `@counter-style z-counterstyle-iHRaLY-circled{…}` and `@position-try --z-positiontry-iHRaLY-above{…}`
 export const circled = counterStyle({ system: 'fixed', symbols: '"①" "②" "③"' })
 export const above = positionTry({ positionArea: 'top' })
 ```

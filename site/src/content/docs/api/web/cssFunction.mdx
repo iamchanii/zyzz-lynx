@@ -9,7 +9,7 @@ import { style } from 'zyzz'
 import { cssFunction } from 'zyzz/web'
 
 // [!code hl:6]
-// Emits `@function --z-cssfunction-double(--size <length>) returns <length>{…}`
+// Emits `@function --z-cssfunction-emUaHx-double(--size <length>) returns <length>{…}`
 const double = cssFunction({
   body: { result: 'calc(var(--size) * 2)' },
   parameters: [{ name: '--size', syntax: '<length>' }],
@@ -22,7 +22,7 @@ export function Box() {
 
 namespace styles {
   // [!code hl:2]
-  // Compiles to `width:--z-cssfunction-double(2rem)`
+  // Compiles to `width:--z-cssfunction-emUaHx-double(2rem)`
   export const box = style({ width: double('2rem') })
 }
 ```
@@ -124,7 +124,7 @@ export const half = cssFunction({
 - **Type:** `string{:ts}`
 - **Default:** `undefined{:ts}`
 
-A fixed identity, which replaces the name derived from the binding. It also separates two modules that declare the same binding name. Without a compiler transform, a call requires it.
+A fixed identity, which replaces the name derived from the module and binding. The name then stays the same when the declaring file moves. Without a compiler transform, a call requires it.
 
 ```ts /{ id: 'double' }/
 // Calls format as `--z-cssfunctionid-double(…)`
@@ -140,7 +140,7 @@ cssFunction({ body: { result: '0px' }, parameters: [] }, { id: 'double' })
 A function that formats a call expression from its arguments. Arguments that contain commas are wrapped in braces, as CSS requires. Imports, re-exports, and packed libraries keep the same name.
 
 ```ts /fluid('1rem', '2rem')/
-// Compiles to `font-size:--z-cssfunction-fluid(1rem,2rem)`
+// Compiles to `font-size:--z-cssfunction-3oDDjY-fluid(1rem,2rem)`
 style({ fontSize: fluid('1rem', '2rem') })
 ```
 

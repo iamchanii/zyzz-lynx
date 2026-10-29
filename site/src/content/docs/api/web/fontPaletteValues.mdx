@@ -9,7 +9,7 @@ import { style } from 'zyzz'
 import { fontPaletteValues } from 'zyzz/web'
 
 // [!code hl:6]
-// Emits `@font-palette-values --z-fontpalettevalues-brand{…}`
+// Emits `@font-palette-values --z-fontpalettevalues-AfPZ6v-brand{…}`
 const brand = fontPaletteValues({
   basePalette: 0,
   fontFamily: '"Brand Icons"',
@@ -97,7 +97,7 @@ export const night = fontPaletteValues({
 - **Type:** `string{:ts}`
 - **Default:** `undefined{:ts}`
 
-A fixed identity, which replaces the name derived from the binding. It also separates two modules that declare the same binding name. Without a compiler transform, a call requires it.
+A fixed identity, which replaces the name derived from the module and binding. The name then stays the same when the declaring file moves. Without a compiler transform, a call requires it.
 
 ```ts /{ id: 'brand' }/
 // Returns `--z-fontpalettevaluesid-brand`
@@ -113,7 +113,7 @@ fontPaletteValues({ fontFamily: '"Brand Icons"' }, { id: 'brand' })
 The generated dashed name. `fontPalette` and custom properties, such as a `vars` assignment, accept it. Other properties reject it. Imports, re-exports, and packed libraries keep the same name. The compiler omits definitions that are neither exported nor referenced.
 
 ```ts /fontPalette: brand/
-// Compiles to `font-palette:--z-fontpalettevalues-brand`
+// Compiles to `font-palette:--z-fontpalettevalues-AfPZ6v-brand`
 style({ fontPalette: brand })
 ```
 

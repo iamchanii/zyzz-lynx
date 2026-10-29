@@ -311,6 +311,7 @@ struct Scanner<'s, 'a> {
     error: Option<Error>,
     imports: FxHashMap<u32, Factory>,
     parsed: &'s Parsed<'a>,
+    qualifier: &'s str,
     result: Contributions<'a>,
 }
 
@@ -554,16 +555,21 @@ impl<'a> Scanner<'_, 'a> {
         });
         let name = match (explicit, binding) {
             (Some(explicit), _) => Some(identity::contribution(factory.as_str(), Some(explicit))?),
+            // The module qualifier separates equal binding names declared in different modules.
             (None, Some((_, id))) => Some(match factory {
-                Factory::Keyframes => format!("z-k-{}", identity::name(&id.name)),
+                Factory::Keyframes => {
+                    format!("z-k-{}-{}", self.qualifier, identity::name(&id.name))
+                }
                 Factory::CounterStyle => format!(
-                    "z-{}-{}",
+                    "z-{}-{}-{}",
                     factory.as_str().to_ascii_lowercase(),
+                    self.qualifier,
                     identity::name(&id.name)
                 ),
                 _ => format!(
-                    "--z-{}-{}",
+                    "--z-{}-{}-{}",
                     factory.as_str().to_ascii_lowercase(),
+                    self.qualifier,
                     identity::name(&id.name)
                 ),
             }),
@@ -643,7 +649,7 @@ impl<'a> Scanner<'_, 'a> {
 /// Collects stylesheet factory calls and named-rule aliases.
 ///
 /// `factories` maps local names of factories imported through source barrels to their export
-/// names.
+/// names. Names derived from bindings include a qualifier from `module_id`, as style classes do.
 ///
 /// # Errors
 ///
@@ -651,6 +657,7 @@ impl<'a> Scanner<'_, 'a> {
 /// bindings, named definitions without a constant, invalid ids, and non-constant aliases.
 pub fn scan<'a>(
     parsed: &Parsed<'a>,
+    module_id: &str,
     namespace: &str,
     links: &Record<Link>,
     factories: Option<&Record<Arc<str>>>,
@@ -715,11 +722,15 @@ pub fn scan<'a>(
     }
 
     if !imports.is_empty() || !result.imported.is_empty() {
+        let compact = identity::compact(module_id);
         let mut scanner = Scanner {
             ancestors: Vec::new(),
             error: None,
             imports,
             parsed,
+            qualifier: compact
+                .get(compact.len().saturating_sub(6)..)
+                .unwrap_or_default(),
             result,
         };
 
