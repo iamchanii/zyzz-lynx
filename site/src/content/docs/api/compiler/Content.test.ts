@@ -264,25 +264,25 @@ export const spin = keyframes({ from: { opacity: 0 }, to: { opacity: 1 } })
     `)
     expect(output.contributionCalls?.map((call) => [call.kind, call.name]))
       .toMatchInlineSnapshot(`
-      [
         [
-          "global",
-          undefined,
-        ],
-        [
-          "keyframes",
-          "z-k-spin",
-        ],
-      ]
-    `)
+          [
+            "global",
+            undefined,
+          ],
+          [
+            "keyframes",
+            "z-k-5M2Jq5-spin",
+          ],
+        ]
+      `)
 
     expect(Transform.compile({ moduleId: 'app/g.ts', source }).code)
       .toMatchInlineSnapshot(`
-      "
-      void 0
-      export const spin = "z-k-spin"
-      "
-    `)
+        "
+        void 0
+        export const spin = "z-k-5M2Jq5-spin"
+        "
+      `)
   })
 
   test('omits offsets for config layer contributions', () => {

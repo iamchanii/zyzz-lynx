@@ -9,7 +9,7 @@ import { style } from 'zyzz'
 import { counterStyle } from 'zyzz/web'
 
 // [!code hl:6]
-// Emits `@counter-style z-counterstyle-circled{…}`
+// Emits `@counter-style z-counterstyle-QvnI2l-circled{…}`
 const circled = counterStyle({
   suffix: '" "',
   symbols: '"①" "②" "③"',
@@ -97,7 +97,7 @@ export const stars = counterStyle({
 - **Type:** `string{:ts}`
 - **Default:** `undefined{:ts}`
 
-A fixed identity, which replaces the name derived from the binding. It also separates two modules that declare the same binding name. Without a compiler transform, a call requires it.
+A fixed identity, which replaces the name derived from the module and binding. The name then stays the same when the declaring file moves. Without a compiler transform, a call requires it.
 
 ```ts /{ id: 'stars' }/
 // Returns `z-counterstyleid-stars`
@@ -113,7 +113,7 @@ counterStyle({ system: 'cyclic', symbols: '"*"' }, { id: 'stars' })
 The generated counter style name. `listStyleType`, `listStyle`, and custom properties accept it, as do the `fallback`, `speakAs`, and `extends` system of another counter style. Other properties reject it. Packed libraries keep the name, and the compiler omits unreferenced definitions.
 
 ```ts /listStyleType: circled/
-// Compiles to `list-style-type:z-counterstyle-circled`
+// Compiles to `list-style-type:z-counterstyle-QvnI2l-circled`
 style({ listStyleType: circled })
 ```
 

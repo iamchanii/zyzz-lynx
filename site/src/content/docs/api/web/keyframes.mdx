@@ -2,20 +2,20 @@
 
 Emit an `@keyframes` rule and return its generated animation name.
 
-`keyframes` emits ordered frame stops into the shared stylesheet. The compiler replaces the call with a name derived from its binding, so styles reference the animation without a handwritten name. The [Keyframes](/docs/guides/keyframes) guide covers reduced motion and timeline ranges.
+`keyframes` emits ordered frame stops into the shared stylesheet. The compiler replaces the call with a name derived from its module and binding, so styles reference the animation without a handwritten name. The [Keyframes](/docs/guides/keyframes) guide covers reduced motion and timeline ranges.
 
 ```ts title="Notice.tsx"
 import { style } from 'zyzz'
 import { keyframes } from 'zyzz/web'
 
 // [!code hl:2]
-// Emits `@keyframes z-k-enter{from{opacity:0;}to{opacity:1;}}`
+// Emits `@keyframes z-k-3PBZzK-enter{from{opacity:0;}to{opacity:1;}}`
 const enter = keyframes({ from: { opacity: 0 }, to: { opacity: 1 } })
 
 export namespace styles {
   export const notice = style({
     // [!code hl:2]
-    // The reference compiles to `animation-name:z-k-enter`
+    // The reference compiles to `animation-name:z-k-3PBZzK-enter`
     animationName: enter,
     animationDuration: '200ms',
   })
@@ -82,7 +82,7 @@ export const fade = keyframes({
 - **Type:** `string{:ts}`
 - **Default:** `undefined{:ts}`
 
-A fixed identity, which replaces the name derived from the binding. It also separates two modules that declare the same binding name. Without a compiler transform, such as in tests, a call requires it.
+A fixed identity, which replaces the name derived from the module and binding. The name then stays the same when the declaring file moves. Without a compiler transform, such as in tests, a call requires it.
 
 ```ts /{ id: 'fade' }/
 // Returns `z-kid-fade` with or without a compiler transform
@@ -95,10 +95,10 @@ keyframes({ from: { opacity: 0 } }, { id: 'fade' })
 
 - **Type:** `string{:ts}`
 
-The generated animation name, such as `z-k-enter`. Imports, re-exports, and packed libraries keep the same name. The compiler omits definitions that are neither exported nor referenced.
+The generated animation name, such as `z-k-3PBZzK-enter`, where the middle segment hashes the declaring module. Imports, re-exports, and packed libraries keep the same name. The compiler omits definitions that are neither exported nor referenced.
 
 ```ts /animationName: enter/
-// Compiles to `animation-name:z-k-enter`
+// Compiles to `animation-name:z-k-3PBZzK-enter`
 style({ animationName: enter })
 ```
 

@@ -5825,8 +5825,8 @@ export const fade=keyframes({from:{opacity:0},to:{opacity:1},'@media (prefers-re
       expect(output.css).toMatchInlineSnapshot(`
         "@font-face{font-family:Base;src:local("Arial");}
         @layer fonts{@media screen{@font-face{font-family:Screen;src:local("Arial");}}}
-        @keyframes z-k-fade{from{opacity:0;}to{opacity:1;}}
-        @media (prefers-reduced-motion: reduce){@keyframes z-k-fade{from{opacity:1;}to{opacity:1;}}}"
+        @keyframes z-k-6y9KKx-fade{from{opacity:0;}to{opacity:1;}}
+        @media (prefers-reduced-motion: reduce){@keyframes z-k-6y9KKx-fade{from{opacity:1;}to{opacity:1;}}}"
       `)
     })
 
@@ -5878,12 +5878,12 @@ export const fade = keyframes({ '@supports (display: grid)': {'entry 0%, cover 1
       })
       expect(output.css).toMatchInlineSnapshot(`
         "@layer fonts{@media screen{@font-face{font-family:Body;src:local("Arial");font-feature-settings:"kern";font-variation-settings:"wght" 400;}}}
-        @supports (display: grid){@keyframes z-k-fade{entry 0%, cover 10%{opacity:0;}exit 100%{opacity:1;}}}"
+        @supports (display: grid){@keyframes z-k-LJoFdN-fade{entry 0%, cover 10%{opacity:0;}exit 100%{opacity:1;}}}"
       `)
       expect(output.code).toMatchInlineSnapshot(`
         "
         void 0;
-        export const fade = "z-k-fade";"
+        export const fade = "z-k-LJoFdN-fade";"
       `)
     })
     test('resolves configured queries across CSS whitespace and comment boundaries', () => {
@@ -5920,7 +5920,7 @@ export const fade = keyframes({ '@supports (display: grid)': {'entry 0%, cover 1
       })
       expect(output.css).toMatchInlineSnapshot(`
         "@font-face{font-family:Body;src:url(/body);}
-        @keyframes z-k-fade{from{opacity:0;}to{opacity:1;}}
+        @keyframes z-k-M1qTj0-fade{from{opacity:0;}to{opacity:1;}}
         @layer{@font-face{font-family:Layered;src:url(/body);}}
         @media
         screen{body{color:red;}}
@@ -7942,11 +7942,11 @@ describe('contributions', () => {
         @layer reset{body{margin:0;}}
         body{color:red;}
         @font-face{font-family:App;src:url(/font.woff2);font-display:swap;}
-        @keyframes z-k-fade{from{opacity:0;}to{opacity:1;}}
-        .z_qfO5i60{animation-name:z-k-fade;}"
+        @keyframes z-k-qfO5i6-fade{from{opacity:0;}to{opacity:1;}}
+        .z_qfO5i60{animation-name:z-k-qfO5i6-fade;}"
       `)
       expect(result.code).toMatchInlineSnapshot(
-        `"  void 0; void 0; void 0; const unused="z-k-unused"; const fade="z-k-fade"; export const box=({className:"z_qfO5i60"})"`,
+        `"  void 0; void 0; void 0; const unused="z-k-qfO5i6-unused"; const fade="z-k-qfO5i6-fade"; export const box=({className:"z_qfO5i60"})"`,
       )
     })
     test('keeps theme references live in global rules', () => {
@@ -9627,8 +9627,8 @@ describe('fontPalette', () => {
         },
       })
       expect(output.sharedCss).toMatchInlineSnapshot(`
-        "@font-palette-values --z-fontpalettevalues-palette{font-family:Evidence, "Second Family";base-palette:1;override-colors:0 red, 0 blue;}
-        body{font-palette:--z-fontpalettevalues-palette;}"
+        "@font-palette-values --z-fontpalettevalues-LnYYhN-palette{font-family:Evidence, "Second Family";base-palette:1;override-colors:0 red, 0 blue;}
+        body{font-palette:--z-fontpalettevalues-LnYYhN-palette;}"
       `)
       expect(
         Trace.originalPositionFor(new Trace.TraceMap(output.sharedCssMap!), {
@@ -10084,10 +10084,10 @@ describe('functionSyntax', () => {
       )
 
       expect(compiled.colors('red, blue')).toMatchInlineSnapshot(
-        `"--z-cssfunction-colors({red, blue})"`,
+        `"--z-cssfunction-zG2_WK-colors({red, blue})"`,
       )
       expect(compiled.colors('{red, blue}')).toMatchInlineSnapshot(
-        `"--z-cssfunction-colors({red, blue})"`,
+        `"--z-cssfunction-zG2_WK-colors({red, blue})"`,
       )
     })
     test('preserves union, repetition, keyword, and universal signatures', () => {
@@ -10101,10 +10101,10 @@ export const any=cssFunction({parameters:[{name:'--x',syntax:'type(*)'}],returns
       })
 
       expect(output.css).toMatchInlineSnapshot(`
-        "@function --z-cssfunction-scale(--x type(<number> | <percentage>): 50%) returns type(<number> | <percentage>){result:var(--x);}
-        @function --z-cssfunction-space(--x <length>+) returns <length>+{result:var(--x);}
-        @function --z-cssfunction-auto(--x type(auto | <length>)) returns type(auto | <length>){result:var(--x);}
-        @function --z-cssfunction-any(--x type(*)) returns type(*){result:var(--x);}"
+        "@function --z-cssfunction-Rtf1Zt-scale(--x type(<number> | <percentage>): 50%) returns type(<number> | <percentage>){result:var(--x);}
+        @function --z-cssfunction-Rtf1Zt-space(--x <length>+) returns <length>+{result:var(--x);}
+        @function --z-cssfunction-Rtf1Zt-auto(--x type(auto | <length>)) returns type(auto | <length>){result:var(--x);}
+        @function --z-cssfunction-Rtf1Zt-any(--x type(*)) returns type(*){result:var(--x);}"
       `)
     })
 
@@ -10126,11 +10126,11 @@ export const any=cssFunction({parameters:[{name:'--x',syntax:'type(*)'}],returns
       })
 
       expect(output.sharedCss).toMatchInlineSnapshot(
-        `"@function --z-cssfunction-size(--size type(<length> | <percentage>): 25%) returns type(<length> | <percentage>){result:var(--size);}"`,
+        `"@function --z-cssfunction-Rtf1Zt-size(--size type(<length> | <percentage>): 25%) returns type(<length> | <percentage>){result:var(--size);}"`,
       )
       expect(output.modules['app.ts']?.css).toMatchInlineSnapshot(`
-        ".z_Zf5JrJ0{width:--z-cssfunction-size();}
-        .z_Zf5JrJ1{width:--z-cssfunction-size(20px);}"
+        ".z_Zf5JrJ0{width:--z-cssfunction-Rtf1Zt-size();}
+        .z_Zf5JrJ1{width:--z-cssfunction-Rtf1Zt-size(20px);}"
       `)
     })
 
@@ -11965,8 +11965,8 @@ describe('namedRules', () => {
         (await Esbuild.transform(output.code, { loader: 'js' })).warnings,
       ).toMatchInlineSnapshot('[]')
       expect(output.css).toMatchInlineSnapshot(`
-        "@counter-style z-counterstyle-base{symbols:"x";}
-        @counter-style z-counterstyle-alias{system:extends decimal;fallback:z-counterstyle-base;}"
+        "@counter-style z-counterstyle-yRWX76-base{symbols:"x";}
+        @counter-style z-counterstyle-yRWX76-alias{system:extends decimal;fallback:z-counterstyle-yRWX76-base;}"
       `)
       const map = new Trace.TraceMap(output.cssMap)
       expect(Trace.originalPositionFor(map, { line: 2, column: 0 }))
@@ -12024,13 +12024,13 @@ export namespace styles {
 }`,
       })
       expect(output.css).toMatchInlineSnapshot(`
-        "@counter-style z-counterstyle-dots{system:cyclic;symbols:"●";suffix:" ";}
-        @font-palette-values --z-fontpalettevalues-palette{font-family:Body;base-palette:0;override-colors:0 red;}
-        @position-try --z-positiontry-below{position-area:bottom;margin-top:4px;}
-        @color-profile --z-colorprofile-profile{src:url(/profile.icc);rendering-intent:relative-colorimetric;}
-        .z_aRWX0o0{list-style-type:z-counterstyle-dots;}
-        .z_aRWX0o1{font-palette:--z-fontpalettevalues-palette;}
-        .z_aRWX0o2{position-try-fallbacks:--z-positiontry-below;}"
+        "@counter-style z-counterstyle-aRWX0o-dots{system:cyclic;symbols:"●";suffix:" ";}
+        @font-palette-values --z-fontpalettevalues-aRWX0o-palette{font-family:Body;base-palette:0;override-colors:0 red;}
+        @position-try --z-positiontry-aRWX0o-below{position-area:bottom;margin-top:4px;}
+        @color-profile --z-colorprofile-aRWX0o-profile{src:url(/profile.icc);rendering-intent:relative-colorimetric;}
+        .z_aRWX0o0{list-style-type:z-counterstyle-aRWX0o-dots;}
+        .z_aRWX0o1{font-palette:--z-fontpalettevalues-aRWX0o-palette;}
+        .z_aRWX0o2{position-try-fallbacks:--z-positiontry-aRWX0o-below;}"
       `)
       expect(
         output.code
@@ -12041,10 +12041,10 @@ export namespace styles {
         "
         import { Props as __zyzzProps } from 'zyzz/runtime';
 
-        export const dots="z-counterstyle-dots" as import('zyzz/web').counterStyle.Reference;
-        export const palette="--z-fontpalettevalues-palette" as import('zyzz/web').fontPaletteValues.Reference;
-        export const below="--z-positiontry-below" as import('zyzz/web').positionTry.Reference;
-        export const profile="--z-colorprofile-profile" as import('zyzz/web').colorProfile.Reference;
+        export const dots="z-counterstyle-aRWX0o-dots" as import('zyzz/web').counterStyle.Reference;
+        export const palette="--z-fontpalettevalues-aRWX0o-palette" as import('zyzz/web').fontPaletteValues.Reference;
+        export const below="--z-positiontry-aRWX0o-below" as import('zyzz/web').positionTry.Reference;
+        export const profile="--z-colorprofile-aRWX0o-profile" as import('zyzz/web').colorProfile.Reference;
         export namespace styles {
           export const list = /*#__PURE__*/__zyzzProps.create({className:"z_aRWX0o0 z_aRWX0o1 z_aRWX0o2 z-style-aRWX0o-styles-list"})
         }"
@@ -12068,10 +12068,10 @@ export namespace styles {
       }
       const output = compiler.compile(input)
       expect(output.sharedCss).toMatchInlineSnapshot(
-        `"@counter-style z-counterstyle-dots{system:cyclic;symbols:"●";}"`,
+        `"@counter-style z-counterstyle-aRWX0o-dots{system:cyclic;symbols:"●";}"`,
       )
       expect(output.modules['app.ts']!.css).toMatchInlineSnapshot(
-        `".z_Zf5JrJ0{list-style-type:z-counterstyle-dots;}"`,
+        `".z_Zf5JrJ0{list-style-type:z-counterstyle-aRWX0o-dots;}"`,
       )
       expect(
         JSON.parse(library.contracts['names.ts']!).version,
@@ -12087,7 +12087,7 @@ export namespace styles {
           contracts: { 'lib/names.js': edited.contracts['names.ts']! },
         }).sharedCss,
       ).toMatchInlineSnapshot(
-        `"@counter-style z-counterstyle-alias{system:cyclic;symbols:"■";}"`,
+        `"@counter-style z-counterstyle-aRWX0o-alias{system:cyclic;symbols:"■";}"`,
       )
     })
     test('rejects unsupported descriptor keys and position declarations at the source call', () => {
@@ -14344,10 +14344,10 @@ global({body:{color:\`color(\${profile} 0 1 1 0)\`}});`
       })
 
       expect(output.sharedCss).toMatchInlineSnapshot(`
-        "@color-profile --z-colorprofile-profile {
+        "@color-profile --z-colorprofile-HPrE_Q-profile {
           src:url("zyzz-asset:lib%2Fprint.icc");components:c, m, y, k;rendering-intent:relative-colorimetric;
         }
-        body{color:color(--z-colorprofile-profile 0 1 1 0);}"
+        body{color:color(--z-colorprofile-HPrE_Q-profile 0 1 1 0);}"
       `)
       expect(output.sharedAssets).toMatchInlineSnapshot(`
       {
@@ -14355,7 +14355,7 @@ global({body:{color:\`color(\${profile} 0 1 1 0)\`}});`
       }
     `)
       expect(output.modules['app.ts']?.css).toMatchInlineSnapshot(
-        `".z_Zf5JrJ0{color:color(--z-colorprofile-profile 0 0 0 1);}"`,
+        `".z_Zf5JrJ0{color:color(--z-colorprofile-HPrE_Q-profile 0 0 0 1);}"`,
       )
       expect(
         Trace.originalPositionFor(new Trace.TraceMap(output.sharedCssMap!), {
@@ -14379,8 +14379,8 @@ global({body:{color:\`color(\${profile} 0 1 1 0)\`}});`
       })
 
       expect(output.css).toMatchInlineSnapshot(`
-        "@color-profile --z-colorprofile-profile{src:url(/print.icc);components:c,m,y,k;}
-        body{color:color(from rgb(1 2 3) --z-colorprofile-profile c m y k);background-color:color(--z-colorprofile-profile 0 0 0 1);}"
+        "@color-profile --z-colorprofile-PmS5Uo-profile{src:url(/print.icc);components:c,m,y,k;}
+        body{color:color(from rgb(1 2 3) --z-colorprofile-PmS5Uo-profile c m y k);background-color:color(--z-colorprofile-PmS5Uo-profile 0 0 0 1);}"
       `)
     })
 
@@ -14398,8 +14398,8 @@ global({body:{color:\`color(\${profile} 0 1 1 0)\`}});`
       })
 
       expect(packed.sharedCss).toMatchInlineSnapshot(`
-        "@color-profile --z-colorprofile-profile{src:url(/print.icc);components:c,m,y,k;}
-        body{color:color(from var(--z-color-base,red) --z-colorprofile-profile c m y k);}"
+        "@color-profile --z-colorprofile-PmS5Uo-profile{src:url(/print.icc);components:c,m,y,k;}
+        body{color:color(from var(--z-color-base,red) --z-colorprofile-PmS5Uo-profile c m y k);}"
       `)
     })
 
@@ -15287,7 +15287,7 @@ describe('statements', () => {
           modules: { 'app.ts': `import 'first';import 'second'` },
         }),
       ).toThrowErrorMatchingInlineSnapshot(
-        `[Source.ExtractError: second.js:0: Conflicting stylesheet identity: --z-custommedia-rule; supply distinct declaration ids.]`,
+        `[Source.ExtractError: second.js:0: Conflicting stylesheet identity: --z-custommedia-LW_GSj-rule; supply distinct declaration ids.]`,
       )
     })
     test('rejects conflicting packed cssFunction identities', () => {
@@ -15314,7 +15314,7 @@ describe('statements', () => {
           modules: { 'app.ts': `import 'first';import 'second'` },
         }),
       ).toThrowErrorMatchingInlineSnapshot(
-        `[Source.ExtractError: second.js:0: Conflicting stylesheet identity: --z-cssfunction-rule; supply distinct declaration ids.]`,
+        `[Source.ExtractError: second.js:0: Conflicting stylesheet identity: --z-cssfunction-LW_GSj-rule; supply distinct declaration ids.]`,
       )
     })
     test('prunes unused named statements and emits JavaScript function formatters', async () => {
@@ -15328,8 +15328,8 @@ describe('statements', () => {
         (await Esbuild.transform(output.code, { loader: 'ts' })).warnings,
       ).toMatchInlineSnapshot('[]')
       expect(output.css).toMatchInlineSnapshot(`
-        "@function --z-cssfunction-twice(--x <number>) returns <number>{result:calc(var(--x)*2);}
-        .z_ttf1Y30{opacity:--z-cssfunction-twice(1);}"
+        "@function --z-cssfunction-ttf1Y3-twice(--x <number>) returns <number>{result:calc(var(--x)*2);}
+        .z_ttf1Y30{opacity:--z-cssfunction-ttf1Y3-twice(1);}"
       `)
     })
     test('rejects unsupported CSS function arguments without emitting a bare identity', () => {
@@ -15390,10 +15390,10 @@ describe('statements', () => {
         },
       })
       expect(output.sharedCss).toMatchInlineSnapshot(
-        `"@custom-media --z-custommedia-compact (width < 40rem);"`,
+        `"@custom-media --z-custommedia-V60VRC-compact (width < 40rem);"`,
       )
       expect(output.modules['app.ts']!.css).toMatchInlineSnapshot(
-        `"@media (--z-custommedia-compact){.z_Zf5JrJ0{color:red;}}"`,
+        `"@media (--z-custommedia-V60VRC-compact){.z_Zf5JrJ0{color:red;}}"`,
       )
     })
     test('emits native functions and callable fixed expressions', async () => {
@@ -15402,7 +15402,7 @@ describe('statements', () => {
         source: `import {cssFunction} from 'zyzz/web';export const twice=cssFunction({parameters:[{name:'--amount',syntax:'<length>',default:'1px'}],returns:'<length>',body:{result:'calc(var(--amount) * 2)','@media (width > 40rem)':{result:'calc(var(--amount) * 3)'}}});`,
       })
       expect(output.css).toMatchInlineSnapshot(
-        `"@function --z-cssfunction-twice(--amount <length>: 1px) returns <length>{result:calc(var(--amount) * 2);@media (width > 40rem){result:calc(var(--amount) * 3);}}"`,
+        `"@function --z-cssfunction-2JvbeK-twice(--amount <length>: 1px) returns <length>{result:calc(var(--amount) * 2);@media (width > 40rem){result:calc(var(--amount) * 3);}}"`,
       )
       const code = (
         await Esbuild.transform(output.code, { loader: 'ts', format: 'esm' })
@@ -15411,7 +15411,7 @@ describe('statements', () => {
         'data:text/javascript,' + encodeURIComponent(code)
       )
       expect(compiled.twice('2px')).toMatchInlineSnapshot(
-        `"--z-cssfunction-twice(2px)"`,
+        `"--z-cssfunction-2JvbeK-twice(2px)"`,
       )
     })
     test('isolates reused and default namespace prefixes across modules and packed output', () => {
@@ -15457,7 +15457,7 @@ describe('statements', () => {
         },
       })
       expect(output.modules['app.ts']!.css).toMatchInlineSnapshot(
-        `".z_Zf5JrJ0{width:--z-cssfunction-twice(2px);}"`,
+        `".z_Zf5JrJ0{width:--z-cssfunction-2JvbeK-twice(2px);}"`,
       )
     })
     test('rejects malformed function parameter data', () => {

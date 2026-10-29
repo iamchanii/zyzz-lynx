@@ -324,7 +324,7 @@ export const card = style({ animationName: fade, gap })
               },
               {
                 "kind": "keyframes",
-                "name": "z-k-fade",
+                "name": "z-k-POmH9e-fade",
                 "frames": [
                   {"stop":"from","style":{"name":"contribution","declarations":[["opacity",0,false]]}},
                   {"stop":"to","style":{"name":"contribution","declarations":[["opacity",1,false]]}}
@@ -340,7 +340,7 @@ export const card = style({ animationName: fade, gap })
                 "start": 315,
                 "end": 370,
                 "kind": "keyframes",
-                "name": "z-k-fade",
+                "name": "z-k-POmH9e-fade",
                 "binding": 308,
                 "exported": false
               }
@@ -360,7 +360,7 @@ export const card = style({ animationName: fade, gap })
                 {
                   "name": "style-19frzcc1owwamk-465",
                   "declarations": [
-                    ["animationName","z-k-fade",false],
+                    ["animationName","z-k-POmH9e-fade",false],
                     [
                       "--z-gap",
                       {"binding":{"dynamic":false,"name":"--z-gap","type":"length","zero":false}},
@@ -882,7 +882,7 @@ export const panel = style({ animationName: fade, selectors: { [`${card} &`]: { 
               "contributions": [
                 {
                   "kind": "keyframes",
-                  "name": "z-k-fade",
+                  "name": "z-k-1dmAZw-fade",
                   "frames": [
                     {"stop":"from","style":{"name":"contribution","declarations":[["opacity",0,false]]}}
                   ]
@@ -894,7 +894,7 @@ export const panel = style({ animationName: fade, selectors: { [`${card} &`]: { 
                   "start": 131,
                   "end": 166,
                   "kind": "keyframes",
-                  "name": "z-k-fade",
+                  "name": "z-k-1dmAZw-fade",
                   "binding": 124,
                   "exported": true
                 }
@@ -968,7 +968,7 @@ export const panel = style({ animationName: fade, selectors: { [`${card} &`]: { 
                 [
                   "fade",
                   {
-                    "binding": "z-k-fade",
+                    "binding": "z-k-1dmAZw-fade",
                     "call": {
                       "appearance": false,
                       "catalogOnly": false,
@@ -977,7 +977,7 @@ export const panel = style({ animationName: fade, selectors: { [`${card} &`]: { 
                       "function": null,
                       "initialization": false,
                       "members": null,
-                      "name": "z-k-fade",
+                      "name": "z-k-1dmAZw-fade",
                       "nativeProvider": false,
                       "options": null,
                       "output": null,
@@ -1098,7 +1098,7 @@ export const panel = style({ animationName: fade, selectors: { [`${card} &`]: { 
                                       null,
                                       {
                                         "name": "style-1ueoqjf18jbcq5-87",
-                                        "declarations": [["animationName","z-k-fade",false]]
+                                        "declarations": [["animationName","z-k-1dmAZw-fade",false]]
                                       }
                                     ],
                                     [
@@ -1123,7 +1123,7 @@ export const panel = style({ animationName: fade, selectors: { [`${card} &`]: { 
                             null,
                             {
                               "name": "style-1ueoqjf18jbcq5-87",
-                              "declarations": [["animationName","z-k-fade",false]]
+                              "declarations": [["animationName","z-k-1dmAZw-fade",false]]
                             }
                           ],
                           [
@@ -1156,7 +1156,7 @@ export const panel = style({ animationName: fade, selectors: { [`${card} &`]: { 
                         null,
                         {
                           "name": "style-1ueoqjf18jbcq5-87",
-                          "declarations": [["animationName","z-k-fade",false]]
+                          "declarations": [["animationName","z-k-1dmAZw-fade",false]]
                         }
                       ],
                       [

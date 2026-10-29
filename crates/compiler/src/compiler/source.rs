@@ -2228,6 +2228,7 @@ pub fn extract<'a>(allocator: &'a Allocator, options: &Options<'_, 'a>) -> Resul
     let statics = statics::collect(allocator, program, &parsed.semantic, constants);
     let mut contributions = match contributions::scan(
         parsed,
+        options.module_id,
         &namespace,
         links,
         context.and_then(|context| context.factories.as_ref()),
