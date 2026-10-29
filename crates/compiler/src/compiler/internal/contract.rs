@@ -26,6 +26,7 @@ use crate::internal::{
 };
 use crate::js::{self, Record};
 use crate::runtime::recipe::Scalar;
+use crate::style;
 
 /// A library contract's validated metadata.
 pub struct Library {
@@ -534,7 +535,7 @@ fn supported(value: &Data) -> Option<u32> {
         return None;
     };
 
-    (1..=36).find(|candidate| *version == f64::from(*candidate))
+    (1..=37).find(|candidate| *version == f64::from(*candidate))
 }
 
 fn empty_theme() -> Result<Arc<theme::Definition>> {
@@ -835,7 +836,7 @@ impl Reader<'_> {
                     },
                     reference.to_lowercase()
                 );
-                let valid = (9..=36).contains(&version)
+                let valid = (9..=37).contains(&version)
                     && kind.is_some()
                     && (identity_like(&name, "z-") || identity_like(&name, "--z-"))
                     && name.starts_with(&prefix)
@@ -1480,9 +1481,12 @@ pub fn write(options: &Write<'_>) -> Result<String> {
 
     output.push_str("},\"version\":");
 
-    // Readers before version 36 would drop class-selection ownership and keep both choice
-    // classes of repeated applications, so these contracts require it.
-    let version = if options.links.values().any(selects_classes) {
+    // Readers before version 37 would drop the class of each flat recipe rule, and readers
+    // before version 36 would drop class-selection ownership and keep both choice classes of
+    // repeated applications, so these contracts require them.
+    let version = if options.links.values().any(flat_rules) {
+        37
+    } else if options.links.values().any(selects_classes) {
         36
     } else if !options.literals.is_empty() {
         35
@@ -1512,6 +1516,21 @@ fn composed(link: &Link) -> bool {
         .as_ref()
         .is_some_and(|style| style.style.composition.is_some())
         || link.members.iter().flat_map(Record::values).any(composed)
+}
+
+fn flat_rules(link: &Link) -> bool {
+    fn classed(style: &style::NamedStyle) -> bool {
+        style
+            .rules
+            .iter()
+            .flatten()
+            .any(|rule| rule.class.is_some() || classed(&rule.style))
+    }
+
+    link.style
+        .as_ref()
+        .is_some_and(|style| classed(&style.style))
+        || link.members.iter().flat_map(Record::values).any(flat_rules)
 }
 
 fn selects_classes(link: &Link) -> bool {

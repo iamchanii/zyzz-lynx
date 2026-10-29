@@ -118,6 +118,43 @@ export const badge = variants({
     )
   })
 
+  test('publishes lynx flat class rules in version 37 contracts', () => {
+    const publisher = Graph.compile({
+      modules: {
+        'library.ts': `import { variants } from 'zyzz'
+export const badge = variants({
+  variants: { size: { large: { height: '40px' }, small: { height: '20px' } } },
+})`,
+      },
+      target: 'lynx',
+    })
+    const contract = JSON.parse(publisher.contracts['library.ts']!)
+    const consume = (contracts: Record<string, string>) =>
+      Graph.compile({
+        contracts,
+        imports: { 'app.ts': { zyzz: null, './library.js': 'library.ts' } },
+        modules: {
+          'app.ts': `import { badge } from './library.js'\nexport const className = badge({ size: 'large' })`,
+        },
+        target: 'lynx',
+      })
+
+    expect(contract.version).toMatchInlineSnapshot(`37`)
+    expect(consume(publisher.contracts).modules['app.ts']!.code)
+      .toMatchInlineSnapshot(`
+      "import { badge } from './library.js'
+      export const className = badge({ size: 'large' })"
+    `)
+
+    contract.version = 36
+
+    expect(() =>
+      consume({ 'library.ts': JSON.stringify(contract) }),
+    ).toThrowErrorMatchingInlineSnapshot(
+      `[Source.ExtractError: library.ts:0: Invalid library contract: Flat recipe rules require contract version 37 or later.]`,
+    )
+  })
+
   test('retains literal token exports across packed configurations and re-exports', () => {
     const publisher = Graph.compile({
       modules: {

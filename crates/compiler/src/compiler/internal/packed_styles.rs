@@ -475,6 +475,11 @@ impl Reader<'_> {
 
                     let class = match get(rule, "class") {
                         Data::Undefined => None,
+                        _ if self.version < 37 => {
+                            return Err(invalid(
+                                "Flat recipe rules require contract version 37 or later.",
+                            ));
+                        }
                         value => Some(string(value)?),
                     };
 
