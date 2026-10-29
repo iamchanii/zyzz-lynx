@@ -3139,6 +3139,163 @@ export const View = () => <App />`,
     `)
   })
 
+  test('folds local namespace applications in modules outside import cycles', async () => {
+    const modules = {
+      'cycle.tsx': `import { style } from 'zyzz'
+import './peer.tsx'
+export function Cycle() { return <b {...styles.card()}>cycle</b> }
+namespace styles {
+  export const card = style({ paddingLeft: '4px' })
+}`,
+      // A module outside import cycles reaches no local function before its namespace runs.
+      'index.tsx': `import { createContext } from 'react'
+import { cx, style } from 'zyzz'
+import { Cycle } from './cycle.tsx'
+import { Escape } from './escape.tsx'
+import { graphql } from './schema.ts'
+const fragment = graphql(\`fragment Card on Card { id }\`)
+const Context = createContext(false)
+function Item(props: { on: boolean }) {
+  return <i {...cx(styles.card(), props.on && styles.title())}>{fragment}</i>
+}
+export function App() {
+  return <main>
+    <i {...styles.card()}>spread</i>
+    <i className={styles.title().className}>read</i>
+    <i {...cx(styles.card(), styles.title())}>cx</i>
+    <Item on />
+    <Item on={false} />
+    <Cycle />
+    <Escape />
+  </main>
+}
+namespace styles {
+  export const card = style({ borderLeft: '1px solid' })
+
+  export const title = style({ color: 'rgb(255, 0, 0)' })
+}`,
+      // Another module may call a function the module passes it before the namespace runs.
+      'escape.tsx': `import { style } from 'zyzz'
+import { graphql } from './schema.ts'
+export function Escape() { return <b {...styles.card()}>escape</b> }
+graphql(String(Escape))
+namespace styles {
+  export const card = style({ paddingLeft: '8px' })
+}`,
+      'peer.tsx': `import { Cycle } from './cycle.tsx'
+export const Peer = () => <Cycle />`,
+      'schema.ts': `export const graphql = (value: string) => value`,
+    }
+    const output = Graph.compile({ cssOutput: 'grouped', modules })
+
+    expect(output.modules['index.tsx']!.code).toMatchInlineSnapshot(`
+      "import { createContext } from 'react'
+
+      import { Cycle } from './cycle.tsx'
+      import { Escape } from './escape.tsx'
+      import { graphql } from './schema.ts'
+      const fragment = graphql(\`fragment Card on Card { id }\`)
+      const Context = createContext(false)
+      function Item(props: { on: boolean }) {
+        return <i className={(props.on)?"z_HXfo7a2 z_HXfo7a3":"z_HXfo7a2"}>{fragment}</i>
+      }
+      export function App() {
+        return <main>
+          <i className={"z_HXfo7a0"}>spread</i>
+          <i className={"z_HXfo7a1"}>read</i>
+          <i className={"z_HXfo7a2 z_HXfo7a3"}>cx</i>
+          <Item on />
+          <Item on={false} />
+          <Cycle />
+          <Escape />
+        </main>
+      }
+      "
+    `)
+    // Importers in a cycle can call a function declaration first, so its guard remains.
+    expect(output.modules['cycle.tsx']!.code).toMatchInlineSnapshot(`
+      "
+      import './peer.tsx'
+      export function Cycle() { return <b className={(styles.card?"z_17UiK40":styles.card().className)}>cycle</b> }
+      namespace styles {
+        export const card = (1 as unknown as import('zyzz').style.ReturnType)
+      }"
+    `)
+    expect(output.modules['escape.tsx']!.code).toMatchInlineSnapshot(`
+      "
+      import { graphql } from './schema.ts'
+      export function Escape() { return <b className={(styles.card?"z_sqmCGR0":styles.card().className)}>escape</b> }
+      graphql(String(Escape))
+      namespace styles {
+        export const card = (1 as unknown as import('zyzz').style.ReturnType)
+      }"
+    `)
+
+    const rendered = await Wrappers.render({
+      css: Object.values(output.modules)
+        .map((module) => module.css)
+        .join('\n'),
+      entry: 'index.tsx',
+      modules: Object.fromEntries(
+        Object.entries(output.modules).map(([id, module]) => [id, module.code]),
+      ),
+    })
+
+    expect(rendered.elements).toMatchInlineSnapshot(`
+      [
+        {
+          "borderLeftWidth": "1px",
+          "className": "z_HXfo7a0",
+          "color": "rgb(0, 0, 0)",
+          "paddingLeft": "0px",
+          "tag": "i",
+        },
+        {
+          "borderLeftWidth": "0px",
+          "className": "z_HXfo7a1",
+          "color": "rgb(255, 0, 0)",
+          "paddingLeft": "0px",
+          "tag": "i",
+        },
+        {
+          "borderLeftWidth": "1px",
+          "className": "z_HXfo7a2 z_HXfo7a3",
+          "color": "rgb(255, 0, 0)",
+          "paddingLeft": "0px",
+          "tag": "i",
+        },
+        {
+          "borderLeftWidth": "1px",
+          "className": "z_HXfo7a2 z_HXfo7a3",
+          "color": "rgb(255, 0, 0)",
+          "paddingLeft": "0px",
+          "tag": "i",
+        },
+        {
+          "borderLeftWidth": "1px",
+          "className": "z_HXfo7a2",
+          "color": "rgb(0, 0, 0)",
+          "paddingLeft": "0px",
+          "tag": "i",
+        },
+        {
+          "borderLeftWidth": "0px",
+          "className": "z_17UiK40",
+          "color": "rgb(0, 0, 0)",
+          "paddingLeft": "4px",
+          "tag": "b",
+        },
+        {
+          "borderLeftWidth": "0px",
+          "className": "z_sqmCGR0",
+          "color": "rgb(0, 0, 0)",
+          "paddingLeft": "8px",
+          "tag": "b",
+        },
+      ]
+    `)
+  })
+
   test('folds wrappers over imported cx calls and imported dynamic components', async () => {
     const modules = {
       'base.ts': `import { style } from 'zyzz'

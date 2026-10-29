@@ -693,8 +693,8 @@ fn closed<'a>(
     namespaces: &FxHashSet<u32>,
 ) -> u32 {
     let mut sealed = Sealed {
+        passes: true,
         semantic,
-        sealed: true,
         values: FxHashSet::default(),
     };
 
@@ -747,7 +747,7 @@ fn closed<'a>(
 /// Checks that evaluating an expression creates no function and reads no local binding beyond
 /// imports and `values`, so it cannot reach a local function.
 struct Sealed<'s, 'a> {
-    sealed: bool,
+    passes: bool,
     semantic: &'s Semantic<'a>,
     /// Variables whose values qualifying statements computed.
     values: FxHashSet<SymbolId>,
@@ -755,27 +755,27 @@ struct Sealed<'s, 'a> {
 
 impl<'a> Sealed<'_, 'a> {
     fn check(&mut self, expression: &Expression<'a>) -> bool {
-        self.sealed = true;
+        self.passes = true;
         self.visit_expression(expression);
-        self.sealed
+        self.passes
     }
 }
 
 impl<'a> Visit<'a> for Sealed<'_, 'a> {
     fn visit_arrow_function_expression(&mut self, _: &ArrowFunctionExpression<'a>) {
-        self.sealed = false;
+        self.passes = false;
     }
 
     fn visit_await_expression(&mut self, _: &AwaitExpression<'a>) {
-        self.sealed = false;
+        self.passes = false;
     }
 
     fn visit_class(&mut self, _: &Class<'a>) {
-        self.sealed = false;
+        self.passes = false;
     }
 
     fn visit_function(&mut self, _: &Function<'a>, _: ScopeFlags) {
-        self.sealed = false;
+        self.passes = false;
     }
 
     fn visit_identifier_reference(&mut self, identifier: &IdentifierReference<'a>) {
@@ -783,16 +783,16 @@ impl<'a> Visit<'a> for Sealed<'_, 'a> {
             && declaration.import.is_none()
             && !self.values.contains(&declaration.symbol)
         {
-            self.sealed = false;
+            self.passes = false;
         }
     }
 
     fn visit_super(&mut self, _: &Super) {
-        self.sealed = false;
+        self.passes = false;
     }
 
     fn visit_this_expression(&mut self, _: &ThisExpression) {
-        self.sealed = false;
+        self.passes = false;
     }
 
     // Type positions name types, not values.
@@ -801,7 +801,7 @@ impl<'a> Visit<'a> for Sealed<'_, 'a> {
     fn visit_ts_type_parameter_instantiation(&mut self, _: &TSTypeParameterInstantiation<'a>) {}
 
     fn visit_yield_expression(&mut self, _: &YieldExpression<'a>) {
-        self.sealed = false;
+        self.passes = false;
     }
 }
 
