@@ -335,6 +335,8 @@ pub struct Extracted<'a> {
     pub contributions: Vec<web::Definition>,
     /// Imported style applications that a graph can fold into class lists.
     pub imported_applications: Vec<ImportedApplication>,
+    /// Whether the Lynx target extracted the module, whose CSS then prints only flat rules.
+    pub lynx: bool,
     /// Module-owned namespace bindings retained when contributions are shared.
     pub namespaces: Vec<namespace::Definition>,
     /// Readonly native variable arguments and their complete catalogs.
@@ -859,6 +861,7 @@ struct Module<'m, 'a> {
     bodies: &'m FxHashMap<u32, &'a ObjectExpression<'a>>,
     calls: &'m [Call<'a>],
     contributions: &'m contributions::Contributions<'a>,
+    lynx: bool,
     native: bool,
     offsets: &'m Utf16Index,
     selectors: &'m selectors::Selectors<'m, 'a>,
@@ -2058,6 +2061,13 @@ impl<'a> Converter<'_, '_, '_, 'a> {
                         format!("Invalid selector or condition: {}", error.text()),
                         location,
                     );
+                } else if self.module.lynx
+                    && let Some(part) = condition::lynx_unsupported(condition)
+                {
+                    self.report(
+                        format!("The lynx target does not support `{part}`."),
+                        location,
+                    );
                 }
             }
 
@@ -2794,6 +2804,7 @@ pub fn extract<'a>(allocator: &'a Allocator, options: &Options<'_, 'a>) -> Resul
             bodies: &bodies,
             calls: &calls,
             contributions: &contributions,
+            lynx: options.target == Target::Lynx,
             native: options.target == Target::Native,
             offsets: &parsed.offsets,
             selectors: &selectors,
@@ -3312,6 +3323,7 @@ pub fn extract<'a>(allocator: &'a Allocator, options: &Options<'_, 'a>) -> Resul
             contribution_starts,
             contributions: contribution_data,
             imported_applications,
+            lynx: options.target == Target::Lynx,
             namespaces,
             native_vars: Vec::new(),
             static_theme_references: Vec::new(),
@@ -3356,6 +3368,7 @@ pub fn extract<'a>(allocator: &'a Allocator, options: &Options<'_, 'a>) -> Resul
         contribution_starts,
         contributions: contribution_data,
         imported_applications,
+        lynx: options.target == Target::Lynx,
         namespaces,
         native_vars: themes.vars_reads,
         static_theme_references,

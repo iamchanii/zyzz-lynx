@@ -82,6 +82,31 @@ Every emitted rule selects one class, so a compound keeps the specificity of a c
 - **`conditions`:** A compile error. Nest `@media` queries inside the choice styles instead.
 - **Dynamic choices:** Supported with spreads, which carry the bound variables in `style`, and rejected by `selection: 'className'`.
 
+## Conditions
+
+Nested selectors and `@media` queries compile to flat rules. A selector's `&` becomes the style's class, and the query wraps the class rule. Grouped output keeps one class and splits it into flat rules in authored order.
+
+```ts title="src/Todo.styles.ts"
+import { style } from 'zyzz'
+
+export const remove = style({
+  opacity: 1,
+  // [!code hl:2]
+  // Emits .z…:active { opacity: 0.4 }
+  ':active': { opacity: 0.4 },
+  // [!code hl:2]
+  // Emits @media (width >= 600px) { .z…:focus { opacity: 0.6 } }
+  '@media (width >= 600px)': { '&:focus': { opacity: 0.6 } },
+})
+```
+
+Conditions that Lynx never matches are compile errors, such as ``The lynx target does not support `:first-child`.``
+
+- **Pseudo-classes:** `:active`, `:focus`, `:hover`, `:not()`, and `:root`. Others, such as `:first-child` or `:has()`, are errors.
+- **Pseudo-elements:** `::placeholder` and `::selection`. Others, such as `::before`, are errors.
+- **Attribute selectors:** Supported, except the `~=` matcher.
+- **At-rules:** `@media` only. `@container`, `@layer`, `@starting-style`, and `@supports` are errors.
+
 ## Lynx Units
 
 Lengths accept the Lynx `rpx` and `sp` units, which the plugin emits as authored. A web build reports them in style declarations other than custom properties as invalid literals.
