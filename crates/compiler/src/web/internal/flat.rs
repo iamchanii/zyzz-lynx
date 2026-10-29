@@ -105,11 +105,14 @@ fn substitute(selector: &str, parent: &str) -> String {
     });
     output.push_str(selector.get(start..).unwrap_or_default());
 
-    if replaced {
-        return output;
+    if !replaced {
+        output.clear();
+        output.push_str(parent);
+        output.push(' ');
+        output.push_str(selector);
     }
 
-    format!("{parent} {selector}")
+    output
 }
 
 /// Splits a selector list at its top-level commas.

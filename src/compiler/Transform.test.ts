@@ -5281,6 +5281,52 @@ namespace styles {
           `[Source.ExtractError: App.tsx:58: The lynx target does not support \`@layer\`.]`,
         )
       })
+
+      test('rejects unmatched conditions in recipe choices and compounds', () => {
+        const compile = (definition: string) =>
+          Transform.compile({
+            moduleId: 'App.tsx',
+            source: `import { variants } from 'zyzz'\nexport const badge = variants(${definition})`,
+            target: 'lynx',
+          })
+
+        expect(() =>
+          compile(
+            `{ variants: { tone: { quiet: { '&::before': { color: 'gray' } } } } }`,
+          ),
+        ).toThrowErrorMatchingInlineSnapshot(
+          `[Source.ExtractError: App.tsx:91: The lynx target does not support \`::before\`.]`,
+        )
+        expect(() =>
+          compile(
+            `{ compoundVariants: [{ style: { ':first-child': { color: 'gray' } }, when: { tone: 'quiet' } }], variants: { tone: { quiet: {} } } }`,
+          ),
+        ).toThrowErrorMatchingInlineSnapshot(
+          `[Source.ExtractError: App.tsx:92: The lynx target does not support \`:first-child\`.]`,
+        )
+      })
+
+      test('prints global rules flat and rejects their unmatched conditions', () => {
+        const compile = (rules: string) =>
+          Transform.compile({
+            moduleId: 'App.tsx',
+            source: `import { global } from 'zyzz/web'\nglobal(${rules})`,
+            target: 'lynx',
+          }).css
+
+        expect(
+          compile(
+            `{ '.list': { color: 'red', '&:active': { color: 'blue' }, '@media (width >= 1px)': { '&:focus': { color: 'green' } } } }`,
+          ),
+        ).toMatchInlineSnapshot(
+          `".list{color:red;}.list:active{color:blue;}@media (width >= 1px){.list:focus{color:green;}}"`,
+        )
+        expect(() =>
+          compile(`{ '.list': { '&:first-child': { color: 'green' } } }`),
+        ).toThrowErrorMatchingInlineSnapshot(
+          `[Source.ExtractError: App.tsx:34: The lynx target does not support \`:first-child\`.]`,
+        )
+      })
     })
   })
 })

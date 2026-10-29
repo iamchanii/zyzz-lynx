@@ -2064,16 +2064,42 @@ impl<'a> Converter<'_, '_, '_, 'a> {
                 } else if self.module.lynx
                     && let Some(part) = condition::lynx_unsupported(condition)
                 {
-                    self.report(
-                        format!("The lynx target does not support `{part}`."),
-                        location,
-                    );
+                    self.report(lynx_message(part), location);
                 }
             }
 
             self.validate(&rule.style, &nested);
         }
     }
+}
+
+fn lynx_message(part: &str) -> String {
+    format!("The lynx target does not support `{part}`.")
+}
+
+/// The first part of a style's nested conditions that Lynx never matches.
+fn lynx_nested(style: &NamedStyle) -> Option<&str> {
+    style.rules.iter().flatten().find_map(|rule| {
+        rule.condition
+            .as_deref()
+            .and_then(condition::lynx_unsupported)
+            .or_else(|| lynx_nested(&rule.style))
+    })
+}
+
+/// The first part of a global style rule that Lynx never matches, in its enclosing groups,
+/// selector, or nested conditions.
+fn lynx_global(definition: &web::Definition) -> Option<&str> {
+    let web::Kind::Rule { selector, style } = &definition.kind else {
+        return None;
+    };
+
+    definition
+        .within
+        .iter()
+        .find_map(|header| condition::lynx_unsupported(header))
+        .or_else(|| condition::lynx_unsupported(selector))
+        .or_else(|| lynx_nested(style))
 }
 
 /// The module namespace: paired 32-bit FNV hashes of the UTF-16 module identity in base 36.
@@ -2913,6 +2939,15 @@ pub fn extract<'a>(allocator: &'a Allocator, options: &Options<'_, 'a>) -> Resul
 
                 match converter.define(values, &rule_name) {
                     Ok(value) => {
+                        // Choices and compounds skip `validate`, so their conditions are
+                        // checked here.
+                        if converter.module.lynx
+                            && let Some(part) =
+                                value.styles.iter().find_map(|style| lynx_nested(style))
+                        {
+                            converter.report(lynx_message(part), rule.value.span);
+                        }
+
                         if let Some(class) = flat.and_then(|flat| flat.get(position)?.as_ref()) {
                             class_rules.extend(value.styles.iter().map(|style| style::Rule {
                                 class: Some(Arc::clone(class)),
@@ -3228,6 +3263,16 @@ pub fn extract<'a>(allocator: &'a Allocator, options: &Options<'_, 'a>) -> Resul
                 )?;
             } else {
                 at_rules::validate(&rendered, options.module_id)?;
+            }
+        }
+
+        if options.target == Target::Lynx {
+            for (index, definition) in data.iter().enumerate() {
+                if let Some(part) = lynx_global(definition) {
+                    let start = contribution_starts.get(index).copied().unwrap_or_default();
+
+                    return Err(invalid(&lynx_message(part), Span::new(start, start)));
+                }
             }
         }
 

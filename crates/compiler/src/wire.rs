@@ -142,6 +142,7 @@ impl Input {
             deferred_scopes: false,
             development: self.development,
             labels: self.labels.as_ref(),
+            lynx: false,
             names: self.names.as_ref(),
             schemes: self.schemes,
             scope: self.scope.as_deref(),

@@ -84,7 +84,7 @@ Every emitted rule selects one class, so a compound keeps the specificity of a c
 
 ## Conditions
 
-Nested selectors and `@media` queries compile to flat rules. A selector's `&` becomes the style's class, and the query wraps the class rule. Grouped output keeps one class and splits it into flat rules in authored order.
+Nested selectors and `@media` queries in styles, recipes, and `global()` rules compile to flat rules. A selector's `&` becomes the style's class, and the query wraps the class rule. Grouped output keeps one class and splits it into flat rules in authored order.
 
 ```ts title="src/Todo.styles.ts"
 import { style } from 'zyzz'

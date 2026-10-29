@@ -54,6 +54,9 @@ pub struct Options<'a> {
     pub development: bool,
     /// Readable source bindings and consumer-owned configuration namespaces.
     pub labels: Option<&'a Labels>,
+    /// Prints contributed style rules flat, since the Lynx template encoder drops every nested
+    /// style rule.
+    pub lynx: bool,
     /// Fixed class identities used by CSS-only consumers.
     pub names: Option<&'a Names>,
     /// Emits the `color-scheme` selection classes.
@@ -1895,16 +1898,17 @@ fn run<'a>(
         return Err(Error::Css(std::mem::take(&mut compiler.diagnostics)));
     }
 
-    let contribution_css = contributions::render(options.contributions, &mut |output, style| {
-        compiler.write_nested(output, style);
-    })
-    .map_err(|message| {
-        Error::Css(vec![Diagnostic::new(
-            Code::InvalidDeclaration,
-            message,
-            vec![Arc::from("contributions")],
-        )])
-    })?;
+    let contribution_css =
+        contributions::render(options.contributions, options.lynx, &mut |output, style| {
+            compiler.write_nested(output, style);
+        })
+        .map_err(|message| {
+            Error::Css(vec![Diagnostic::new(
+                Code::InvalidDeclaration,
+                message,
+                vec![Arc::from("contributions")],
+            )])
+        })?;
     if options.contributions_only {
         return Ok(Output {
             contribution_css: Some(contribution_css),

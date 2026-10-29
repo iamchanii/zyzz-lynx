@@ -8,6 +8,7 @@ use rustc_hash::FxBuildHasher;
 use crate::js;
 use crate::style::NamedStyle;
 use crate::web::internal::block::{self, Entry};
+use crate::web::internal::flat;
 use crate::web::internal::namespace;
 
 /// An authored scalar descriptor value.
@@ -268,13 +269,15 @@ fn rank(value: &Definition) -> u8 {
     }
 }
 
-/// Renders static contributions without registration or environment access.
+/// Renders static contributions without registration or environment access. With `lynx`,
+/// style rules print flat, as [`flat::write`] describes.
 ///
 /// # Errors
 ///
 /// Returns the TypeScript message when layer ordering constraints are invalid.
 pub fn render<'s>(
     definitions: &'s [Definition],
+    lynx: bool,
     style: &mut dyn FnMut(&mut String, &'s NamedStyle),
 ) -> Result<String, String> {
     let lists: Vec<&[Arc<str>]> = definitions
@@ -313,15 +316,26 @@ pub fn render<'s>(
             output.push('\n');
         }
 
+        let mut rule = String::new();
+        let target = if lynx && matches!(value.kind, Kind::Rule { .. }) {
+            &mut rule
+        } else {
+            &mut output
+        };
+
         for header in &value.within {
-            output.push_str(header);
-            output.push('{');
+            target.push_str(header);
+            target.push('{');
         }
 
-        write(&mut output, &value.kind, style);
+        write(target, &value.kind, style);
 
         for _ in &value.within {
-            output.push('}');
+            target.push('}');
+        }
+
+        if !rule.is_empty() {
+            flat::write(&mut output, &rule);
         }
     }
 

@@ -1842,6 +1842,7 @@ pub fn compile<'a>(
         deferred_scopes: options.deferred_scopes,
         development: options.development,
         labels: labels.as_deref(),
+        lynx: extracted.lynx,
         names: portable.then_some(&names),
         schemes,
         scope: None,

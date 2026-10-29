@@ -3728,6 +3728,7 @@ impl Build<'_, '_> {
                         &css::Options {
                             contributions: std::slice::from_ref(contribution),
                             contributions_only: true,
+                            lynx: options.lynx,
                             vars: Some(&scopes),
                             ..css::Options::default()
                         },
