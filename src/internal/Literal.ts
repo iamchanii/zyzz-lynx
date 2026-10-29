@@ -538,7 +538,10 @@ export const globals = new Set<string>([
 ])
 const intrinsic = ['fit-content', 'max-content', 'min-content'] as const
 const length = { auto: false, kind: 'length', negative: false } as const
-/** Shared CSS length unit vocabulary for static domains and query metadata. */
+/**
+ * Shared length unit vocabulary for static domains and query metadata. It includes the Lynx
+ * units in `lynxUnits`, which the web target rejects.
+ */
 export const lengthUnits = [
   '%',
   'cap',
@@ -579,6 +582,8 @@ export const lengthUnits = [
   'rex',
   'ric',
   'rlh',
+  'rpx',
+  'sp',
   'svb',
   'svh',
   'svi',
@@ -592,6 +597,8 @@ export const lengthUnits = [
   'vmin',
   'vw',
 ] as const
+/** Length units only Lynx defines, which only the `lynx` compiler target emits. */
+export const lynxUnits = ['rpx', 'sp'] as const
 const margin = { auto: true, kind: 'length', negative: true } as const
 const maximum = { ...length, keywords: [...intrinsic, 'none'] } as const
 /** Absolute CSS named colors shared with target conversion. */

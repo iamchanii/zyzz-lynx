@@ -1,7 +1,7 @@
 //! Classifies literal declaration values against the generated property rule table.
 
 use crate::generated::literal::{
-    self, GLOBALS, Kind, LENGTH_UNITS, NAMED_COLORS, Rule, SYSTEM_COLORS,
+    self, GLOBALS, Kind, LENGTH_UNITS, LYNX_UNITS, NAMED_COLORS, Rule, SYSTEM_COLORS,
 };
 use crate::internal::lexical;
 use crate::js;
@@ -143,6 +143,23 @@ pub fn is_color_keyword(folded: &str) -> bool {
         .iter()
         .chain(SYSTEM_COLORS)
         .any(|color| color.eq_ignore_ascii_case(folded))
+}
+
+/// The first Lynx unit a value's dimension carries, such as `sp` in `calc(-6.4sp + 1px)`.
+pub fn lynx_unit(value: &str) -> Option<&'static str> {
+    value
+        .split(|character: char| {
+            character.is_ascii_whitespace() || matches!(character, '(' | ')' | ',' | '/' | '*')
+        })
+        .find_map(|part| {
+            let length = js::css_number_prefix(part, b"+-");
+            let unit = part.get(length..).filter(|_| length > 0)?;
+
+            LYNX_UNITS
+                .iter()
+                .find(|candidate| candidate.eq_ignore_ascii_case(unit))
+                .copied()
+        })
 }
 
 /// Whether a value is a number with a CSS length, angle, time, flex, or resolution unit.

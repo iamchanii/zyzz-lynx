@@ -62,6 +62,7 @@ describe('style', () => {
     card({ style: { color: { ':hover': 'red' } } })
     // @ts-expect-error Authored lengths still require units or configured tokens.
     style({ padding: 12 })
+    style({ marginTop: '-6.4sp', width: '48rpx' })
     // @ts-expect-error Authored values retain CSS domain checks.
     style({ display: 'invalid' })
   })

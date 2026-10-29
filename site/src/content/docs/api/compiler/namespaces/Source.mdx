@@ -70,7 +70,7 @@ Source.extract({ compiler: false, moduleId: 'app/Card.tsx', source })
 - **Type:** `'lynx' | 'web' | 'native'{:ts}`
 - **Default:** `'web'{:ts}`
 
-The output the extraction serves. `'native'` keeps style applications for native props composition, as [`Native.compile`](/docs/api/compiler/namespaces/Native) requires. `'lynx'` selects recipes with classes and keeps each choice and compound as a rule of its own class, which the Lynx template encoder keeps.
+The output the extraction serves. `'native'` keeps style applications for native props composition, as [`Native.compile`](/docs/api/compiler/namespaces/Native) requires. `'lynx'` selects recipes with classes and keeps each choice and compound as a rule of its own class, which the Lynx template encoder keeps. Only `'lynx'` accepts the `rpx` and `sp` units, and `'web'` reports them as invalid literals.
 
 ```ts /target: 'native'/
 // Extracts for native callables instead of CSS
