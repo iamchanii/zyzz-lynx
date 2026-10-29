@@ -146,6 +146,20 @@ cx(card)
 
 The compiler reports unsupported calls as `Source.ExtractError` with the source location. Ternary arguments, mutated bindings, and more than eight conditional arguments are unsupported.
 
+A definition read as a value, such as `[styles.small, styles.large][index]`, stays a runtime function, and other calls still compose. An application selected that way is not statically known. When a read exposes the namespace object, such as `Object.values(styles)`, composing its members reports that read.
+
+```ts
+// 1. Selected at runtime, outside composition
+const size = [styles.small, styles.large][index]!()
+
+// 2. Composes, because `styles.small()` is read directly
+cx(styles.card(), styles.small())
+
+// 3. Rejected at `level()`, which is not statically known
+const level = [styles.small, styles.large][index]!
+cx(styles.card(), level())
+```
+
 ## React Native
 
 On native, `cx` combines `{ style }` props into one ordered style array, and later styles win conflicting properties. Combining web class props with native props throws `Native.SelectionError`.

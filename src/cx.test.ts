@@ -355,6 +355,141 @@ namespace styles {
     }
   })
 
+  test('composes namespace definitions that other functions read as values', async () => {
+    const compiled = Transform.compile({
+      moduleId: 'values.ts',
+      source: `import { cx, style } from 'zyzz'
+export const level = (index: number) => [styles.l1, styles.l2][index]!()
+export const row = () => cx(styles.row(), styles.l1())
+namespace styles {
+  export const row = style({ color: 'rgb(255, 0, 0)' })
+  export const l1 = style({ padding: '4px' })
+  export const l2 = style({ padding: '8px' })
+}`,
+    })
+    const code = await Packed.bundle({
+      entry: 'values.ts',
+      modules: { 'values.ts': compiled.code },
+    })
+    const fixture = Vm.runInNewContext(`${code};Fixture;`)
+    const browser = await chromium.launch()
+
+    try {
+      const page = await browser.newPage()
+
+      await page.setContent(
+        `<style>${compiled.css}</style><div id="level" class="${fixture.level(1).className}"></div><div id="row" class="${fixture.row().className}"></div>`,
+      )
+
+      expect(
+        await page
+          .locator('#level')
+          .evaluate((node) => getComputedStyle(node).padding),
+      ).toMatchInlineSnapshot(`"8px"`)
+      expect(
+        await page
+          .locator('#row')
+          .evaluate((node) => getComputedStyle(node).color),
+      ).toMatchInlineSnapshot(`"rgb(255, 0, 0)"`)
+      expect(
+        await page
+          .locator('#row')
+          .evaluate((node) => getComputedStyle(node).padding),
+      ).toMatchInlineSnapshot(`"4px"`)
+    } finally {
+      await browser.close()
+    }
+  })
+
+  test('composes local definitions that other functions read as values', async () => {
+    const compiled = Transform.compile({
+      moduleId: 'locals.ts',
+      source: `import { cx, style } from 'zyzz'
+const row = style({ color: 'rgb(255, 0, 0)' })
+const l1 = style({ padding: '4px' })
+const l2 = style({ padding: '8px' })
+export const level = (index: number) => [l1, l2][index]!()
+export const composed = () => cx(row(), l1())`,
+    })
+    const code = await Packed.bundle({
+      entry: 'locals.ts',
+      modules: { 'locals.ts': compiled.code },
+    })
+    const fixture = Vm.runInNewContext(`${code};Fixture;`)
+    const browser = await chromium.launch()
+
+    try {
+      const page = await browser.newPage()
+
+      await page.setContent(
+        `<style>${compiled.css}</style><div id="level" class="${fixture.level(1).className}"></div><div id="row" class="${fixture.composed().className}"></div>`,
+      )
+
+      expect(
+        await page
+          .locator('#level')
+          .evaluate((node) => getComputedStyle(node).padding),
+      ).toMatchInlineSnapshot(`"8px"`)
+      expect(
+        await page
+          .locator('#row')
+          .evaluate((node) => getComputedStyle(node).padding),
+      ).toMatchInlineSnapshot(`"4px"`)
+    } finally {
+      await browser.close()
+    }
+  })
+
+  test('rejects composition of a member that a type assertion can replace', () => {
+    expect(() =>
+      Transform.compile({
+        moduleId: 'replaced.ts',
+        source: `import { cx, style } from 'zyzz'
+const styles = { a: style({ color: 'red' }) }
+;(styles.a as any) = style({ color: 'blue' })
+export const a = () => cx(styles.a())`,
+      }),
+    ).toThrowErrorMatchingInlineSnapshot(
+      `[Source.ExtractError: replaced.ts:81: Composition requires direct applications of styles, which this read prevents.]`,
+    )
+  })
+
+  test('rejects composition of a namespace whose object escapes at the escaping read', () => {
+    expect(() =>
+      Transform.compile({
+        moduleId: 'escape.ts',
+        source: `import { cx, style } from 'zyzz'
+export const all = Object.values(styles)
+export const row = () => cx(styles.row())
+namespace styles {
+  export const row = style({ color: 'red' })
+}`,
+      }),
+    ).toThrowErrorMatchingInlineSnapshot(
+      `[Source.ExtractError: escape.ts:66: Composition requires direct applications of styles, which this read prevents.]`,
+    )
+  })
+
+  test('rejects composition of a definition selected as a value at the application', () => {
+    expect(() =>
+      Transform.compile({
+        moduleId: 'selected.ts',
+        source: `import { cx, style } from 'zyzz'
+export const row = (index: number) => {
+  const level = [styles.l1, styles.l2][index]!
+  return cx(styles.row(), level())
+}
+namespace styles {
+  export const row = style({ color: 'red' })
+  export const l1 = style({ padding: '4px' })
+  export const l2 = style({ padding: '8px' })
+}`,
+      }),
+    ).toThrowErrorMatchingInlineSnapshot(
+      `[Source.ExtractError: selected.ts:146: Composition requires statically known local style applications.]`,
+    )
+  })
+
   test('composes exported module-level definitions', async () => {
     const graph = Graph.compile({
       modules: {

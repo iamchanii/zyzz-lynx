@@ -848,6 +848,7 @@ pub fn collect<'o, 'a>(options: Options<'o, 'a>) -> Result<Collected<'a>> {
             &bindings,
             &undefined_reads,
             &applied,
+            applications.as_ref(),
             &direct,
             &by_name,
             &mut calls,
@@ -888,6 +889,7 @@ fn compose<'o, 'a>(
     bindings: &Bindings<'_, 'a>,
     undefined_reads: &FxHashSet<u32>,
     applied: &FxHashMap<u32, Application>,
+    applications: Option<&applications::Applications<'_, 'a>>,
     direct: &FxHashMap<u32, Arc<str>>,
     by_name: &FxHashMap<Arc<str>, Call<'a>>,
     calls: &mut FxHashMap<u32, Call<'a>>,
@@ -1114,6 +1116,25 @@ fn compose<'o, 'a>(
         let Some(call) =
             call.filter(|call| call.composition.is_none() && call.runtime_composition.is_none())
         else {
+            // A definition read that cannot fold elsewhere is the cause, not this application.
+            let read = match &value.callee {
+                Expression::StaticMemberExpression(member) => Some(member.object.span()),
+                callee @ Expression::Identifier(_) => Some(callee.span()),
+                _ => None,
+            };
+
+            if let Some((name, span)) = read
+                .zip(applications)
+                .and_then(|(read, applications)| applications.blocking(read))
+            {
+                return Err(invalid(
+                    &format!(
+                        "Composition requires direct applications of {name}, which this read prevents."
+                    ),
+                    span,
+                ));
+            }
+
             return Err(invalid(
                 "Composition requires statically known local style applications.",
                 value.span,
