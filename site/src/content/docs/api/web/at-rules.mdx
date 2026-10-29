@@ -85,7 +85,9 @@ fontFace({
 
 ## Named References
 
-`colorProfile`, `counterStyle`, `cssFunction`, `customMedia`, `fontPaletteValues`, `keyframes`, and `positionTry` return references. Each name combines a hash of the declaring module with the binding, such as `z-k-3PBZzK-enter` for `const enter`, and survives imports and packed libraries. Equal bindings in different modules get distinct names, and an `{ id }` argument fixes one.
+These seven helpers return references: `colorProfile`, `counterStyle`, `cssFunction`, `customMedia`, `fontPaletteValues`, `keyframes`, and `positionTry`. Each name joins a module hash and the binding, such as `z-k-3PBZzK-enter`, and survives imports and packed libraries.
+
+Equal bindings in different modules get distinct names. Packed libraries declaring one in the same package-relative module still conflict, so an `{ id }` argument fixes one.
 
 References keep their domains in TypeScript, so a palette cannot become an animation name. The compiler omits named definitions that are neither exported nor referenced.
 
