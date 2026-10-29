@@ -960,6 +960,7 @@ pub fn transform(input: &Value, separate: Option<&str>) -> Result<String> {
     )?;
     let output = transform::compile(
         &transform::Options {
+            acyclic: false,
             compiler: compiler != Some(false),
             composition: options.composition,
             css_output: options.css_output,

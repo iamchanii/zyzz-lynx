@@ -12,13 +12,18 @@ use std::sync::Arc;
 use indexmap::IndexMap;
 use oxc_ast::AstKind;
 use oxc_ast::ast::{
-    Argument, ArrayExpressionElement, CallExpression, Declaration, ExportDefaultDeclarationKind,
-    Expression, JSXAttributeItem, JSXAttributeName, JSXElementName, ObjectExpression,
-    ObjectPropertyKind, Program, PropertyKey, PropertyKind, Statement, TSNamespaceDeclarationBody,
-    UnaryOperator, VariableDeclarationKind,
+    Argument, ArrayExpressionElement, ArrowFunctionExpression, AwaitExpression, CallExpression,
+    Class, Declaration, ExportDefaultDeclarationKind, Expression, Function, IdentifierReference,
+    JSXAttributeItem, JSXAttributeName, JSXElementName, ObjectExpression, ObjectPropertyKind,
+    Program, PropertyKey, PropertyKind, Statement, Super, TSNamespaceDeclarationBody, TSType,
+    TSTypeParameterInstantiation, ThisExpression, UnaryOperator, VariableDeclarationKind,
+    YieldExpression,
 };
+use oxc_ast_visit::Visit;
 use oxc_semantic::Semantic;
 use oxc_span::{GetSpan, Span};
+use oxc_syntax::scope::ScopeFlags;
+use oxc_syntax::symbol::SymbolId;
 use rustc_hash::{FxBuildHasher, FxHashMap, FxHashSet};
 
 use crate::compiler::internal::expression::unwrap;
@@ -28,6 +33,9 @@ use crate::compiler::source::Call;
 /// One application of a definition without arguments or with a `className` override alone.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Application {
+    /// Whether every evaluation follows the definition's initialization once the module shares
+    /// no import cycle with other modules.
+    pub acyclic: bool,
     /// End of the callee expression.
     pub callee_end: u32,
     /// The override value of a `{ className: value }` argument.
@@ -127,6 +135,9 @@ pub struct Definitions {
 /// Options for [`create`].
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Options {
+    /// Whether the module shares no import cycle with other modules, so only its own body or
+    /// functions it passes to other modules can call its functions before it finishes evaluating.
+    pub acyclic: bool,
     /// Whether recipes, dynamic styles, and applications with arguments count as applications.
     pub dynamic: bool,
     /// Whether applications of exported top-level definitions count as applications.
@@ -175,8 +186,11 @@ struct Read<'a> {
 /// When a read evaluates relative to the module body.
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Timing {
-    /// In a function declaration, class, or namespace, whose body can run before its statement.
+    /// In a class or namespace, whose body can run before its statement.
     Deferred,
+    /// In a function declaration outside namespaces, which importers in an import cycle can call
+    /// before the module body runs.
+    Hoisted,
     /// At its position in the module body.
     Immediate,
     /// In an arrow or function expression outside namespaces, which runs only once module code
@@ -189,6 +203,9 @@ pub struct Applications<'c, 'a> {
     /// Start of the first top-level statement that can call a function, or `u32::MAX`.
     active: u32,
     candidates: Vec<Candidate<'c, 'a>>,
+    /// Start of the first top-level statement that can call a local function when the module
+    /// shares no import cycle, or `u32::MAX`.
+    closed: u32,
     /// Each candidate's foldable applications and called definitions, read by several queries.
     collected: OnceCell<Vec<Collected>>,
     evaluation: bool,
@@ -489,10 +506,12 @@ pub fn create<'c, 'a>(
         .iter()
         .find(|statement| !inert(statement, semantic, &definitions, &namespaces))
         .map_or(u32::MAX, |statement| statement.span().start);
+    let closed = closed(program, semantic, &definitions, &namespaces);
 
     Some(Applications {
         active,
         candidates,
+        closed,
         collected: OnceCell::new(),
         evaluation: walker.evaluation,
         namespace_counts,
@@ -660,6 +679,132 @@ fn inert_expression<'a>(
     }
 }
 
+/// Start of the first top-level statement that can call a local function when the module shares
+/// no import cycle, or `u32::MAX`.
+///
+/// Code outside the module then holds no local function unless the module passes one to it. A
+/// statement qualifies when it is inert, or when its expressions create no function and read
+/// only imports, globals, and variables whose values earlier qualifying statements computed.
+/// Such a statement may call other modules, but none can call back into this one.
+fn closed<'a>(
+    program: &Program<'a>,
+    semantic: &Semantic<'a>,
+    definitions: &FxHashMap<u32, &Call<'a>>,
+    namespaces: &FxHashSet<u32>,
+) -> u32 {
+    let mut sealed = Sealed {
+        passes: true,
+        semantic,
+        values: FxHashSet::default(),
+    };
+
+    for statement in &program.body {
+        let inert = inert(statement, semantic, definitions, namespaces);
+        let (variable, expression) = match statement {
+            Statement::ExpressionStatement(statement) => (None, Some(&statement.expression)),
+            Statement::ExportDefaultDeclaration(export) => {
+                (None, export.declaration.as_expression())
+            }
+            Statement::ExportDeclaration(export) => match &export.declaration {
+                Declaration::VariableDeclaration(variable) => (Some(&**variable), None),
+                _ => (None, None),
+            },
+            Statement::VariableDeclaration(variable) => (Some(&**variable), None),
+            _ => (None, None),
+        };
+        let mut computed = Vec::new();
+        let qualifies = match (variable, expression) {
+            (Some(variable), _) => variable.declarations.iter().all(|declarator| {
+                let oxc_ast::ast::BindingPattern::BindingIdentifier(binding) = &declarator.id
+                else {
+                    return inert;
+                };
+                let value = declarator
+                    .init
+                    .as_ref()
+                    .is_none_or(|init| sealed.check(init));
+
+                if value && let Some(symbol) = binding.symbol_id.get() {
+                    computed.push(symbol);
+                }
+
+                inert || value
+            }),
+            (None, Some(expression)) => inert || sealed.check(expression),
+            (None, None) => inert,
+        };
+
+        if !qualifies {
+            return statement.span().start;
+        }
+
+        sealed.values.extend(computed);
+    }
+
+    u32::MAX
+}
+
+/// Checks that evaluating an expression creates no function and reads no local binding beyond
+/// imports and `values`, so it cannot reach a local function.
+struct Sealed<'s, 'a> {
+    passes: bool,
+    semantic: &'s Semantic<'a>,
+    /// Variables whose values qualifying statements computed.
+    values: FxHashSet<SymbolId>,
+}
+
+impl<'a> Sealed<'_, 'a> {
+    fn check(&mut self, expression: &Expression<'a>) -> bool {
+        self.passes = true;
+        self.visit_expression(expression);
+        self.passes
+    }
+}
+
+impl<'a> Visit<'a> for Sealed<'_, 'a> {
+    fn visit_arrow_function_expression(&mut self, _: &ArrowFunctionExpression<'a>) {
+        self.passes = false;
+    }
+
+    fn visit_await_expression(&mut self, _: &AwaitExpression<'a>) {
+        self.passes = false;
+    }
+
+    fn visit_class(&mut self, _: &Class<'a>) {
+        self.passes = false;
+    }
+
+    fn visit_function(&mut self, _: &Function<'a>, _: ScopeFlags) {
+        self.passes = false;
+    }
+
+    fn visit_identifier_reference(&mut self, identifier: &IdentifierReference<'a>) {
+        if let Some(declaration) = scope::resolve(self.semantic, identifier)
+            && declaration.import.is_none()
+            && !self.values.contains(&declaration.symbol)
+        {
+            self.passes = false;
+        }
+    }
+
+    fn visit_super(&mut self, _: &Super) {
+        self.passes = false;
+    }
+
+    fn visit_this_expression(&mut self, _: &ThisExpression) {
+        self.passes = false;
+    }
+
+    // Type positions name types, not values.
+    fn visit_ts_type(&mut self, _: &TSType<'a>) {}
+
+    fn visit_ts_type_parameter_instantiation(&mut self, _: &TSTypeParameterInstantiation<'a>) {}
+
+    fn visit_yield_expression(&mut self, _: &YieldExpression<'a>) {
+        self.passes = false;
+    }
+}
+
 const TYPE_CONTEXTS: [fn(&AstKind<'_>) -> bool; 6] = [
     |kind| matches!(kind, AstKind::TSTypeQuery(_)),
     |kind| matches!(kind, AstKind::TSTypeAnnotation(_)),
@@ -759,6 +904,7 @@ impl Walker<'_, '_> {
                 Some(AstKind::Function(function)) if function.is_expression() && !namespaced => {
                     Timing::Lazy
                 }
+                Some(AstKind::Function(_)) if !namespaced => Timing::Hoisted,
                 Some(_) => Timing::Deferred,
             };
             let read = Read {
@@ -917,11 +1063,15 @@ impl<'c, 'a> Applications<'c, 'a> {
     /// Whether a read always evaluates after the candidate initializes. A read in a function
     /// expression qualifies when no statement up to the declaration can call functions, since
     /// the function cannot run before that. Hoisted function declarations stay callable from
-    /// importers in a cycle, so their reads never qualify.
-    fn follows(&self, candidate: &Candidate<'c, 'a>, reference: &Read<'a>) -> bool {
+    /// importers in a cycle, so their reads qualify only in an `acyclic` module. There, other
+    /// modules reach a local function only when the module passes one to them, so statements
+    /// that pass none may also precede the declaration.
+    fn follows(&self, candidate: &Candidate<'c, 'a>, reference: &Read<'a>, acyclic: bool) -> bool {
         match reference.timing {
             Timing::Deferred => false,
+            Timing::Hoisted => acyclic && self.closed > candidate.statement,
             Timing::Immediate => reference.span.start >= candidate.ready,
+            Timing::Lazy if acyclic => self.closed > candidate.statement,
             Timing::Lazy => self.active > candidate.statement,
         }
     }
@@ -993,14 +1143,18 @@ impl<'c, 'a> Applications<'c, 'a> {
                 continue;
             };
 
+            // Several namespaces of one name merge, so a member read may precede its own one.
+            let single = candidate.namespace.is_none()
+                || self.namespace_counts.get(&candidate.name) == Some(&1);
+            let acyclic = single && self.follows(candidate, reference, true);
+
             applications.push(Application {
+                acyclic,
                 callee_end: callee.end,
                 class_override,
                 class_read: class_read(span, read),
                 end: span.end,
-                initialized: self.follows(candidate, reference)
-                    && (candidate.namespace.is_none()
-                        || self.namespace_counts.get(&candidate.name) == Some(&1)),
+                initialized: single && self.follows(candidate, reference, self.options.acyclic),
                 name: Arc::clone(&call.name),
                 spread: spread_of(read[0], span),
                 start: span.start,
@@ -1275,7 +1429,7 @@ impl<'c, 'a> Applications<'c, 'a> {
                     .push(Bound {
                         callee_end: callee.end,
                         end: span.end,
-                        initialized: self.follows(candidate, reference),
+                        initialized: self.follows(candidate, reference, self.options.acyclic),
                         spread,
                         start: span.start,
                         values,

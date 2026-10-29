@@ -77,6 +77,7 @@ fn read(path: &str) -> Input {
 
 fn options(input: &Input) -> transform::Options<'_, '_> {
     transform::Options {
+        acyclic: false,
         compiler: true,
         composition: input.composition,
         css_output: None,
