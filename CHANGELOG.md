@@ -1,5 +1,18 @@
 # zyzz
 
+## 0.0.43
+
+### Patch Changes
+
+- beb6e9e: Added the Lynx `rpx` and `sp` length units to the length types, so `marginTop: '-6.4sp'` type-checks. The `lynx` target emits them as authored. The `web` target reports them in style declarations other than custom properties as invalid literals, such as ``The `sp` unit requires the lynx target.``, and breakpoint and container thresholds reject them.
+- 01d51f1: Added the `lynx` compile target, which `zyzz/rspeedy` always uses, and exposed it as `target: 'lynx'` on `Graph.compile`, `Transform.compile`, `Source.extract`, and the `zyzz/unplugin` options. The Lynx template encoder keeps only flat class rules, so recipes on this target select with classes by default and emit each choice and compound as one rule under its own class, such as `.zv…0 { height: 40px }`. Applications add compound classes themselves, so every recipe rule keeps one-class specificity and later styles, including `cx` arguments, still win by order. Compositions copy the recipe rules under their own prefix and rename the application's choice classes. `selection: 'attribute'` and `conditions` are compile errors on this target.
+- 91b36d3: Names derived from bindings for `keyframes`, `counterStyle`, `positionTry`, `customMedia`, `cssFunction`, `colorProfile`, and `fontPaletteValues` now include a six-character hash of the declaring module, as style classes do, such as `z-k-3PBZzK-enter` instead of `z-k-enter`. Two modules can declare the same binding, such as `const enter = keyframes(…)`, without a `Conflicting animation identity` error. Explicit `{ id }` names are unchanged. CSS that spells a generated name by hand must switch to an explicit `id`.
+- 53cf13e: Number properties such as `opacity`, `fontWeight`, and `zIndex`, plus `aspectRatio`, now accept CSS number strings such as `'0'`, `'700'`, and `'1.5'`. CSS output keeps the authored spelling, `fontWeight` tokens accept numeric strings, and React Native converts these strings to numbers, with a nonzero `lineHeight` string acting as a multiplier.
+- c9aee8a: Added the `inject` option to `zyzz/rspeedy`. With `zyzz({ inject: true })`, every entry imports `zyzz.css` before its own modules, and a remaining manual `import 'zyzz.css'` resolves to the same module. The option defaults to `false`, so entries still import the stylesheet themselves.
+- 5803d3d: Fixed `zyzz/rspeedy` builds that failed with `Zyzz must run before source transforms` when the project registers `enforce: 'pre'` loaders. The Zyzz transform now runs before every other loader, including other pre loaders.
+- ab8416a: Kept the `zyzz.css` module of `zyzz/rspeedy` out of `node_modules`, so split-chunk vendor groups no longer move it into an empty `npm-.virtual` chunk.
+- 01d51f1: Added `selection: 'className'` to `variants`. Applications of such a recipe return the class list string, so `className={styles.badge({ tone })}` works without a spread. The recipe selects with classes like `selection: 'class'`, accepts a `className` override, and rejects conditions and dynamic choices.
+
 ## 0.0.42
 
 ### Patch Changes
