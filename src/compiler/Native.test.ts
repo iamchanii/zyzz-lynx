@@ -1797,7 +1797,7 @@ describe('compile', () => {
       moduleId: 'numeric.ts',
       colorScheme: 'light',
       source:
-        "import {style,variants} from 'zyzz'; const fade=style((values:{alpha:string})=>({opacity:values.alpha})); const text=variants({variants:{size:{body:{fontSize:'16px',lineHeight:'1.5'}}}}); export const results=[style({aspectRatio:'1.5',flexGrow:'+.5',fontWeight:'700',opacity:'0',zIndex:'10'})(),style({fontSize:'16px',lineHeight:'1.5'})(),text({size:'body'}),fade({alpha:'0'})];",
+        "import {style,variants} from 'zyzz'; const fade=style((values:{alpha:`${number}`})=>({opacity:values.alpha})); const text=variants({variants:{size:{body:{fontSize:'16px',lineHeight:'1.5'}}}}); export const results=[style({aspectRatio:'1.5',flexGrow:'+.5',fontWeight:'700',opacity:'0',zIndex:'10'})(),style({fontSize:'16px',lineHeight:'1.5'})(),text({size:'body'}),fade({alpha:'0'})];",
     })
 
     expect((await execute(output.code)).results).toMatchInlineSnapshot(`
