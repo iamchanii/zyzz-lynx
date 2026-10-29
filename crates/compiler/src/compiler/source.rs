@@ -3089,6 +3089,10 @@ pub fn extract<'a>(allocator: &'a Allocator, options: &Options<'_, 'a>) -> Resul
                     styles.push(entry.style);
                 }
             }
+            // A failed definition leaves its applications unknown, so composition reports only
+            // in a module whose definitions all extracted. Fixing the earlier diagnostics then
+            // reveals any remaining composition diagnostic.
+            Err(Error::Themes { .. }) if reporter.len() > 0 => {}
             Err(error) => reporter.unsupported(error)?,
         }
     }

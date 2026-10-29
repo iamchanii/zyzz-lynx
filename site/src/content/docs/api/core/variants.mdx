@@ -101,6 +101,27 @@ const button = variants({
 })
 ```
 
+Numeric choice names need quotes, such as `'1'`, and applications select them as strings. Emitted rules keep the authored order, while generated choice classes number array-index names first, as JavaScript objects list them.
+
+```ts
+import { variants } from 'zyzz'
+
+const temperature = variants({
+  selection: 'class',
+  variants: {
+    // [!code hl:5]
+    level: {
+      '10': { color: 'red' },
+      '2': { color: 'orange' },
+      '1': { color: 'blue' },
+    },
+  },
+})
+
+// Selects the `10` choice by its string name
+temperature({ level: '10' })
+```
+
 ### definition.defaultVariants
 
 - **Type:** `{ [axis: string]: choice }{:ts}`
