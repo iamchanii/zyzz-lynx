@@ -46,6 +46,7 @@ use crate::web::css;
 use crate::web::internal::class_name::{self, Registry, Units, Used, Visibility};
 use crate::web::internal::combination;
 use crate::web::internal::contributions;
+use crate::web::internal::flat;
 use crate::web::internal::themes::{Resource, Scope, Shared};
 
 /// Inputs of one module's web transform.
@@ -1841,6 +1842,7 @@ pub fn compile<'a>(
         deferred_scopes: options.deferred_scopes,
         development: options.development,
         labels: labels.as_deref(),
+        lynx: extracted.lynx,
         names: portable.then_some(&names),
         schemes,
         scope: None,
@@ -4973,7 +4975,23 @@ impl<'a> Generator<'_, 'a> {
             });
         }
 
-        let rules = rules.join("\n");
+        // Lynx keeps no nested style rule, so each line prints flat after its mappings, which
+        // then locate lines but not columns.
+        let rules = if extracted.lynx {
+            let mut output = String::with_capacity(rules.iter().map(|rule| rule.len() + 1).sum());
+
+            for (index, rule) in rules.iter().enumerate() {
+                if index > 0 {
+                    output.push('\n');
+                }
+
+                flat::write(&mut output, rule);
+            }
+
+            output
+        } else {
+            rules.join("\n")
+        };
         let css = [prefix, rules.as_str()]
             .into_iter()
             .filter(|part| !part.is_empty())

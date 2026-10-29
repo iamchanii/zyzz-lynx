@@ -333,6 +333,91 @@ pub fn local(key: &str) -> bool {
     true
 }
 
+/// Pseudo-classes and pseudo-elements that Lynx matches, with their leading colons.
+const LYNX_PSEUDOS: [&str; 7] = [
+    ":active",
+    ":focus",
+    ":hover",
+    ":not",
+    ":root",
+    "::placeholder",
+    "::selection",
+];
+
+/// The first part of a normalized condition that Lynx never matches: an at-rule other than
+/// `@media`, a pseudo-class or pseudo-element outside the matched set, or a `~=` attribute
+/// matcher. The Lynx parser accepts most of these, so their rules would silently never apply.
+pub fn lynx_unsupported(key: &str) -> Option<&str> {
+    if let Some(rest) = key.strip_prefix('@') {
+        let end = rest
+            .find(|character: char| !(character.is_ascii_alphanumeric() || character == '-'))
+            .unwrap_or(rest.len());
+        let name = key.get(..=end)?;
+
+        return (!name.eq_ignore_ascii_case("@media")).then_some(name);
+    }
+
+    let bytes = key.as_bytes();
+    let mut index = 0;
+    let mut quote = None;
+
+    while let Some(&byte) = bytes.get(index) {
+        if byte == b'\\' {
+            index += 2;
+            continue;
+        }
+
+        if let Some(open) = quote {
+            if byte == open {
+                quote = None;
+            }
+
+            index += 1;
+            continue;
+        }
+
+        match byte {
+            b'"' | b'\'' => quote = Some(byte),
+            b'/' if bytes.get(index + 1) == Some(&b'*') => {
+                index = find(key, "*/", index + 2).map_or(bytes.len(), |end| end + 1);
+            }
+            b'~' if bytes.get(index + 1) == Some(&b'=') => return key.get(index..index + 2),
+            b':' => {
+                let start = index;
+
+                index += if bytes.get(index + 1) == Some(&b':') {
+                    2
+                } else {
+                    1
+                };
+
+                while bytes
+                    .get(index)
+                    .is_some_and(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_'))
+                {
+                    index += 1;
+                }
+
+                let pseudo = key.get(start..index)?;
+
+                if !LYNX_PSEUDOS
+                    .iter()
+                    .any(|supported| supported.eq_ignore_ascii_case(pseudo))
+                {
+                    return Some(pseudo);
+                }
+
+                continue;
+            }
+            _ => {}
+        }
+
+        index += 1;
+    }
+
+    None
+}
+
 /// Finds `needle` at or after a byte offset.
 fn find(haystack: &str, needle: &str, from: usize) -> Option<usize> {
     haystack

@@ -526,6 +526,46 @@ namespace styles {
     }
   }, 60_000)
 
+  test('encodes pseudo-class, selector, and media conditions as flat rules', async () => {
+    const root = await fixture()
+    try {
+      await Fs.writeFile(
+        Path.join(root, 'src/App.tsx'),
+        `import { style } from 'zyzz'
+
+export function App() {
+  return <view className="list"><view {...styles.remove()} /></view>
+}
+
+namespace styles {
+  export const remove = style({
+    opacity: 1,
+    ':active': { opacity: 0.4 },
+    '@media (min-width: 1px)': { '&:focus': { opacity: 0.6 } },
+    selectors: { '.list > &': { marginTop: '1px' } },
+  })
+}
+`,
+      )
+
+      const result = await (await create(root)).build()
+      await result.close()
+
+      // Each condition reaches the template as its own rule with its declarations.
+      const { css } = await template(root)
+      expect(css).toMatchInlineSnapshot(`
+        [
+          ".z_i6Fywm0 { opacity: 1 }",
+          ".z_i6Fywm1:active { opacity: .4 }",
+          "@media (width>=1px) { .z_i6Fywm2:focus { opacity: .6 } }",
+          ".list>.z_i6Fywm3 { margin-top: 1px }",
+        ]
+      `)
+    } finally {
+      await Fs.rm(root, { force: true, recursive: true })
+    }
+  }, 60_000)
+
   test('rebuilds the zyzz.css module after a style edit in watch mode', async () => {
     const root = await fixture()
     const rspeedy = await create(root)

@@ -5203,6 +5203,131 @@ export const props = zyzz.style({ '@media md': { color: 'red' } })()`,
         `[Error: ["breakpoint","md"]: Expected a named nonnegative length threshold.]`,
       )
     })
+
+    describe('selectors', () => {
+      const source = `import { style, variants } from 'zyzz'
+export const App = () => <view {...styles.button()}><text {...styles.label({ tone: 'quiet' })} /></view>
+namespace styles {
+  export const button = style({
+    opacity: 1,
+    ':active': { opacity: 0.4 },
+    '@media (width >= 1px)': { color: 'blue', '&:focus, &:hover': { color: 'green' } },
+    selectors: { '.list > &': { marginTop: '1px' } },
+    paddingLeft: '2px',
+  })
+
+  export const label = variants({
+    variants: { tone: { quiet: { ':active': { color: 'gray' } } } },
+  })
+}`
+
+      test('prints nested selectors and at-rules as flat rules', () => {
+        // Nested selectors resolve `&` to the class, and at-rules move outside it.
+        expect(
+          Transform.compile({ moduleId: 'App.tsx', source, target: 'lynx' })
+            .css,
+        ).toMatchInlineSnapshot(`
+          ".z_l0kPgl0{opacity:1;}
+          .z_l0kPgl1:active{opacity:0.4;}
+          @media (width >= 1px){.z_l0kPgl2{color:blue;}}
+          @media (width >= 1px){.z_l0kPgl3:focus,.z_l0kPgl3:hover{color:green;}}
+          .list > .z_l0kPgl4{margin-top:1px;}
+          .z_l0kPgl5{padding-left:2px;}
+          .zv24sXp5PK0:active{color:gray;}"
+        `)
+      })
+
+      test('splits a grouped rule into flat rules in authored order', () => {
+        expect(
+          Transform.compile({
+            cssOutput: 'grouped',
+            moduleId: 'App.tsx',
+            source,
+            target: 'lynx',
+          }).css,
+        ).toMatchInlineSnapshot(`
+          ".z_l0kPgl0{opacity:1;}.z_l0kPgl0:active{opacity:0.4;}@media (width >= 1px){.z_l0kPgl0{color:blue;}}@media (width >= 1px){.z_l0kPgl0:focus,.z_l0kPgl0:hover{color:green;}}.list > .z_l0kPgl0{margin-top:1px;}.z_l0kPgl0{padding-left:2px;}
+          .zv24sXp5PK0:active{color:gray;}"
+        `)
+      })
+
+      test('rejects selectors and at-rules that Lynx never matches', () => {
+        const compile = (condition: string) =>
+          Transform.compile({
+            moduleId: 'App.tsx',
+            source: `import { style } from 'zyzz'\nexport const props = style({ ${condition}: { color: 'red' } })()`,
+            target: 'lynx',
+          })
+
+        expect(() =>
+          compile(`'&:not(:first-child)'`),
+        ).toThrowErrorMatchingInlineSnapshot(
+          `[Source.ExtractError: App.tsx:58: The lynx target does not support \`:first-child\`.]`,
+        )
+        expect(() => compile(`'&::before'`)).toThrowErrorMatchingInlineSnapshot(
+          `[Source.ExtractError: App.tsx:58: The lynx target does not support \`::before\`.]`,
+        )
+        expect(() =>
+          compile(`'&[data-tags~="a"]'`),
+        ).toThrowErrorMatchingInlineSnapshot(
+          `[Source.ExtractError: App.tsx:58: The lynx target does not support \`~=\`.]`,
+        )
+        expect(() =>
+          compile(`'@supports (display: grid)'`),
+        ).toThrowErrorMatchingInlineSnapshot(
+          `[Source.ExtractError: App.tsx:58: The lynx target does not support \`@supports\`.]`,
+        )
+        expect(() => compile(`'@layer'`)).toThrowErrorMatchingInlineSnapshot(
+          `[Source.ExtractError: App.tsx:58: The lynx target does not support \`@layer\`.]`,
+        )
+      })
+
+      test('rejects unmatched conditions in recipe choices and compounds', () => {
+        const compile = (definition: string) =>
+          Transform.compile({
+            moduleId: 'App.tsx',
+            source: `import { variants } from 'zyzz'\nexport const badge = variants(${definition})`,
+            target: 'lynx',
+          })
+
+        expect(() =>
+          compile(
+            `{ variants: { tone: { quiet: { '&::before': { color: 'gray' } } } } }`,
+          ),
+        ).toThrowErrorMatchingInlineSnapshot(
+          `[Source.ExtractError: App.tsx:91: The lynx target does not support \`::before\`.]`,
+        )
+        expect(() =>
+          compile(
+            `{ compoundVariants: [{ style: { ':first-child': { color: 'gray' } }, when: { tone: 'quiet' } }], variants: { tone: { quiet: {} } } }`,
+          ),
+        ).toThrowErrorMatchingInlineSnapshot(
+          `[Source.ExtractError: App.tsx:92: The lynx target does not support \`:first-child\`.]`,
+        )
+      })
+
+      test('prints global rules flat and rejects their unmatched conditions', () => {
+        const compile = (rules: string) =>
+          Transform.compile({
+            moduleId: 'App.tsx',
+            source: `import { global } from 'zyzz/web'\nglobal(${rules})`,
+            target: 'lynx',
+          }).css
+
+        expect(
+          compile(
+            `{ '.list': { color: 'red', '&:active': { color: 'blue' }, '@media (width >= 1px)': { '&:focus': { color: 'green' } } } }`,
+          ),
+        ).toMatchInlineSnapshot(
+          `".list{color:red;}.list:active{color:blue;}@media (width >= 1px){.list:focus{color:green;}}"`,
+        )
+        expect(() =>
+          compile(`{ '.list': { '&:first-child': { color: 'green' } } }`),
+        ).toThrowErrorMatchingInlineSnapshot(
+          `[Source.ExtractError: App.tsx:34: The lynx target does not support \`:first-child\`.]`,
+        )
+      })
+    })
   })
 })
 
