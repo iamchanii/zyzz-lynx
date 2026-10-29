@@ -590,7 +590,7 @@ pub fn expand<'s, 'a>(
                 ));
             }
 
-            let mut choices = entries(&property.value)?;
+            let choices = entries(&property.value)?;
 
             if choices.is_empty() {
                 return Err(invalid(
@@ -602,10 +602,15 @@ pub fn expand<'s, 'a>(
             for (key, property) in &choices {
                 let lone = matches!(&property.key, PropertyKey::StringLiteral(literal) if literal.lone_surrogates);
 
-                if matches!(property.key, PropertyKey::NumericLiteral(_))
-                    || key.contains('\0')
-                    || lone
-                {
+                // Selections name choices with strings, so a numeric key needs quotes.
+                if matches!(property.key, PropertyKey::NumericLiteral(_)) {
+                    return Err(invalid(
+                        "Numeric recipe choice names require quotes, such as '1'.",
+                        property.span,
+                    ));
+                }
+
+                if key.contains('\0') || lone {
                     return Err(invalid(
                         "Recipe choice names require CSS-safe strings.",
                         property.span,
@@ -622,21 +627,24 @@ pub fn expand<'s, 'a>(
                 }
             }
 
-            // Choices take JavaScript own-property order, which lists array indexes first, so
-            // class names and payload slots match the `Object.keys` positions of uncompiled
-            // authoring. Choices of one axis never match together, so their rule order is free.
-            choices.sort_by_key(|(key, _)| js::array_index(key).map_or((1, 0), |index| (0, index)));
-
-            let names: Vec<Arc<str>> = choices
+            // Choice positions follow JavaScript own-property order, which lists array indexes
+            // first, so class names and payload slots match the `Object.keys` positions of
+            // uncompiled authoring. Rules keep authored order, which decides their cascade.
+            let mut names: Vec<Arc<str>> = choices
                 .iter()
                 .map(|(key, _)| Arc::from(key.as_str()))
                 .collect();
 
-            axes.insert(axis.as_str(), names);
+            names.sort_by_key(|name| js::array_index(name).map_or((1, 0), |index| (0, index)));
 
-            let count = axes.len();
+            let count = axes.len() + 1;
 
-            for (index, (key, style)) in choices.iter().enumerate() {
+            for (key, style) in &choices {
+                let index = names
+                    .iter()
+                    .position(|name| **name == **key)
+                    .unwrap_or_default();
+
                 if key == "__proto__"
                     && matches!(
                         style.value,
@@ -710,6 +718,8 @@ pub fn expand<'s, 'a>(
                     suffix: String::new(),
                 });
             }
+
+            axes.insert(axis.as_str(), names);
         }
     }
 

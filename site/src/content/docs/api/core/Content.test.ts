@@ -270,9 +270,9 @@ describe('variants API page', () => {
       .z_1{&:where([data-size="custom"]){padding:var(--z-3oDDjY-button-1-1-0-padding);}}"
     `)
     expect(css(numeric!.source)).toMatchInlineSnapshot(`
-      ".z_0{&:where(.zv8A0iQkK30){color:blue;}}
+      ".z_0{&:where(.zv8A0iQkK32){color:red;}}
       .z_1{&:where(.zv8A0iQkK31){color:orange;}}
-      .z_2{&:where(.zv8A0iQkK32){color:red;}}"
+      .z_2{&:where(.zv8A0iQkK30){color:blue;}}"
     `)
   })
 

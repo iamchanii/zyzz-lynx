@@ -3089,6 +3089,9 @@ pub fn extract<'a>(allocator: &'a Allocator, options: &Options<'_, 'a>) -> Resul
                     styles.push(entry.style);
                 }
             }
+            // A definition that failed leaves its applications unknown, so its own diagnostic
+            // replaces the composition diagnostic that would follow from it.
+            Err(Error::Themes { .. }) if reporter.len() > 0 => {}
             Err(error) => reporter.unsupported(error)?,
         }
     }

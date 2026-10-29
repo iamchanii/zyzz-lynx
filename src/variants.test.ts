@@ -265,7 +265,7 @@ const button = variants({
         source: `import { variants } from 'zyzz'; variants({ variants: { size: { 1: {} } } })`,
       }),
     ).toThrowErrorMatchingInlineSnapshot(
-      `[Source.ExtractError: invalid.ts:64: Recipe choice names require CSS-safe strings.]`,
+      `[Source.ExtractError: invalid.ts:64: Numeric recipe choice names require quotes, such as '1'.]`,
     )
     expect(() =>
       Source.extract({
@@ -1911,6 +1911,18 @@ export const level = variants({
   },
   defaultVariants: { level: '1' },
 }, { id: 'level' })
+export const attribute = variants({
+  base: { color: 'black' },
+  variants: {
+    level: {
+      tint: (values: { color: string }) => ({ color: values.color }),
+      '10': { color: 'green' },
+      '2': { color: 'blue' },
+      '1': { color: 'red' },
+    },
+  },
+  defaultVariants: { level: '1' },
+}, { id: 'attribute' })
 export const composed = (value: '1' | '2' | '10') => cx(level({ level: value }))`
       const compiled = Graph.compile({ modules: { 'app.ts': source } })
       const uncompiled = Graph.compile({
@@ -1932,15 +1944,20 @@ export const composed = (value: '1' | '2' | '10') => cx(level({ level: value }))
           .modules['app.ts']!.css,
       ).toMatchInlineSnapshot(`
         ".z_Zf5JrJ0{color:black;}
-        .zv4AYnAtnf0{color:red;}
-        .zv4AYnAtnf1{color:blue;}
-        .zv4AYnAtnf2{color:green;}
         .zv4AYnAtnf3{color:var(--z-level-1-3-0-color);}
+        .zv4AYnAtnf2{color:green;}
+        .zv4AYnAtnf1{color:blue;}
+        .zv4AYnAtnf0{color:red;}
         .z_Zf5JrJ1{color:black;}
-        .zvdFyJpabT0{color:red;}
-        .zvdFyJpabT1{color:blue;}
-        .zvdFyJpabT2{color:green;}
-        .zvdFyJpabT3{color:var(--z-level-1-3-0-color);}"
+        .zv6EPvOQ1I3{color:var(--z-attribute-1-3-0-color);}
+        .zv6EPvOQ1I2{color:green;}
+        .zv6EPvOQ1I1{color:blue;}
+        .zv6EPvOQ1I0{color:red;}
+        .z_Zf5JrJ2{color:black;}
+        .zv0roCDgrt3{color:var(--z-level-1-3-0-color);}
+        .zv0roCDgrt2{color:green;}
+        .zv0roCDgrt1{color:blue;}
+        .zv0roCDgrt0{color:red;}"
       `)
 
       const browser = await chromium.launch({
@@ -1960,16 +1977,22 @@ export const composed = (value: '1' | '2' | '10') => cx(level({ level: value }))
         })
         await page.evaluate(`window.apply = (props) => {
           const element = document.querySelector('button');
+          for (const name of element.getAttributeNames()) element.removeAttribute(name);
           element.className = props.className;
-          element.style.cssText = '';
+          for (const [name, value] of Object.entries(props)) if (name.startsWith('data-')) element.setAttribute(name, value);
           for (const [name, value] of Object.entries(props.style ?? {})) element.style.setProperty(name, value);
           return getComputedStyle(element).color;
         }`)
 
-        for (const library of ['App', 'Authored']) {
+        for (const recipe of [
+          'App.level',
+          'Authored.level',
+          'App.attribute',
+          'Authored.attribute',
+        ]) {
           expect(
             await page.evaluate(
-              `['1', '2', '10'].map((value) => apply(${library}.level({ level: value })))`,
+              `['1', '2', '10'].map((value) => apply(${recipe}({ level: value })))`,
             ),
           ).toMatchInlineSnapshot(`
             [
@@ -1980,7 +2003,7 @@ export const composed = (value: '1' | '2' | '10') => cx(level({ level: value }))
           `)
           expect(
             await page.evaluate(
-              `[apply(${library}.level()), apply(${library}.level({ level: { tint: { color: 'orange' } } }))]`,
+              `[apply(${recipe}()), apply(${recipe}({ level: { tint: { color: 'orange' } } }))]`,
             ),
           ).toMatchInlineSnapshot(`
             [
@@ -2231,6 +2254,15 @@ export const initialized = renderToStaticMarkup(<button {...classes.button({ var
         }),
       ).toThrowErrorMatchingInlineSnapshot(
         `[Source.ExtractError: recipe.ts:71: Class-selection condition names cannot be array indexes.]`,
+      )
+      // A failed recipe reports its own location, not the composition that applies it.
+      expect(() =>
+        Source.extract({
+          moduleId: 'recipe.ts',
+          source: `import {cx, variants} from 'zyzz'; const size = variants({variants:{size:{1:{color:'red'}}}}); export const app = () => cx(size({size:'1'}))`,
+        }),
+      ).toThrowErrorMatchingInlineSnapshot(
+        `[Source.ExtractError: recipe.ts:74: Numeric recipe choice names require quotes, such as '1'.]`,
       )
     })
   })

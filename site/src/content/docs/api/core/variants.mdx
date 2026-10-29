@@ -101,7 +101,7 @@ const button = variants({
 })
 ```
 
-Numeric choice names such as `'1'` are string choices, and applications select them as strings. The recipe lists array-index names first in ascending order, as JavaScript objects do. Choices of one axis never match together, so this order leaves precedence unchanged.
+Numeric choice names need quotes, such as `'1'`, and applications select them as strings. Emitted rules keep the authored order, while generated choice classes number array-index names first, as JavaScript objects list them.
 
 ```ts
 import { variants } from 'zyzz'
