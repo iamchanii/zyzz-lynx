@@ -44,14 +44,18 @@ async function fixture() {
   return root
 }
 
-async function create(root: string, config: Config = {}) {
+async function create(
+  root: string,
+  config: Config = {},
+  options: zyzz.Options = {},
+) {
   return createRspeedy({
     cwd: root,
     loadEnv: false,
     rspeedyConfig: {
       // Development builds write the encoded template to `tasm.json`.
       mode: 'development',
-      plugins: [pluginReactLynx(), zyzz()],
+      plugins: [pluginReactLynx(), zyzz(options)],
       source: { entry: { main: './src/index.tsx' } },
       ...config,
     },
@@ -71,9 +75,9 @@ async function files(directory: string): Promise<readonly string[]> {
     .sort()
 }
 
-async function template(root: string) {
+async function template(root: string, entry = 'main') {
   const template = JSON.parse(
-    await Fs.readFile(Path.join(root, 'dist/.lynx/main/tasm.json'), 'utf8'),
+    await Fs.readFile(Path.join(root, `dist/.lynx/${entry}/tasm.json`), 'utf8'),
   ) as Template
 
   // Media rules nest the style rules the encoder kept under them.
@@ -117,6 +121,77 @@ describe('zyzz', () => {
           file.startsWith('zyzz'),
         ),
       ).toMatchInlineSnapshot(`[]`)
+    } finally {
+      await Fs.rm(root, { force: true, recursive: true })
+    }
+  }, 60_000)
+
+  test('leaves entries without zyzz.css by default', async () => {
+    const root = await fixture()
+    try {
+      const file = Path.join(root, 'src/index.tsx')
+      await Fs.writeFile(
+        file,
+        (await Fs.readFile(file, 'utf8')).replace("import 'zyzz.css'\n", ''),
+      )
+
+      const result = await (await create(root)).build()
+      await result.close()
+
+      expect((await template(root)).css).toMatchInlineSnapshot(`[]`)
+    } finally {
+      await Fs.rm(root, { force: true, recursive: true })
+    }
+  }, 60_000)
+
+  test('injects zyzz.css into every entry with options.inject', async () => {
+    const root = await fixture()
+    try {
+      // The first entry imports its own stylesheet before the manual import,
+      // and the second entry omits the manual import.
+      const file = Path.join(root, 'src/index.tsx')
+      const source = await Fs.readFile(file, 'utf8')
+      await Fs.writeFile(
+        Path.join(root, 'src/app.css'),
+        '.app { margin: 4px }\n',
+      )
+      await Fs.writeFile(file, `import './app.css'\n${source}`)
+      await Fs.writeFile(
+        Path.join(root, 'src/other.tsx'),
+        source.replace("import 'zyzz.css'\n", ''),
+      )
+
+      const result = await (
+        await create(
+          root,
+          {
+            source: {
+              entry: { main: './src/index.tsx', other: './src/other.tsx' },
+            },
+          },
+          { inject: true },
+        )
+      ).build()
+      await result.close()
+
+      // The injected stylesheet precedes the entry's own imports once.
+      expect((await template(root)).css).toMatchInlineSnapshot(`
+        [
+          ".z_i6Fywm0 { background-color: #06c }",
+          ".z_i6Fywm1 { padding: 8px }",
+          ".z_i6Fywm2 { color: #fff }",
+          ".z_i6Fywm3 { font-size: 20px }",
+          ".app { margin: 4px }",
+        ]
+      `)
+      expect((await template(root, 'other')).css).toMatchInlineSnapshot(`
+        [
+          ".z_i6Fywm0 { background-color: #06c }",
+          ".z_i6Fywm1 { padding: 8px }",
+          ".z_i6Fywm2 { color: #fff }",
+          ".z_i6Fywm3 { font-size: 20px }",
+        ]
+      `)
     } finally {
       await Fs.rm(root, { force: true, recursive: true })
     }

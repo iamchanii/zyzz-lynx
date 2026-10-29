@@ -41,6 +41,8 @@ root.render(<App />)
 
 Each environment compiles separately, so `lynx` and `web` environments receive their own stylesheet. Watch rebuilds recompile the stylesheet after any source edit.
 
+With [`options.inject`](#optionsinject), the plugin imports `zyzz.css` ahead of every entry's own modules instead. A manual import then resolves to the same module, which stays in its injected position.
+
 ## Variants
 
 The Lynx template encoder drops nested rules, `:where()`, and attribute selectors, so the plugin compiles every environment for the `lynx` target. Recipes select with classes by default, and each choice and compound becomes one rule under its own class, which the application adds. `selection: 'className'` returns that class list for a `className` prop.
@@ -126,6 +128,30 @@ import { zyzz } from 'zyzz/rspeedy'
 // [!code hl:2]
 // Keeps authored calls in the bundle
 const plugin = zyzz({ compiler: false })
+```
+
+### options.inject
+
+- **Type:** `boolean{:ts}`
+- **Default:** `false{:ts}`
+
+Imports `zyzz.css` before the modules of every entry in every environment, after any configured `source.preEntry` modules, so entries need no import of their own. A manual import of `zyzz.css` stays safe and adds no second copy of the rules.
+
+```ts title="lynx.config.ts"
+import { zyzz } from 'zyzz/rspeedy'
+
+// [!code hl:2]
+// Adds zyzz.css to the start of every entry
+const plugin = zyzz({ inject: true })
+```
+
+The injected stylesheet precedes every stylesheet the entry imports, even one imported before a manual `import 'zyzz.css'`. Those later rules win ties in specificity. Keep the option off to control the order from the entry, or use cascade layers on Lynx versions that support them, from 4.2.
+
+```css title="src/app.css"
+/* Overrides a zyzz.css rule of equal specificity, since it comes later */
+.title {
+  color: red;
+}
 ```
 
 ### options.reset
