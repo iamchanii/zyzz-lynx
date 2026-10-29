@@ -2230,7 +2230,7 @@ export const initialized = renderToStaticMarkup(<button {...classes.button({ var
       }
     })
 
-    test('rejects unknown selection modes and condition names that Object.keys reorders', () => {
+    test('rejects unknown selection modes, reordered condition names, and failed recipes before composition', () => {
       expect(() =>
         Source.extract({
           moduleId: 'recipe.ts',
