@@ -55,7 +55,7 @@ Lengths need a unit, and numeric `0` is the only unitless length. Units keep the
 - **Viewport-relative:** `vw`, `vh`, `vi`, `vb`, `vmin`, `vmax`, each also with an `s`, `l`, or `d` prefix.
 - **Container-relative:** `cqw`, `cqh`, `cqi`, `cqb`, `cqmin`, `cqmax`.
 - **Percentages:** `%`, where the property accepts them.
-- **Lynx:** `rpx` and `sp`, which the `lynx` compiler target emits. Style declarations compiled for the web report them as invalid literals, and breakpoints reject them.
+- **Lynx:** `rpx` and `sp`, which the `lynx` compiler target emits. Style declarations other than custom properties report them as invalid literals on the web, and breakpoint and container thresholds reject them.
 
 ```ts
 import { style } from 'zyzz'
