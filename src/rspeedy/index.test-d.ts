@@ -7,7 +7,7 @@ import { zyzz } from 'zyzz/rspeedy'
 describe('zyzz', () => {
   test('returns an Rsbuild plugin accepted by Rspeedy', () => {
     expectTypeOf(
-      zyzz({ reset: true, root: 'src' }),
+      zyzz({ inject: true, reset: true, root: 'src' }),
     ).toEqualTypeOf<RsbuildPlugin>()
 
     defineConfig({ plugins: [zyzz()] })
