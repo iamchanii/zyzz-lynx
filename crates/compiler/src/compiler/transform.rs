@@ -54,6 +54,10 @@ use crate::web::internal::themes::{Resource, Scope, Shared};
     reason = "Each flag is an independent host option."
 )]
 pub struct Options<'s, 'a> {
+    /// Whether a graph proves the module shares no import cycle with its sources, so only its
+    /// own body and the functions it passes to other modules can call its functions before it
+    /// finishes evaluating.
+    pub acyclic: bool,
     /// Rewrites authoring calls. `false` emits CSS for unchanged source.
     pub compiler: bool,
     /// Composition for styles without their own mode.
@@ -1485,7 +1489,10 @@ pub fn compile<'a>(
         program,
         &parsed.semantic,
         &extracted.calls,
-        applications::Options::default(),
+        applications::Options {
+            acyclic: options.acyclic,
+            ..applications::Options::default()
+        },
     );
     let found: Vec<&Application> = local_applications
         .iter()
@@ -1871,6 +1878,7 @@ pub fn compile<'a>(
     );
     let combined = combinations(&chains, &classes, &generated);
     let generator = Generator {
+        acyclic: options.acyclic,
         chains: &chains,
         classes,
         shadowed,
@@ -2936,6 +2944,9 @@ struct State {
 }
 
 struct Generator<'g, 'a> {
+    /// Whether the module shares no import cycle, which settles the composition inputs that
+    /// follow initialization only then.
+    acyclic: bool,
     /// Merged styles of folded wrapper chains.
     chains: &'g [Chain],
     classes: IndexMap<Arc<str>, String, FxBuildHasher>,
@@ -2974,6 +2985,7 @@ impl<'a> Generator<'_, 'a> {
     /// callee read can never throw.
     fn initialized(&self, known: &KnownInput) -> bool {
         known.initialized
+            || (self.acyclic && known.acyclic)
             || known
                 .import
                 .as_deref()
@@ -3398,6 +3410,12 @@ impl<'a> Generator<'_, 'a> {
                     })
                     .filter_map(|input| input.application_start)
                     .chain(call.composition_settled.iter().copied())
+                    .chain(
+                        call.composition_acyclic
+                            .iter()
+                            .filter(|_| self.acyclic)
+                            .map(|(start, _)| *start),
+                    )
             })
             .collect();
         // Definitions read only through folded applications need no class list of their own. True
@@ -3580,6 +3598,23 @@ impl<'a> Generator<'_, 'a> {
                     )
                 }
             } else if let Some(guards) = &call.composition {
+                let mut settled: Vec<&Arc<str>> = if self.acyclic {
+                    call.composition_acyclic
+                        .iter()
+                        .map(|(_, guard)| guard)
+                        .collect()
+                } else {
+                    Vec::new()
+                };
+                let guards: Vec<&Arc<str>> = guards
+                    .iter()
+                    .filter(|guard| {
+                        let position = settled.iter().position(|value| value == guard);
+
+                        position.map(|index| settled.swap_remove(index)).is_none()
+                    })
+                    .collect();
+
                 if guards.is_empty()
                     && !html
                     && let Some(classes) = self.classes.get(&call.name)
@@ -3589,19 +3624,29 @@ impl<'a> Generator<'_, 'a> {
                         .insert(call.start, (call.end, classes.clone()));
                 }
 
-                let base = if compose_html {
-                    format!(
-                        "{}.from({{className:{class_name}}})",
-                        state.composition_html
-                    )
+                // A composition spread alone onto a DOM element becomes its className, as
+                // runtime compositions do.
+                if guards.is_empty()
+                    && !html
+                    && let Some(spread) = call.spread
+                {
+                    module.overwrite(spread.start, call.start, "className={")?;
+                    class_name
                 } else {
-                    format!("({props})")
-                };
-                let cast = if typed { " as unknown" } else { "" };
+                    let base = if compose_html {
+                        format!(
+                            "{}.from({{className:{class_name}}})",
+                            state.composition_html
+                        )
+                    } else {
+                        format!("({props})")
+                    };
+                    let cast = if typed { " as unknown" } else { "" };
 
-                guards.iter().rev().fold(base, |result, guard| {
-                    format!("(({guard}{cast})?{result}:{guard}())")
-                })
+                    guards.iter().rev().fold(base, |result, guard| {
+                        format!("(({guard}{cast})?{result}:{guard}())")
+                    })
+                }
             } else if let Some(recipe) = &call.recipe {
                 let conditional = recipe
                     .conditions

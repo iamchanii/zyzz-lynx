@@ -290,6 +290,7 @@ impl<'a> Visit<'a> for Walker<'_, 'a> {
                         ..(*style.style).clone()
                     };
                     let application = Application {
+                        acyclic: true,
                         callee_end: node.callee.span().end,
                         class_override: None,
                         class_read: None,
@@ -800,6 +801,7 @@ pub fn collect<'o, 'a>(options: Options<'o, 'a>) -> Result<Collected<'a>> {
         options.semantic,
         options.calls,
         applications::Options {
+            acyclic: false,
             dynamic: true,
             exported: true,
         },
@@ -902,6 +904,7 @@ fn compose<'o, 'a>(
     let mut attributes: FxHashMap<Arc<str>, Arc<str>> = FxHashMap::default();
     let mut guards: Vec<Arc<str>> = Vec::new();
     let mut settled: Vec<u32> = Vec::new();
+    let mut acyclic: Vec<(u32, Arc<str>)> = Vec::new();
 
     let mut input = |inputs: &mut Vec<RuntimeInput>,
                      call: &Call<'a>,
@@ -1086,6 +1089,7 @@ fn compose<'o, 'a>(
         }) {
             guards.extend(nested.composition.iter().flatten().cloned());
             settled.extend_from_slice(&nested.composition_settled);
+            acyclic.extend_from_slice(&nested.composition_acyclic);
             input(
                 &mut inputs,
                 &nested,
@@ -1154,6 +1158,7 @@ fn compose<'o, 'a>(
                 && let Some(input) = inputs.last_mut()
             {
                 input.known = Some(KnownInput {
+                    acyclic: call.ownership.is_none() && application.acyclic,
                     callee: Arc::clone(&guard),
                     condition: match resolved {
                         Expression::LogicalExpression(logical) if conditional => {
@@ -1174,6 +1179,10 @@ fn compose<'o, 'a>(
             if call.ownership.is_none() && application.initialized {
                 settled.push(application.start);
             } else {
+                if call.ownership.is_none() && application.acyclic {
+                    acyclic.push((application.start, Arc::clone(&guard)));
+                }
+
                 guards.push(guard);
             }
         }
@@ -1278,6 +1287,7 @@ fn compose<'o, 'a>(
         call.runtime_composition = Some(inputs.clone());
     } else {
         call.composition = Some(guards);
+        call.composition_acyclic = acyclic;
         call.composition_settled = settled;
     }
 

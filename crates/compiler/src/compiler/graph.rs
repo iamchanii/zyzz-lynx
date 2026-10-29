@@ -354,6 +354,8 @@ struct Extraction {
 
 #[derive(Clone)]
 struct Transformed {
+    /// Whether the module shared no import cycle when it was transformed.
+    acyclic: bool,
     classes: Vec<(Arc<str>, Option<Arc<str>>)>,
     /// The wrapper folds of each import the transform read, by specifier.
     components: Vec<(Arc<str>, Option<Arc<wrappers::Exports>>)>,
@@ -3515,7 +3517,10 @@ impl Build<'_, '_> {
     /// module it reaches is known: a graph source, a packed library, or a `zyzz` entrypoint.
     /// An import the graph cannot follow could lead back to the importer, so it settles nothing
     /// that reaches it.
-    fn settled(&self) -> Map<FxHashSet<Arc<str>>> {
+    ///
+    /// Also returns the modules that share no import cycle with graph sources. Modules outside
+    /// the graph, such as packages, are assumed never to import graph sources.
+    fn settled(&self) -> (Map<FxHashSet<Arc<str>>>, FxHashSet<Arc<str>>) {
         let ids: Vec<&Arc<str>> = self.options.modules.keys().collect();
         let indexes: FxHashMap<&str, usize> = ids
             .iter()
@@ -3524,6 +3529,8 @@ impl Build<'_, '_> {
             .collect();
         let mut edges: Vec<Vec<usize>> = vec![Vec::new(); ids.len()];
         let mut unknown = vec![false; ids.len()];
+        // An unparsed source's imports are unknown, so it may close a cycle with any module.
+        let mut complete = true;
         let mut imports: Vec<Vec<ImportTarget>> = vec![Vec::new(); ids.len()];
 
         for (index, id) in ids.iter().enumerate() {
@@ -3531,6 +3538,8 @@ impl Build<'_, '_> {
                 if let Some(flag) = unknown.get_mut(index) {
                     *flag = true;
                 }
+
+                complete = false;
 
                 continue;
             };
@@ -3632,6 +3641,29 @@ impl Build<'_, '_> {
             }
         }
 
+        let mut sizes = vec![0_usize; count];
+
+        for component in &components {
+            if let Some(size) = sizes.get_mut(*component) {
+                *size += 1;
+            }
+        }
+
+        let acyclic: FxHashSet<Arc<str>> = ids
+            .iter()
+            .enumerate()
+            .filter(|(index, _)| {
+                complete
+                    && components
+                        .get(*index)
+                        .and_then(|component| sizes.get(*component))
+                        == Some(&1)
+                    && !edges
+                        .get(*index)
+                        .is_some_and(|targets| targets.contains(index))
+            })
+            .map(|(_, id)| Arc::clone(id))
+            .collect();
         let mut settled: Map<FxHashSet<Arc<str>>> = Map::default();
 
         for (index, declarations) in imports.into_iter().enumerate() {
@@ -3658,7 +3690,7 @@ impl Build<'_, '_> {
             }
         }
 
-        settled
+        (settled, acyclic)
     }
 
     /// Emits module CSS, shared stylesheets, and contracts for a web graph.
@@ -3981,10 +4013,10 @@ impl Build<'_, '_> {
         let mut transformed = previous
             .map(|previous| previous.transformed.clone())
             .unwrap_or_default();
-        let settled = if rewrite && !options.development {
+        let (settled, acyclic) = if rewrite && !options.development {
             self.settled()
         } else {
-            Map::default()
+            (Map::default(), FxHashSet::default())
         };
         let (order, components, rendering) = if rewrite && !options.development {
             self.fold_order()
@@ -4033,8 +4065,10 @@ impl Build<'_, '_> {
                 .map(|(specifier, target)| (Arc::clone(specifier), exports.get(target).cloned()))
                 .collect();
             let imports = settled.get(module_id);
+            let isolated = acyclic.contains(module_id);
             let reusable = transformed.get(module_id).filter(|cached| {
                 Arc::ptr_eq(&cached.extracted, &module)
+                    && cached.acyclic == isolated
                     && cached.components == read
                     && cached.settled.as_ref() == imports
                     && cached.schemes == schemes
@@ -4058,8 +4092,12 @@ impl Build<'_, '_> {
                 // Resolutions can retarget a component import without changing the module's
                 // extraction, so a transform reads the same folds only if it recorded them.
                 let same_components = match previous.transformed.get(module_id) {
-                    Some(cached) => cached.components == read && cached.settled.as_ref() == imports,
-                    None => !rendering.contains(module_id) && imports.is_none(),
+                    Some(cached) => {
+                        cached.components == read
+                            && cached.settled.as_ref() == imports
+                            && cached.acyclic == isolated
+                    }
+                    None => !rendering.contains(module_id) && imports.is_none() && !isolated,
                 };
 
                 same_components
@@ -4115,6 +4153,7 @@ impl Build<'_, '_> {
                     .collect();
                 let output = transform::compile(
                     &transform::Options {
+                        acyclic: isolated,
                         compiler: rewrite,
                         composition: options.composition,
                         css_output: options.css_output,
@@ -4171,6 +4210,7 @@ impl Build<'_, '_> {
             transformed.insert(
                 Arc::clone(module_id),
                 Transformed {
+                    acyclic: isolated,
                     classes,
                     components: read,
                     extracted: Arc::clone(&module),

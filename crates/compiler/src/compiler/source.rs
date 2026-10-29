@@ -94,6 +94,9 @@ pub struct RuntimeInput {
 /// The reads a statically known composition argument keeps once its application is skipped.
 #[derive(Clone, Debug)]
 pub struct KnownInput {
+    /// Whether the application is local and follows the definition's initialization once a
+    /// graph proves the module shares no import cycle.
+    pub acyclic: bool,
     /// Authored callee, read for truthiness so initialization failures still throw.
     pub callee: Arc<str>,
     /// Left operand of a conditional `&&` argument.
@@ -142,6 +145,9 @@ pub struct Call<'a> {
     /// Choice-class prefixes this composition renames, as (runtime input, from, to), when it
     /// copies the class rules of a Lynx recipe under classes of its own.
     pub composition_renames: Option<Vec<Rename>>,
+    /// Starts and guards of a compile-time composition's input applications that keep their
+    /// guard only until a graph proves the module shares no import cycle.
+    pub composition_acyclic: Vec<(u32, Arc<str>)>,
     /// Starts of a compile-time composition's input applications that keep no guard, since
     /// they always follow their definition's initialization.
     pub composition_settled: Vec<u32>,
