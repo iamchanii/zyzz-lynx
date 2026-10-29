@@ -215,9 +215,9 @@ pub struct Applications<'c, 'a> {
     options: Options,
 }
 
-/// One candidate's foldable applications and the definitions its reads call with arguments, or
-/// `None` when a read cannot fold.
-type Collected = Option<(Vec<Application>, FxHashSet<Arc<str>>)>;
+/// One candidate's foldable applications and the definitions whose reads need the runtime
+/// callable, such as calls with arguments and value reads, or the first read that cannot fold.
+type Collected = Result<(Vec<Application>, FxHashSet<Arc<str>>), Span>;
 
 fn is_call_of<'c, 'a>(
     definitions: &FxHashMap<u32, &'c Call<'a>>,
@@ -954,8 +954,17 @@ fn class_read(call: Span, [member, parent]: [Option<AstKind<'_>>; 2]) -> Option<
         _ => return None,
     };
     let span = member.span;
-    // Writes, calls, deletions, and grouped expressions keep the object.
-    let value = match parent? {
+
+    reads_value(parent?, span).then_some(ClassRead {
+        end: span.end,
+        html,
+    })
+}
+
+/// Whether a parent only reads the value of its child at `span`. Writes, calls, deletions, and
+/// grouped expressions keep the child.
+fn reads_value(parent: AstKind<'_>, span: Span) -> bool {
+    match parent {
         AstKind::ArrayExpression(_)
         | AstKind::AwaitExpression(_)
         | AstKind::BinaryExpression(_)
@@ -979,12 +988,7 @@ fn class_read(call: Span, [member, parent]: [Option<AstKind<'_>>; 2]) -> Option<
             declarator.init.as_ref().map(GetSpan::span) == Some(span)
         }
         _ => false,
-    };
-
-    value.then_some(ClassRead {
-        end: span.end,
-        html,
-    })
+    }
 }
 
 /// A static member read `object.name` of a reference.
@@ -1112,7 +1116,9 @@ impl<'c, 'a> Applications<'c, 'a> {
                     [reference.grandparent, above],
                 )
             } else {
-                let (name, member) = member_name(reference.parent, reference.span)?;
+                let Some((name, member)) = member_name(reference.parent, reference.span) else {
+                    return Err(reference.span);
+                };
 
                 (
                     candidate.members.get(name).copied(),
@@ -1130,8 +1136,25 @@ impl<'c, 'a> Applications<'c, 'a> {
                 continue;
             }
 
-            let call = call?;
-            let node = call_of(application, callee)?;
+            let Some(call) = call else {
+                return Err(reference.span);
+            };
+            let Some(node) = call_of(application, callee) else {
+                // A value read, as in `[styles.a, styles.b][index]`, cannot replace the definition,
+                // so only that definition keeps its runtime callable. A type assertion can be an
+                // assignment target, as in `(styles.a as any) = other`, so it never qualifies.
+                if application.is_some_and(|parent| {
+                    !matches!(
+                        parent,
+                        AstKind::TSAsExpression(_) | AstKind::TSSatisfiesExpression(_)
+                    ) && reads_value(parent, callee)
+                }) {
+                    called.insert(Arc::clone(&call.name));
+                    continue;
+                }
+
+                return Err(reference.span);
+            };
             let span = node.span;
             let class_override = if self.options.dynamic || node.arguments.is_empty() {
                 None
@@ -1162,7 +1185,7 @@ impl<'c, 'a> Applications<'c, 'a> {
             });
         }
 
-        Some((applications, called))
+        Ok((applications, called))
     }
 
     fn unique(&self) -> FxHashMap<&Arc<str>, usize> {
@@ -1266,7 +1289,7 @@ impl<'c, 'a> Applications<'c, 'a> {
                 continue;
             }
 
-            let Some((applications, called)) = collected else {
+            let Ok((applications, called)) = collected else {
                 continue;
             };
             let mut erased = candidate.namespace.is_some();
@@ -1438,6 +1461,40 @@ impl<'c, 'a> Applications<'c, 'a> {
         }
 
         output
+    }
+
+    /// The candidate name and the read that keeps it from folding, when `read` is another read of
+    /// that candidate.
+    pub fn blocking(&self, read: Span) -> Option<(&str, Span)> {
+        if self.evaluation {
+            return None;
+        }
+
+        self.candidates
+            .iter()
+            .zip(self.collected())
+            .find_map(|(candidate, collected)| {
+                let Err(span) = collected else {
+                    return None;
+                };
+
+                // Merged declarations share reads, so a sibling's member read is no cause.
+                if self
+                    .namespace_counts
+                    .get(&candidate.name)
+                    .copied()
+                    .unwrap_or_default()
+                    > 1
+                {
+                    return None;
+                }
+
+                self.references
+                    .get(&candidate.name)?
+                    .iter()
+                    .any(|reference| reference.span == read)
+                    .then_some((&*candidate.name, *span))
+            })
     }
 
     /// Every foldable application, in candidate order.
