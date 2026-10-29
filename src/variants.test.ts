@@ -1731,7 +1731,7 @@ namespace classes {${recipes("\n    selection: 'class',")}
           ),
         ).toMatchInlineSnapshot(`
           {
-            "className": "z_Zf5JrJ1f z_Zf5JrJ1g z_Zf5JrJ1h z_Zf5JrJ1i z_Zf5JrJ1j z_Zf5JrJ1k z_Zf5JrJ1l z_Zf5JrJ1m z_Zf5JrJ1n z_Zf5JrJ1o z_Zf5JrJ1p z_Zf5JrJ1q zv1xOvZXeS1 zv1xOvZXeS2 extra",
+            "className": "z_Zf5JrJ1e z_Zf5JrJ1f z_Zf5JrJ1g z_Zf5JrJ1h z_Zf5JrJ1i z_Zf5JrJ1j z_Zf5JrJ1k z_Zf5JrJ1l z_Zf5JrJ1m z_Zf5JrJ1n z_Zf5JrJ1o z_Zf5JrJ1p zv1xOvZXeS1 zv1xOvZXeS2 extra",
           }
         `)
         expect(
@@ -1746,7 +1746,7 @@ namespace classes {${recipes("\n    selection: 'class',")}
         expect(await page.evaluate(`App.selected.html({ size: 'lg' })`))
           .toMatchInlineSnapshot(`
             {
-              "class": "z_Zf5JrJ2q z_Zf5JrJ2r z_Zf5JrJ2s zv6hr07stx1",
+              "class": "z_Zf5JrJ2p z_Zf5JrJ2q z_Zf5JrJ2r zv6hr07stx1",
             }
           `)
       } finally {

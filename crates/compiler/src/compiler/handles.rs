@@ -976,6 +976,7 @@ pub fn transform(input: &Value, separate: Option<&str>) -> Result<String> {
             shared: options.shared,
             source,
             style_classes: None,
+            unapplied: None,
             wrappers: None,
         },
         &extracted,

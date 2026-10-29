@@ -741,6 +741,45 @@ impl<'a> Synthesizer<'_, 'a> {
     }
 }
 
+/// Starts of the applications whose class lists their outermost composition replaces, so the
+/// rewritten module never reads them. A compile-time composition replaces every input, whose
+/// guard reads only truthiness, and a runtime composition replaces its known inputs, which its
+/// helper receives as `true`. Contained compositions are skipped, since the outer one decides
+/// their reads.
+pub fn replaced(calls: &[Call<'_>]) -> FxHashSet<u32> {
+    let mut outer: Vec<&Call<'_>> = calls
+        .iter()
+        .filter(|call| {
+            !call.composition_case
+                && (call.composition.is_some() || call.runtime_composition.is_some())
+        })
+        .collect();
+    let mut output = FxHashSet::default();
+    let mut end = 0;
+
+    // Compositions nest or stay disjoint, so a call starting before the furthest end seen so far
+    // lies inside an earlier one.
+    outer.sort_by_key(|call| (call.start, std::cmp::Reverse(call.end)));
+
+    for call in outer {
+        if call.start < end {
+            continue;
+        }
+
+        end = call.end;
+        output.extend(call.composition_inputs.iter().copied());
+        output.extend(
+            call.runtime_composition
+                .iter()
+                .flatten()
+                .filter(|input| input.known.is_some())
+                .filter_map(|input| input.application_start),
+        );
+    }
+
+    output
+}
+
 /// Collects ordered compositions of `cx(...)` calls and the imported applications spread alone
 /// onto DOM elements.
 ///
@@ -906,6 +945,7 @@ fn compose<'o, 'a>(
     let mut attributes: FxHashMap<Arc<str>, Arc<str>> = FxHashMap::default();
     let mut guards: Vec<Arc<str>> = Vec::new();
     let mut settled: Vec<u32> = Vec::new();
+    let mut contained: Vec<u32> = Vec::new();
     let mut acyclic: Vec<(u32, Arc<str>)> = Vec::new();
 
     let mut input = |inputs: &mut Vec<RuntimeInput>,
@@ -1091,6 +1131,7 @@ fn compose<'o, 'a>(
         }) {
             guards.extend(nested.composition.iter().flatten().cloned());
             settled.extend_from_slice(&nested.composition_settled);
+            contained.extend_from_slice(&nested.composition_inputs);
             acyclic.extend_from_slice(&nested.composition_acyclic);
             input(
                 &mut inputs,
@@ -1309,6 +1350,11 @@ fn compose<'o, 'a>(
     } else {
         call.composition = Some(guards);
         call.composition_acyclic = acyclic;
+        call.composition_inputs = inputs
+            .iter()
+            .filter_map(|input| input.application_start)
+            .chain(contained)
+            .collect();
         call.composition_settled = settled;
     }
 

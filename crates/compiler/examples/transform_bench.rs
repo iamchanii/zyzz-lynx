@@ -93,6 +93,7 @@ fn options(input: &Input) -> transform::Options<'_, '_> {
         shared: None,
         source: &input.source,
         style_classes: None,
+        unapplied: None,
         wrappers: None,
     }
 }

@@ -3296,6 +3296,184 @@ export const Peer = () => <Cycle />`,
     `)
   })
 
+  test('leaves out rules of definitions that only cx calls apply', async () => {
+    const modules = {
+      'index.tsx': `import { cx, style } from 'zyzz'
+import * as styles from './styles.ts'
+import { label } from './styles.ts'
+const local = style({ marginLeft: '3px' })
+export const App = () => <main>
+  <i {...cx(styles.field(), styles.edit())}>field</i>
+  <i {...cx(label(), local())}>label</i>
+  <b {...label()}>alone</b>
+</main>
+// A read outside an application keeps the definition's rules.
+export const raw = styles.raw`,
+      'styles.ts': `import { style } from 'zyzz'
+export const field = style({ color: 'rgb(255, 0, 0)', paddingLeft: '1px' })
+export const edit = style({ paddingLeft: '2px' })
+export const label = style({ color: 'rgb(0, 0, 255)' })
+export const raw = style({ color: 'rgb(0, 128, 0)' })`,
+    }
+    const options = {
+      [ClassName.complete]: true,
+      [ClassName.references]: true,
+      modules,
+    }
+    const output = Graph.compile(options)
+
+    expect(output.modules['styles.ts']!.css).toMatchInlineSnapshot(`
+      ".z_b8Bx0E0{color:rgb(0, 0, 255);}
+      .z_b8Bx0E1{color:rgb(0, 128, 0);}"
+    `)
+    expect(output.modules['index.tsx']!.css).toMatchInlineSnapshot(`
+      ".z_HXfo7a0{color:rgb(255, 0, 0);}
+      .z_HXfo7a1{padding-left:1px;}
+      .z_HXfo7a2{padding-left:2px;}
+      .z_HXfo7a3{color:rgb(0, 0, 255);}
+      .z_HXfo7a4{margin-left:3px;}"
+    `)
+
+    const rendered = await Wrappers.render({
+      css: Object.values(output.modules)
+        .map((module) => module.css)
+        .join('\n'),
+      entry: 'index.tsx',
+      modules: Object.fromEntries(
+        Object.entries(output.modules).map(([id, module]) => [id, module.code]),
+      ),
+    })
+
+    expect(rendered.elements).toMatchInlineSnapshot(`
+      [
+        {
+          "borderLeftWidth": "0px",
+          "className": "z_HXfo7a0 z_HXfo7a1 z_HXfo7a2",
+          "color": "rgb(255, 0, 0)",
+          "paddingLeft": "2px",
+          "tag": "i",
+        },
+        {
+          "borderLeftWidth": "0px",
+          "className": "z_HXfo7a3 z_HXfo7a4",
+          "color": "rgb(0, 0, 255)",
+          "paddingLeft": "0px",
+          "tag": "i",
+        },
+        {
+          "borderLeftWidth": "0px",
+          "className": "z_b8Bx0E0",
+          "color": "rgb(0, 0, 255)",
+          "paddingLeft": "0px",
+          "tag": "b",
+        },
+      ]
+    `)
+
+    // Development keeps every exported definition's rules, as do graphs that may lack readers.
+    const development = Graph.compile({ ...options, development: true })
+    const partial = Graph.compile({ [ClassName.complete]: true, modules })
+    const closure = Graph.compile({ [ClassName.references]: true, modules })
+
+    expect(development.modules['styles.ts']!.css).toMatchInlineSnapshot(`
+      ".z-b8Bx0E-field-text-0{color:rgb(255, 0, 0);}
+      .z-b8Bx0E-field-pl-1{padding-left:1px;}
+      .z-b8Bx0E-edit-pl-0{padding-left:2px;}
+      .z-b8Bx0E-label-text-0{color:rgb(0, 0, 255);}
+      .z-b8Bx0E-raw-text-0{color:rgb(0, 128, 0);}"
+    `)
+    expect(partial.modules['styles.ts']!.css).toMatchInlineSnapshot(`
+      ".z_b8Bx0E0{color:rgb(255, 0, 0);}
+      .z_b8Bx0E1{padding-left:1px;}
+      .z_b8Bx0E2{padding-left:2px;}
+      .z_b8Bx0E3{color:rgb(0, 0, 255);}
+      .z_b8Bx0E4{color:rgb(0, 128, 0);}"
+    `)
+    expect(closure.modules['styles.ts']!.css).toMatchInlineSnapshot(`
+      ".z_b8Bx0E0{color:rgb(255, 0, 0);}
+      .z_b8Bx0E1{padding-left:1px;}
+      .z_b8Bx0E2{padding-left:2px;}
+      .z_b8Bx0E3{color:rgb(0, 0, 255);}
+      .z_b8Bx0E4{color:rgb(0, 128, 0);}"
+    `)
+
+    // A recompile restores the rules once an importer applies the definition directly.
+    const compiler = Graph.create()
+
+    compiler.compile(options)
+
+    const applied = compiler.compile({
+      ...options,
+      modules: {
+        ...modules,
+        'index.tsx': modules['index.tsx'].replace(
+          '</main>',
+          '<b {...styles.field()}>direct</b></main>',
+        ),
+      },
+    })
+
+    expect(applied.modules['styles.ts']!.css).toMatchInlineSnapshot(`
+      ".z_b8Bx0E0{color:rgb(255, 0, 0);}
+      .z_b8Bx0E1{padding-left:1px;}
+      .z_b8Bx0E2{color:rgb(0, 0, 255);}
+      .z_b8Bx0E3{color:rgb(0, 128, 0);}"
+    `)
+    expect(compiler.compile(options).modules['styles.ts']!.css)
+      .toMatchInlineSnapshot(`
+      ".z_b8Bx0E0{color:rgb(0, 0, 255);}
+      .z_b8Bx0E1{color:rgb(0, 128, 0);}"
+    `)
+  })
+
+  test('leaves out rules of exported namespace members that only cx calls apply through host imports', () => {
+    const modules = {
+      'index.tsx': `import { cx } from 'zyzz'
+import { styles } from './theme.ts'
+import { type Todo } from './types.ts'
+export const lazy = () => import('./lazy.tsx')
+export const App = (props: { todo: Todo }) => <i {...cx(styles.field(), styles.edit())}>{props.todo.title}</i>`,
+      'lazy.tsx': `export const Lazy = () => <b />`,
+      'theme.ts': `import { style } from 'zyzz'
+export namespace styles {
+  export const field = style({ color: 'rgb(255, 0, 0)' })
+  export const edit = style({ paddingLeft: '2px' })
+}`,
+      'types.ts': `export type Todo = { title: string }`,
+    }
+    // Hosts list static runtime imports only, leaving out type-only and dynamic imports.
+    const imports = {
+      'index.tsx': { './theme.ts': 'theme.ts', zyzz: null },
+      'lazy.tsx': {},
+      'theme.ts': { zyzz: null },
+      'types.ts': {},
+    }
+    const options = {
+      [ClassName.complete]: true,
+      [ClassName.references]: true,
+      imports,
+      modules,
+    }
+
+    expect(
+      Graph.compile(options).modules['theme.ts']!.css,
+    ).toMatchInlineSnapshot(`""`)
+
+    // A dynamic import reads the whole module object, which keeps every rule.
+    const loaded = Graph.compile({
+      ...options,
+      modules: {
+        ...modules,
+        'lazy.tsx': `export const theme = () => import('./theme.ts')`,
+      },
+    })
+
+    expect(loaded.modules['theme.ts']!.css).toMatchInlineSnapshot(`
+      ".z_DLyhct0{color:rgb(255, 0, 0);}
+      .z_DLyhct1{padding-left:2px;}"
+    `)
+  })
+
   test('folds wrappers over imported cx calls and imported dynamic components', async () => {
     const modules = {
       'base.ts': `import { style } from 'zyzz'
@@ -4553,15 +4731,13 @@ export function sample(active:boolean){return cx(controls.button({size:active?{c
       })
       expect(result.modules['a.ts']!.css).toMatchInlineSnapshot(`
         ".z-theme-src_2d_first_2d_dcTfYzugwnm_2d_style{}
-        .z_ZYrHvJ0{opacity:0.5;}
-        .z_ZYrHvJ1{color:red;padding:8px;}
-        .z_ZYrHvJ2{opacity:0.5;}"
+        .z_ZYrHvJ0{color:red;padding:8px;}
+        .z_ZYrHvJ1{opacity:0.5;}"
       `)
       expect(result.modules['b.ts']!.css).toMatchInlineSnapshot(`
         ".z-theme-src_2d_first_2d_dcTfYzugwnm_2d_style{}
-        .z_hYrPIe0{opacity:1;}
-        .z_hYrPIe1{color:red;padding:8px;}
-        .z_hYrPIe2{opacity:1;}"
+        .z_hYrPIe0{color:red;padding:8px;}
+        .z_hYrPIe1{opacity:1;}"
       `)
     })
 
