@@ -93,7 +93,7 @@ style({ flexDirection: '' })
 //                      ^|
 ```
 
-The compiler reads definitions without running application code. Literal values, local `const` records, and typed callbacks qualify. Running source that skipped the transform throws `style.MissingTransformError`, which means the build integration did not process that file.
+The compiler reads definitions without running application code. Literal values, local `const` records, and typed callbacks qualify. Source that skipped the transform still runs static definitions. Empty, dynamic, and other identity-bearing calls throw unless they receive an explicit `id`. See [Untransformed Tests](/docs/guides/testing#untransformed-tests).
 
 ### Apply the Style
 
