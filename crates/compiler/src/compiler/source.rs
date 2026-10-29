@@ -1059,6 +1059,12 @@ impl<'a> Converter<'_, '_, '_, 'a> {
             }
 
             let input = match value {
+                // The general path records the value location the web unit check reports.
+                Expression::StringLiteral(literal)
+                    if module.web && literal::lynx_unit(&literal.value).is_some() =>
+                {
+                    return None;
+                }
                 Expression::StringLiteral(literal) => {
                     Data::String(module.strings.get(literal.value.as_str()))
                 }

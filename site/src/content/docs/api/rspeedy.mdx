@@ -82,7 +82,7 @@ Every emitted rule selects one class, so a compound keeps the specificity of a c
 
 ## Lynx Units
 
-Lengths accept the Lynx `rpx` and `sp` units, which the plugin emits as authored. Other integrations compile for the web and report them as invalid literals.
+Lengths accept the Lynx `rpx` and `sp` units, which the plugin emits as authored. A web build reports them in style declarations as invalid literals.
 
 ```ts title="src/Map.styles.ts"
 import { style } from 'zyzz'

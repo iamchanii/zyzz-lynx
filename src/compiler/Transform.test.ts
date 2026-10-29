@@ -5177,6 +5177,32 @@ export const props = style({ marginTop: '-6.4sp', paddingLeft: 'calc(10rpx + 1px
         App.tsx:150: The \`sp\` unit requires the lynx target.]
       `)
     })
+
+    test('reports web sp values at their location, not in strings or urls', () => {
+      expect(() =>
+        Transform.compile({
+          moduleId: 'App.tsx',
+          source: `import { style } from 'zyzz'
+export const props = style({ backgroundImage: 'url(/a/10sp.png)', content: '" 10sp "', marginTop: '-6.4sp' })()`,
+        }),
+      ).toThrowErrorMatchingInlineSnapshot(
+        `[Source.ExtractError: App.tsx:127: The \`sp\` unit requires the lynx target.]`,
+      )
+    })
+
+    test('rejects Lynx units in breakpoints', () => {
+      expect(() =>
+        Transform.compile({
+          moduleId: 'App.tsx',
+          source: `import { Config } from 'zyzz'
+const zyzz = Config.create({ vars: { breakpoint: { md: '300rpx' } } })
+export const props = zyzz.style({ '@media md': { color: 'red' } })()`,
+          target: 'lynx',
+        }),
+      ).toThrowErrorMatchingInlineSnapshot(
+        `[Error: ["breakpoint","md"]: Expected a named nonnegative length threshold.]`,
+      )
+    })
   })
 })
 
