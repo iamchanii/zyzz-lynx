@@ -157,13 +157,19 @@ describe('zyzz', () => {
     try {
       await Fs.writeFile(
         Path.join(root, 'src/App.tsx'),
-        `import { variants } from 'zyzz'
+        `import { cx, style, variants } from 'zyzz'
 
 export function App() {
-  return <view className={styles.badge({ tone: 'success' })} />
+  return (
+    <view className={styles.badge({ tone: 'success' })}>
+      <view {...cx(styles.badge({ tone: 'neutral' }), styles.wide())} />
+    </view>
+  )
 }
 
 namespace styles {
+  export const wide = style({ margin: '1px', width: '40px' })
+
   export const badge = variants({
     base: { height: '20px', padding: '2px' },
     selection: 'className',
@@ -178,12 +184,17 @@ namespace styles {
       ).build()
       await result.close()
 
-      // The base becomes one rule, and each choice keeps its own class rule.
+      // The base becomes one rule, also inside the cx composition, and each choice keeps its own
+      // class rule.
       expect((await template(root)).css).toMatchInlineSnapshot(`
         [
           ".z_i6Fywm0 { height: 20px; padding: 2px }",
           ".zv7eXG394G0 { color: #000 }",
           ".zv7eXG394G1 { color: #0a0 }",
+          ".z_i6Fywm1 { height: 20px; padding: 2px }",
+          ".zv9ac31Fxc0 { color: #000 }",
+          ".zv9ac31Fxc1 { color: #0a0 }",
+          ".z_i6Fywm2 { width: 40px; margin: 1px }",
         ]
       `)
     } finally {

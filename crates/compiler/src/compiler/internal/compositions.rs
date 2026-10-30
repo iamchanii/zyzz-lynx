@@ -490,6 +490,9 @@ fn rules(
             });
             continue;
         };
+        // A Lynx recipe prints atomically for its choice rules alone, so its base keeps the
+        // configured output, or none for the compilation default.
+        let recipe = rules.iter().any(|rule| rule.class.is_some());
 
         for rule in rules {
             let class = rule.class.as_deref().map(|class| {
@@ -516,7 +519,10 @@ fn rules(
             output.push(Rule {
                 class,
                 condition: rule.condition.clone(),
-                style: if rule.style.css_output.is_some() || style.css_output.is_none() {
+                style: if rule.style.css_output.is_some()
+                    || style.css_output.is_none()
+                    || (recipe && rule.class.is_none())
+                {
                     Arc::clone(&rule.style)
                 } else {
                     Arc::new(NamedStyle {

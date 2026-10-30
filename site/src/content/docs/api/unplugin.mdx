@@ -52,7 +52,7 @@ const plugin = zyzz.esbuild({ compiler: false })
 - **Type:** `'atomic' | 'grouped'{:ts}`
 - **Default:** `'atomic'{:ts}`
 
-Sets the CSS representation of styles without their own mode, including helpers imported directly from `zyzz`. Atomic output emits one class per declaration, and grouped output emits one class per style. The [CSS Output](/docs/guides/css-output) guide compares them.
+Sets the CSS representation of helpers imported directly from `zyzz`. Helpers from `defineConfig` keep the config's own `cssOutput`, which defaults to atomic. Atomic output emits one class per declaration, and grouped output emits one class per style. The [CSS Output](/docs/guides/css-output) guide compares them.
 
 ```ts title="build.ts"
 import { zyzz } from 'zyzz/unplugin'
