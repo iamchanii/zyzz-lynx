@@ -165,6 +165,7 @@ impl Graph<'_, '_> {
         let options = Options {
             compiler: self.case.compiler,
             context: self.case.linked.then_some(&context),
+            css_output: None,
             module_id,
             parsed: None,
             source: text,

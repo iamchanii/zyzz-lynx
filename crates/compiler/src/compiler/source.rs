@@ -312,6 +312,9 @@ pub struct Options<'s, 'a> {
     pub compiler: Option<bool>,
     /// Compiler-owned graph context.
     pub context: Option<&'s Context<'a>>,
+    /// Default CSS output of definitions without their own mode, under which `cx` compositions
+    /// of grouped styles merge into one rule.
+    pub css_output: Option<token::CssOutput>,
     /// Portable identity including package and module path; no filesystem access occurs.
     pub module_id: &'s str,
     /// Syntax owned by the current graph compilation, parsed from `source`.
@@ -3106,6 +3109,7 @@ pub fn extract<'a>(allocator: &'a Allocator, options: &Options<'_, 'a>) -> Resul
         let collected = compositions::collect(compositions::Options {
             allocator,
             calls: &calls,
+            css_output: options.css_output,
             identity: &namespace,
             links: context.map(|context| &context.links),
             offsets: &parsed.offsets,

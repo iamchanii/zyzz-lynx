@@ -1433,6 +1433,7 @@ pub fn extract(input: &str) -> String {
     let options = Options {
         compiler: parsed.get("compiler").and_then(Value::as_bool),
         context: None,
+        css_output: None,
         module_id: text("moduleId"),
         parsed: None,
         source,

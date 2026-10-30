@@ -152,6 +152,41 @@ describe('zyzz', () => {
     }
   }, 60_000)
 
+  test('merges a cx value of plain styles into one rule with options.cssOutput', async () => {
+    const root = await fixture()
+    try {
+      await Fs.writeFile(
+        Path.join(root, 'src/App.tsx'),
+        `import { cx, style } from 'zyzz'
+
+export function App() {
+  return <view {...pair} />
+}
+
+const wide = style({ margin: '1px', width: '40px' })
+
+const tall = style({ height: '9px', width: '20px' })
+
+const pair = cx(wide(), tall())
+`,
+      )
+
+      const result = await (
+        await create(root, {}, { cssOutput: 'grouped' })
+      ).build()
+      await result.close()
+
+      // The later width wins inside the one merged rule.
+      expect((await template(root)).css).toMatchInlineSnapshot(`
+        [
+          ".z_i6Fywm0 { width: 20px; height: 9px; margin: 1px }",
+        ]
+      `)
+    } finally {
+      await Fs.rm(root, { force: true, recursive: true })
+    }
+  }, 60_000)
+
   test('groups recipe bases beside their choice rules with options.cssOutput', async () => {
     const root = await fixture()
     try {

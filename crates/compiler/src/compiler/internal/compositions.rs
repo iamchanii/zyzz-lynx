@@ -44,6 +44,8 @@ pub struct Options<'o, 'a> {
     pub allocator: &'a Allocator,
     /// Extracted authoring calls.
     pub calls: &'o [Call<'a>],
+    /// Default CSS output of styles without their own mode.
+    pub css_output: Option<CssOutput>,
     /// Stable module identity.
     pub identity: &'o str,
     /// Imported style definitions the source graph supplies, by local name.
@@ -544,6 +546,7 @@ fn composed(
     name: &Arc<str>,
     selected: &[Call<'_>],
     styles: &FxHashMap<Arc<str>, Arc<NamedStyle>>,
+    default: Option<CssOutput>,
 ) -> (Arc<NamedStyle>, Renames) {
     let (rules, renames) = rules(name, selected, styles);
     let composition = independent(selected, styles);
@@ -558,7 +561,7 @@ fn composed(
                     .is_some_and(|style| style.css_output == Some(CssOutput::Grouped)))
     });
 
-    if plain && let Some(merged) = combination::merge(name, &rules, None) {
+    if plain && let Some(merged) = combination::merge(name, &rules, default) {
         return (
             Arc::new(NamedStyle {
                 composition,
@@ -1286,7 +1289,7 @@ fn compose<'o, 'a>(
         options.identity,
         options.offsets.utf16(node.span.start)
     ));
-    let (style, renames) = composed(&name, &selected, styles);
+    let (style, renames) = composed(&name, &selected, styles, options.css_output);
     // Renames address runtime inputs, which include placeholder arguments.
     let input_positions: Vec<usize> = inputs
         .iter()
@@ -1420,7 +1423,7 @@ fn compose<'o, 'a>(
             case.portable_inputs = Some(inputs);
         }
 
-        let (style, renames) = composed(&case_name, &included, styles);
+        let (style, renames) = composed(&case_name, &included, styles, options.css_output);
 
         case.composition_renames = addressed(renames, &included_positions);
         names.push(case_name);

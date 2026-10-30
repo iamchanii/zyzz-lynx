@@ -1410,8 +1410,9 @@ pub fn invalid_output(path: Vec<Arc<str>>) -> Error {
     )])
 }
 
-/// Gives a Lynx recipe base without its own mode the compilation's default output. The recipe
-/// prints atomically so its choices keep their own class rules, while the base beside them keeps
+/// Gives the rules beside a Lynx recipe's choice class rules the compilation's default output when
+/// they have no mode of their own. The recipe prints atomically so its choices keep their own
+/// class rules, while its base, and the other inputs of a `cx` composition that copies it, keep
 /// the output of a style.
 fn recipe_base(style: Arc<NamedStyle>, default: Option<CssOutput>) -> Arc<NamedStyle> {
     let Some(default) = default else {
