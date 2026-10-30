@@ -1,5 +1,15 @@
 # zyzz
 
+## 0.0.44
+
+### Patch Changes
+
+- ba3817f: Graph compiles now drop initialization guards from local style applications in modules that share no import cycle with other sources, including reads inside function declarations and after top-level calls such as `graphql(...)` or `createContext(false)` that pass no local function. Same-file `namespace styles` applications then render the constant class strings an imported style module produces, and a static `cx` composition spread alone onto an element becomes its `className`. Packages outside the graph are assumed never to import its sources.
+- ef3ba01: Styles applied only inside `cx` calls no longer emit their own CSS rules, since each `cx` call emits rules for its combined declarations. A module-local style qualifies when every read is such an application, except in Vite and Next.js development builds. An exported style, including a member of an exported namespace, qualifies when the host compiles every module in one graph (the Rspeedy and other unplugin hosts) and no module reads it another way, so `cx(styles.field(), styles.edit())` alone leaves out the rules of `field` and `edit`.
+- e269b01: Fixed nested conditions on the `lynx` target, which the Lynx template encoder dropped. `style({ ':active': { opacity: 0.4 } })` now emits `.z…:active{opacity:0.4;}` instead of `.z…{&:active{opacity:0.4;}}`, nested selectors resolve `&` to the class, and `@media` queries wrap the class rule. Grouped output splits into flat rules in authored order, and `global()` rules print flat too. Conditions that Lynx never matches, such as `:first-child`, `::before`, `[attr~=value]`, and at-rules other than `@media`, are compile errors in styles, recipe choices, compounds, and `global()` rules, such as ``The lynx target does not support `:first-child`.``
+- e578055: Fixed `cx` failing across a module when a `namespace styles` member or local definition is read as a value, such as `[styles.l1, styles.l2][index]()`. Only the definitions read that way stay runtime functions, so other `cx` calls compose again. When a read exposes the namespace object, such as `Object.values(styles)`, composing its members now reports `Composition requires direct applications of styles, which this read prevents.` at that read instead of at an unrelated `cx` call.
+- 1ffca6c: Recipe choices accept quoted array-index names such as `'1'` and `'10'` under class selection, which Lynx recipes use by default. Choice classes and payload slots follow JavaScript own-property order, so compiled and uncompiled applications agree, and emitted rules keep the authored order. A recipe that fails to compile no longer adds a composition error at the `cx` call that applies it, and an unquoted numeric choice name reports that it needs quotes.
+
 ## 0.0.43
 
 ### Patch Changes
