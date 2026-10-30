@@ -187,6 +187,55 @@ const pair = cx(wide(), tall())
     }
   }, 60_000)
 
+  test('keeps the choice rules of an imported recipe in a cx call with options.cssOutput', async () => {
+    const root = await fixture()
+    try {
+      await Fs.writeFile(
+        Path.join(root, 'src/badge.ts'),
+        `import { variants } from 'zyzz'
+
+export const badge = variants({
+  base: { padding: '2px' },
+  selection: 'className',
+  variants: { tone: { neutral: { color: '#000' }, success: { color: '#0a0' } } },
+})
+`,
+      )
+      await Fs.writeFile(
+        Path.join(root, 'src/App.tsx'),
+        `import { cx, style } from 'zyzz'
+import { badge } from './badge'
+
+export function App() {
+  return <view {...cx(badge({ tone: 'neutral' }), wide())} />
+}
+
+const wide = style({ width: '40px' })
+`,
+      )
+
+      const result = await (
+        await create(root, {}, { cssOutput: 'grouped' })
+      ).build()
+      await result.close()
+
+      // Each choice keeps its own class rule, so neutral never receives the success color.
+      expect((await template(root)).css).toMatchInlineSnapshot(`
+        [
+          ".z_jn9NAa0 { padding: 2px }",
+          ".zvaGVVfqps0 { color: #000 }",
+          ".zvaGVVfqps1 { color: #0a0 }",
+          ".z_i6Fywm0 { padding: 2px }",
+          ".zv76T8aF430 { color: #000 }",
+          ".zv76T8aF431 { color: #0a0 }",
+          ".z_i6Fywm1 { width: 40px }",
+        ]
+      `)
+    } finally {
+      await Fs.rm(root, { force: true, recursive: true })
+    }
+  }, 60_000)
+
   test('groups recipe bases beside their choice rules with options.cssOutput', async () => {
     const root = await fixture()
     try {

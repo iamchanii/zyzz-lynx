@@ -56,13 +56,14 @@ impl Visit<'_> {
 
 /// Merges grouped rules that one element always applies together, in order, into the rules of
 /// one grouped style. A rule without its own output mode takes `default`. Returns `None` when a
-/// rule is not grouped, carries target branches or cascade layers, or a nested block cannot move
-/// ahead of the declarations that follow it.
+/// rule is not grouped, prints under its own choice class, carries target branches or cascade
+/// layers, or a nested block cannot move ahead of the declarations that follow it.
 pub fn merge(name: &Arc<str>, rules: &[Rule], default: Option<CssOutput>) -> Option<Vec<Rule>> {
     let mut pieces: Vec<Piece<'_>> = Vec::new();
 
     for rule in rules {
-        if rule.style.css_output.or(default) != Some(CssOutput::Grouped) {
+        // A choice class rule applies only when the application selects that choice.
+        if rule.class.is_some() || rule.style.css_output.or(default) != Some(CssOutput::Grouped) {
             return None;
         }
 
