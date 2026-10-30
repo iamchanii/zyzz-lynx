@@ -4182,10 +4182,10 @@ namespace styles {
           <b className={"quoted"} key="key">quoted</b>
           <b className={"template"}>template</b>
           <b className={"named"}>named</b>
-          <b className={"z_l0kPgl0 z_l0kPgl1 z_l0kPgl5 z_l0kPgl6"}>composed</b>
+          <b className={"z_l0kPgl0 z_l0kPgl1 z_l0kPgl3 z_l0kPgl4"}>composed</b>
           <i className={"z_l0kPgl0 z_l0kPgl1 z_l0kPgl2 outer"}>outer</i>
-          <i className={"z_l0kPgl0 z_l0kPgl1 z_l0kPgl2 z_l0kPgl7 z_l0kPgl8"}>ladder</i>
-          <i className={"z_l0kPgl0 z_l0kPgl1 z_l0kPgl2 z_l0kPgl7 z_l0kPgl8"}>twice</i>
+          <i className={"z_l0kPgl0 z_l0kPgl1 z_l0kPgl2 z_l0kPgl5 z_l0kPgl6"}>ladder</i>
+          <i className={"z_l0kPgl0 z_l0kPgl1 z_l0kPgl2 z_l0kPgl5 z_l0kPgl6"}>twice</i>
           <i className={"z_l0kPgl0 z_l0kPgl1 z_l0kPgl2 passed"}>passed</i>
           <Bare>bare</Bare>
           <Literal className="ignored">ignored</Literal>
@@ -4206,7 +4206,7 @@ namespace styles {
       })
 
       expect(rendered.markup).toMatchInlineSnapshot(
-        `"<main><b class="literal">literal</b><b class="quoted">quoted</b><b class="template">template</b><b class="named">named</b><b class="z_l0kPgl0 z_l0kPgl1 z_l0kPgl5 z_l0kPgl6">composed</b><i class="z_l0kPgl0 z_l0kPgl1 z_l0kPgl2 outer">outer</i><i class="z_l0kPgl0 z_l0kPgl1 z_l0kPgl2 z_l0kPgl7 z_l0kPgl8">ladder</i><i class="z_l0kPgl0 z_l0kPgl1 z_l0kPgl2 z_l0kPgl7 z_l0kPgl8">twice</i><i class="z_l0kPgl0 z_l0kPgl1 z_l0kPgl2 passed">passed</i><b>bare</b><b class="literal">ignored</b><b class="late">hoisted</b><b class="changing">changing</b><b class="z_l0kPgl0 z_l0kPgl9 z_l0kPgla">conditional</b><b id="extra" class="extra">extra</b><b class="">empty</b><b class="a&amp;b">entity</b></main>"`,
+        `"<main><b class="literal">literal</b><b class="quoted">quoted</b><b class="template">template</b><b class="named">named</b><b class="z_l0kPgl0 z_l0kPgl1 z_l0kPgl3 z_l0kPgl4">composed</b><i class="z_l0kPgl0 z_l0kPgl1 z_l0kPgl2 outer">outer</i><i class="z_l0kPgl0 z_l0kPgl1 z_l0kPgl2 z_l0kPgl5 z_l0kPgl6">ladder</i><i class="z_l0kPgl0 z_l0kPgl1 z_l0kPgl2 z_l0kPgl5 z_l0kPgl6">twice</i><i class="z_l0kPgl0 z_l0kPgl1 z_l0kPgl2 passed">passed</i><b>bare</b><b class="literal">ignored</b><b class="late">hoisted</b><b class="changing">changing</b><b class="z_l0kPgl0 z_l0kPgl7 z_l0kPgl8">conditional</b><b id="extra" class="extra">extra</b><b class="">empty</b><b class="a&amp;b">entity</b></main>"`,
       )
 
       const development = Transform.compile({
@@ -4828,55 +4828,54 @@ namespace styles {
         .zv9WvyhNQ-1{padding-left:4px;}
         .zv9WvyhNQ-2{color:rgb(0, 0, 255);}
         .zv9WvyhNQ-4{color:rgb(0, 128, 0);}
-        .z_l0kPgl2{border-left:1px solid;}
-        .z_l0kPgl3{color:rgb(0, 0, 0);}
+        .z_l0kPgl2{color:rgb(0, 0, 0);}
         .zvbsqHUbNY1{padding-left:2px;}
         .zvbsqHUbNY2{padding-left:8px;}
         .zvbsqHUbNY3{padding-left:4px;}
         .zvbsqHUbNY4{color:rgb(0, 0, 255);}
         .zvbsqHUbNY5{color:rgb(255, 0, 0);}
         .zvbsqHUbNY6{border-left:4px solid;}
+        .z_l0kPgl3{border-left:1px solid;}
         .z_l0kPgl4{border-left:1px solid;}
-        .z_l0kPgl5{border-left:1px solid;}
-        .z_l0kPgl6{color:rgb(0, 0, 0);}
+        .z_l0kPgl5{color:rgb(0, 0, 0);}
         .zv14w9Ddz71{padding-left:2px;}
         .zv14w9Ddz72{padding-left:8px;}
         .zv14w9Ddz73{padding-left:4px;}
         .zv14w9Ddz74{color:rgb(0, 0, 255);}
         .zv14w9Ddz75{color:rgb(255, 0, 0);}
         .zv14w9Ddz76{border-left:4px solid;}
-        .z_l0kPgl7{color:rgb(0, 0, 0);}
+        .z_l0kPgl6{color:rgb(0, 0, 0);}
         .zv6pa7USHW1{padding-left:2px;}
         .zv6pa7USHW2{padding-left:8px;}
         .zv6pa7USHW3{padding-left:4px;}
         .zv6pa7USHW4{color:rgb(0, 0, 255);}
         .zv6pa7USHW5{color:rgb(255, 0, 0);}
         .zv6pa7USHW6{border-left:4px solid;}
-        .z_l0kPgl8{color:rgb(0, 0, 0);}
+        .z_l0kPgl7{color:rgb(0, 0, 0);}
         .zv5ZO1lHfQ1{padding-left:2px;}
         .zv5ZO1lHfQ2{padding-left:8px;}
         .zv5ZO1lHfQ3{padding-left:4px;}
         .zv5ZO1lHfQ4{color:rgb(0, 0, 255);}
         .zv5ZO1lHfQ5{color:rgb(255, 0, 0);}
         .zv5ZO1lHfQ6{border-left:4px solid;}
-        .z_l0kPgl9{border-left:1px solid;}"
+        .z_l0kPgl8{border-left:1px solid;}"
       `)
       expect(output.classes).toMatchInlineSnapshot(`
         {
-          "composition-1k0bfdx1r9hbnf-641": "z_l0kPgl3 z_l0kPgl4",
-          "composition-1k0bfdx1r9hbnf-731": "z_l0kPgl5 z_l0kPgl6",
-          "composition-1k0bfdx1r9hbnf-821": "z_l0kPgl8 z_l0kPgl9",
-          "composition-1k0bfdx1r9hbnf-821-0": "z_l0kPgl7",
+          "composition-1k0bfdx1r9hbnf-641": "z_l0kPgl2 z_l0kPgl3",
+          "composition-1k0bfdx1r9hbnf-731": "z_l0kPgl4 z_l0kPgl5",
+          "composition-1k0bfdx1r9hbnf-821": "z_l0kPgl7 z_l0kPgl8",
+          "composition-1k0bfdx1r9hbnf-821-0": "z_l0kPgl6",
           "style-1k0bfdx1r9hbnf-1036": "z_l0kPgl0",
           "style-1k0bfdx1r9hbnf-1490": "z_l0kPgl1",
-          "style-1k0bfdx1r9hbnf-1924": "z_l0kPgl2",
+          "style-1k0bfdx1r9hbnf-1924": "",
         }
       `)
       expect(output.code).toMatchInlineSnapshot(`
         "
-        const __zyzzComposition641=/*#__PURE__*/__zyzzComposition.create({"className":"z_l0kPgl3 z_l0kPgl4","inputs":[{"className":"z_l0kPgl0","renames":[[["zv4meQUdh6","zvbsqHUbNY"]]],"prefixes":["zv4meQUdh6"]},{}]});
-        const __zyzzComposition731=/*#__PURE__*/__zyzzComposition.create({"className":"z_l0kPgl5 z_l0kPgl6","inputs":[{},{"className":"z_l0kPgl0","renames":[[["zv4meQUdh6","zv14w9Ddz7"]]],"prefixes":["zv4meQUdh6"]}]});
-        const __zyzzComposition821=/*#__PURE__*/__zyzzComposition.create({"cases":["z_l0kPgl7","z_l0kPgl8 z_l0kPgl9"],"inputs":[{"className":"z_l0kPgl0","renames":[[["zv4meQUdh6","zv6pa7USHW"]],[["zv4meQUdh6","zv5ZO1lHfQ"]]],"prefixes":["zv4meQUdh6"]},{"condition":0}]});
+        const __zyzzComposition641=/*#__PURE__*/__zyzzComposition.create({"className":"z_l0kPgl2 z_l0kPgl3","inputs":[{"className":"z_l0kPgl0","renames":[[["zv4meQUdh6","zvbsqHUbNY"]]],"prefixes":["zv4meQUdh6"]},{}]});
+        const __zyzzComposition731=/*#__PURE__*/__zyzzComposition.create({"className":"z_l0kPgl4 z_l0kPgl5","inputs":[{},{"className":"z_l0kPgl0","renames":[[["zv4meQUdh6","zv14w9Ddz7"]]],"prefixes":["zv4meQUdh6"]}]});
+        const __zyzzComposition821=/*#__PURE__*/__zyzzComposition.create({"cases":["z_l0kPgl6","z_l0kPgl7 z_l0kPgl8"],"inputs":[{"className":"z_l0kPgl0","renames":[[["zv4meQUdh6","zv6pa7USHW"]],[["zv4meQUdh6","zv5ZO1lHfQ"]]],"prefixes":["zv4meQUdh6"]},{"condition":0}]});
 
         import { Composition as __zyzzComposition, Props as __zyzzProps } from 'zyzz/runtime';
 
@@ -4900,7 +4899,7 @@ namespace styles {
 
           export const badge = (((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className;let value,className="z_l0kPgl1",s0,s1;value=Object.prototype.hasOwnProperty.call(input,"size")?input["size"]:void 0;if(value!==null&&value!==void 0){value=String(value);s0=value;className+=value==="large"?" zv9WvyhNQ-0":value==="small"?" zv9WvyhNQ-1":""}value=Object.prototype.hasOwnProperty.call(input,"tone")?input["tone"]:void 0;if(value!==null&&value!==void 0){value=String(value);s1=value;className+=value==="blue"?" zv9WvyhNQ-2":""}if((s0==="large"||s0==="small")&&s1==="blue")className+=" zv9WvyhNQ-4";if(external)className+=" "+external;return className}) as unknown as import('zyzz').variants.ReturnType<{selection:'className';variants:{"size":{"large":{};"small":{}};"tone":{"blue":{};"red":{}}}}>)
 
-          export const override = /*#__PURE__*/__zyzzProps.create({className:"z_l0kPgl2"})
+          export const override = /*#__PURE__*/__zyzzProps.create({className:""})
         }"
       `)
 
@@ -4943,21 +4942,21 @@ namespace styles {
           },
           {
             "borderLeftWidth": "1px",
-            "className": "z_l0kPgl3 z_l0kPgl4 zvbsqHUbNY1 zvbsqHUbNY4 zvbsqHUbNY6",
+            "className": "z_l0kPgl2 z_l0kPgl3 zvbsqHUbNY1 zvbsqHUbNY4 zvbsqHUbNY6",
             "color": "rgb(0, 0, 255)",
             "paddingLeft": "2px",
             "tag": "span",
           },
           {
             "borderLeftWidth": "4px",
-            "className": "z_l0kPgl5 z_l0kPgl6 zv14w9Ddz71 zv14w9Ddz74 zv14w9Ddz76",
+            "className": "z_l0kPgl4 z_l0kPgl5 zv14w9Ddz71 zv14w9Ddz74 zv14w9Ddz76",
             "color": "rgb(0, 0, 255)",
             "paddingLeft": "2px",
             "tag": "span",
           },
           {
             "borderLeftWidth": "1px",
-            "className": "z_l0kPgl8 z_l0kPgl9 zv5ZO1lHfQ1 zv5ZO1lHfQ4 zv5ZO1lHfQ6",
+            "className": "z_l0kPgl7 z_l0kPgl8 zv5ZO1lHfQ1 zv5ZO1lHfQ4 zv5ZO1lHfQ6",
             "color": "rgb(0, 0, 255)",
             "paddingLeft": "2px",
             "tag": "span",
@@ -4995,38 +4994,37 @@ namespace styles {
         .zv9WvyhNQ-1{padding-left:4px;}
         .zv9WvyhNQ-2{color:rgb(0, 0, 255);}
         .zv9WvyhNQ-4{color:rgb(0, 128, 0);}
-        .z_l0kPgl2{border-left:1px solid;}
-        .z_l0kPgl3{color:rgb(0, 0, 0);}
+        .z_l0kPgl2{color:rgb(0, 0, 0);}
         .zvbsqHUbNY1{padding-left:2px;}
         .zvbsqHUbNY2{padding-left:8px;}
         .zvbsqHUbNY3{padding-left:4px;}
         .zvbsqHUbNY4{color:rgb(0, 0, 255);}
         .zvbsqHUbNY5{color:rgb(255, 0, 0);}
         .zvbsqHUbNY6{border-left:4px solid;}
+        .z_l0kPgl3{border-left:1px solid;}
         .z_l0kPgl4{border-left:1px solid;}
-        .z_l0kPgl5{border-left:1px solid;}
-        .z_l0kPgl6{color:rgb(0, 0, 0);}
+        .z_l0kPgl5{color:rgb(0, 0, 0);}
         .zv14w9Ddz71{padding-left:2px;}
         .zv14w9Ddz72{padding-left:8px;}
         .zv14w9Ddz73{padding-left:4px;}
         .zv14w9Ddz74{color:rgb(0, 0, 255);}
         .zv14w9Ddz75{color:rgb(255, 0, 0);}
         .zv14w9Ddz76{border-left:4px solid;}
-        .z_l0kPgl7{color:rgb(0, 0, 0);}
+        .z_l0kPgl6{color:rgb(0, 0, 0);}
         .zv6pa7USHW1{padding-left:2px;}
         .zv6pa7USHW2{padding-left:8px;}
         .zv6pa7USHW3{padding-left:4px;}
         .zv6pa7USHW4{color:rgb(0, 0, 255);}
         .zv6pa7USHW5{color:rgb(255, 0, 0);}
         .zv6pa7USHW6{border-left:4px solid;}
-        .z_l0kPgl8{color:rgb(0, 0, 0);}
+        .z_l0kPgl7{color:rgb(0, 0, 0);}
         .zv5ZO1lHfQ1{padding-left:2px;}
         .zv5ZO1lHfQ2{padding-left:8px;}
         .zv5ZO1lHfQ3{padding-left:4px;}
         .zv5ZO1lHfQ4{color:rgb(0, 0, 255);}
         .zv5ZO1lHfQ5{color:rgb(255, 0, 0);}
         .zv5ZO1lHfQ6{border-left:4px solid;}
-        .z_l0kPgl9{border-left:1px solid;}"
+        .z_l0kPgl8{border-left:1px solid;}"
       `)
     })
 
@@ -5047,30 +5045,29 @@ namespace styles {
         .z_l0kPgla{&:where(.zv9WvyhNQ-1){padding-left:4px;}}
         .z_l0kPglb{&:where(.zv9WvyhNQ-2){color:rgb(0, 0, 255);}}
         .z_l0kPglc{&:where(.zv9WvyhNQ-0,.zv9WvyhNQ-1):where(.zv9WvyhNQ-2):where(*, .__zyzz-compound-0){color:rgb(0, 128, 0);}}
-        .z_l0kPgld{border-left:1px solid;}
-        .z_l0kPgle{color:rgb(0, 0, 0);}
-        .z_l0kPglf{&:where([data-on="true"]){padding-left:2px;}}
-        .z_l0kPglg{&:where([data-size="large"]){padding-left:8px;}}
-        .z_l0kPglh{&:where([data-size="small"]){padding-left:4px;}}
-        .z_l0kPgli{&:where([data-tone="blue"]){color:rgb(0, 0, 255);}}
-        .z_l0kPglj{&:where([data-tone="red"]){color:rgb(255, 0, 0);}}
-        .z_l0kPglk{&:where([data-on="true"]):where([data-tone="blue"]):where(*, .__zyzz-compound-0){border-left:4px solid;}}
+        .z_l0kPgld{color:rgb(0, 0, 0);}
+        .z_l0kPgle{&:where([data-on="true"]){padding-left:2px;}}
+        .z_l0kPglf{&:where([data-size="large"]){padding-left:8px;}}
+        .z_l0kPglg{&:where([data-size="small"]){padding-left:4px;}}
+        .z_l0kPglh{&:where([data-tone="blue"]){color:rgb(0, 0, 255);}}
+        .z_l0kPgli{&:where([data-tone="red"]){color:rgb(255, 0, 0);}}
+        .z_l0kPglj{&:where([data-on="true"]):where([data-tone="blue"]):where(*, .__zyzz-compound-0){border-left:4px solid;}}
+        .z_l0kPglk{border-left:1px solid;}
         .z_l0kPgll{border-left:1px solid;}
-        .z_l0kPglm{border-left:1px solid;}
+        .z_l0kPglm{&:where([data-on="true"]):where([data-tone="blue"]):where(*, .__zyzz-compound-0){border-left:4px solid;}}
         .z_l0kPgln{&:where([data-on="true"]):where([data-tone="blue"]):where(*, .__zyzz-compound-0){border-left:4px solid;}}
         .z_l0kPglo{&:where([data-on="true"]):where([data-tone="blue"]):where(*, .__zyzz-compound-0){border-left:4px solid;}}
-        .z_l0kPglp{&:where([data-on="true"]):where([data-tone="blue"]):where(*, .__zyzz-compound-0){border-left:4px solid;}}
-        .z_l0kPglq{border-left:1px solid;}"
+        .z_l0kPglp{border-left:1px solid;}"
       `)
       expect(output.classes).toMatchInlineSnapshot(`
         {
-          "composition-1k0bfdx1r9hbnf-641": "z_l0kPgle z_l0kPglf z_l0kPglg z_l0kPglh z_l0kPgli z_l0kPglj z_l0kPglk z_l0kPgll",
-          "composition-1k0bfdx1r9hbnf-731": "z_l0kPglm z_l0kPgle z_l0kPgli z_l0kPglj z_l0kPglf z_l0kPglg z_l0kPglh z_l0kPgln",
-          "composition-1k0bfdx1r9hbnf-821": "z_l0kPgle z_l0kPgli z_l0kPglj z_l0kPglf z_l0kPglg z_l0kPglh z_l0kPglp z_l0kPglq",
-          "composition-1k0bfdx1r9hbnf-821-0": "z_l0kPgle z_l0kPgli z_l0kPglj z_l0kPglf z_l0kPglg z_l0kPglh z_l0kPglo",
+          "composition-1k0bfdx1r9hbnf-641": "z_l0kPgld z_l0kPgle z_l0kPglf z_l0kPglg z_l0kPglh z_l0kPgli z_l0kPglj z_l0kPglk",
+          "composition-1k0bfdx1r9hbnf-731": "z_l0kPgll z_l0kPgld z_l0kPglh z_l0kPgli z_l0kPgle z_l0kPglf z_l0kPglg z_l0kPglm",
+          "composition-1k0bfdx1r9hbnf-821": "z_l0kPgld z_l0kPglh z_l0kPgli z_l0kPgle z_l0kPglf z_l0kPglg z_l0kPglo z_l0kPglp",
+          "composition-1k0bfdx1r9hbnf-821-0": "z_l0kPgld z_l0kPglh z_l0kPgli z_l0kPgle z_l0kPglf z_l0kPglg z_l0kPgln",
           "style-1k0bfdx1r9hbnf-1036": "z_l0kPgl0 z_l0kPgl1 z_l0kPgl2 z_l0kPgl3 z_l0kPgl4 z_l0kPgl5 z_l0kPgl6",
           "style-1k0bfdx1r9hbnf-1490": "z_l0kPgl7 z_l0kPgl8 z_l0kPgl9 z_l0kPgla z_l0kPglb z_l0kPglc",
-          "style-1k0bfdx1r9hbnf-1924": "z_l0kPgld",
+          "style-1k0bfdx1r9hbnf-1924": "",
         }
       `)
     })
@@ -12962,8 +12959,7 @@ export const accent=style({color:'blue'});
         .z_l0kPgl5{padding:8px;}
         .z_l0kPgl6{padding:24px;}
         .z_l0kPgl7{color:red;}
-        .z_l0kPgl8{color:red;}
-        .z_l0kPgl9{color:blue;}"
+        .z_l0kPgl8{color:blue;}"
       `)
 
       const bundle = await Esbuild.build({
@@ -13095,10 +13091,7 @@ export const accent=style({color:'blue'});
           expect(output.css).toMatchInlineSnapshot(`
             ".z_EZaLq60{color:red;}
             .z_EZaLq61{padding:8px;}
-            .z_EZaLq62{padding-left:2px;}
-            .z_EZaLq63{color:red;}
-            .z_EZaLq64{padding:8px;}
-            .z_EZaLq65{padding-left:2px;}"
+            .z_EZaLq62{padding-left:2px;}"
           `)
           expect(emitted.css).toMatchInlineSnapshot(`
             ".z_0{color:red;}
@@ -13108,11 +13101,9 @@ export const accent=style({color:'blue'});
             .z_4{padding-left:2px;}"
           `)
         } else {
-          expect(output.css).toMatchInlineSnapshot(`
-            ".z_EZaLq60{color:red;padding:8px;}
-            .z_EZaLq61{padding-left:2px;}
-            .z_EZaLq62{color:red;padding:8px;padding-left:2px;}"
-          `)
+          expect(output.css).toMatchInlineSnapshot(
+            `".z_EZaLq60{color:red;padding:8px;padding-left:2px;}"`,
+          )
           expect(emitted.css).toMatchInlineSnapshot(`
             ".z_0{color:red;padding:8px;}
             .z_1{padding-left:2px;}

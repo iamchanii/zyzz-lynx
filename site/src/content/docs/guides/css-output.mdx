@@ -163,6 +163,31 @@ export const { style } = defineConfig({
 
 Ordered output resolves conflicts between combined class lists in definition order, so an override class from a consuming module wins over the component's own style. Independent output drops that guarantee, while `cx` and the declarations inside each style keep their authored order. Development builds skip the sharing so names survive edits.
 
+## Composed Styles
+
+A `cx` call emits its own rules for the combined declarations. A style applied only inside `cx` calls therefore emits no rules of its own, since no element carries its class list.
+
+```tsx title="Field.tsx"
+import { cx } from 'zyzz'
+import { style } from './zyzz.config.js'
+
+export function Field() {
+  // [!code hl:2]
+  // Only the combination's rules reach the stylesheet
+  return <input {...cx(styles.field(), styles.edit())} />
+}
+
+namespace styles {
+  export const field = style({ color: 'red', padding: '8px' })
+
+  export const edit = style({ padding: '4px' })
+}
+```
+
+A module-local style qualifies when its every read is such an application, except in development builds of hosts that compile for updates, such as Vite and Next.js. Any other read keeps the rules, such as a direct application or a value read.
+
+An exported style, including a member of an exported namespace, qualifies only when the host compiles every module of the application in one graph, as the Rspeedy, Rspack, webpack, Rollup, and esbuild plugins do. A re-export or a dynamic import of its module keeps the rules.
+
 ## Generated Names
 
 Production class names are short and deterministic, including shared atomic rules, grouped classes, and `cx` combinations. Development builds use readable names throughout. Variables follow authored paths, such as `--z-color-brand`. Apply returned props rather than copying class names.

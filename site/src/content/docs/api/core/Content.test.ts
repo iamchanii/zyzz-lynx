@@ -512,7 +512,7 @@ describe('cx API page', () => {
         color-scheme: light dark;
       }
 
-      .z_SlmzrP0, .z_SlmzrP1 {
+      .z_SlmzrP0 {
         color: var(--z-color-foreground, light-dark(#171717, #fafafa));
       }
       "

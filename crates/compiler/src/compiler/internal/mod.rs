@@ -37,6 +37,7 @@ pub mod statics;
 pub mod stylesheets;
 pub mod syntax;
 pub mod themes;
+pub mod unapplied;
 pub mod vars;
 pub mod view_transitions;
 pub mod wire;

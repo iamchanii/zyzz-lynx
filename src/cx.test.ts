@@ -235,9 +235,17 @@ describe('cx', () => {
       type Input = Parameters<typeof color>[0];
       export const props = cx(color(), mapped());`
     const output = Transform.compile({ moduleId: 'mapped.ts', source })
+    // Only the composition emits rules, one per expanded property.
     expect(
-      output.css.includes('padding-left:8px;padding-right:8px'),
-    ).toMatchInlineSnapshot(`true`)
+      ['padding-left:8px', 'padding-right:8px'].map((declaration) =>
+        output.css.includes(declaration),
+      ),
+    ).toMatchInlineSnapshot(`
+      [
+        true,
+        true,
+      ]
+    `)
     const prefix = output.css
       .slice(0, output.css.lastIndexOf('padding-right:8px'))
       .split('\n')
@@ -972,12 +980,12 @@ describe('bindings', () => {
       )
       expect(module.exports.apply(false)).toMatchInlineSnapshot(`
         {
-          "className": "z_bCW_kc2",
+          "className": "z_bCW_kc1",
         }
       `)
       expect(module.exports.apply(true)).toMatchInlineSnapshot(`
         {
-          "className": "z_bCW_kc2 z_bCW_kc0",
+          "className": "z_bCW_kc1 z_bCW_kc0",
         }
       `)
     })
@@ -1406,16 +1414,13 @@ import {cx,style} from 'zyzz'; const a=style((values:{padding:string})=>({paddin
 
       expect(grouped.css).toMatchInlineSnapshot(`
         ".z_kNYrjR0{color:red;padding-left:1px;@media (min-width: 1px){padding-left:7px;}&:hover{color:green;}}
-        .z_kNYrjR1{color:blue;padding-left:2px;}
-        .z_kNYrjR2{padding:4px;}
-        .z_kNYrjR3{color:red;padding-left:1px;@media (min-width: 1px){padding-left:7px;}&:hover{color:green;}}
-        .z_kNYrjR4{color:blue;padding-left:2px;&:hover{color:green;}}
-        .z_kNYrjR5{color:red;}
-        .z_kNYrjR6{padding-left:1px;}
-        .z_kNYrjR7{@media (min-width: 1px){padding-left:7px;}}
-        .z_kNYrjR8{&:hover{color:green;}}
-        .z_kNYrjR9{padding:4px;}
-        .z_kNYrjRa{color:red;padding-left:1px;&:hover{color:green;}@media (min-width: 1px){padding-left:7px;}&:hover{color:green;}}"
+        .z_kNYrjR1{color:blue;padding-left:2px;&:hover{color:green;}}
+        .z_kNYrjR2{color:red;}
+        .z_kNYrjR3{padding-left:1px;}
+        .z_kNYrjR4{@media (min-width: 1px){padding-left:7px;}}
+        .z_kNYrjR5{&:hover{color:green;}}
+        .z_kNYrjR6{padding:4px;}
+        .z_kNYrjR7{color:red;padding-left:1px;&:hover{color:green;}@media (min-width: 1px){padding-left:7px;}&:hover{color:green;}}"
       `)
       expect(grouped.results).toMatchInlineSnapshot(`
         [

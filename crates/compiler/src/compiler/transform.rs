@@ -21,6 +21,7 @@ use rustc_hash::{FxBuildHasher, FxHashMap, FxHashSet};
 use smallvec::SmallVec;
 
 use crate::compiler::internal::applications::{self, Application, Bound};
+use crate::compiler::internal::compositions;
 use crate::compiler::internal::contributions::Factory;
 use crate::compiler::internal::expression::{self, unwrap};
 use crate::compiler::internal::packed_styles;
@@ -67,6 +68,9 @@ pub struct Options<'s, 'a> {
     pub owners: Option<&'s Owners>,
     /// Class names of styles compiled elsewhere in the graph, by style identity.
     pub style_classes: Option<&'s FxHashMap<Arc<str>, Arc<str>>>,
+    /// Exported definitions that no module of a complete graph applies outside the compositions
+    /// replacing their class lists, so they emit no rules. `None` emits every definition.
+    pub unapplied: Option<&'s FxHashSet<Arc<str>>>,
     /// Exported wrapper folds of imported source modules, by import specifier.
     pub wrappers: Option<&'s wrappers::Imports>,
     /// Default CSS representation for styles without their own mode.
@@ -1726,10 +1730,43 @@ pub fn compile<'a>(
     let mut styles: Vec<Arc<NamedStyle>> = if portable || options.development {
         extracted.styles.styles.clone()
     } else {
-        let dead = local_applications
+        let mut dead = local_applications
             .as_ref()
             .map(applications::Applications::dead)
             .unwrap_or_default();
+        let replaced = compositions::replaced(&extracted.calls);
+        let mut applied: FxHashSet<&str> = FxHashSet::default();
+        let mut composed: FxHashSet<&str> = FxHashSet::default();
+
+        // A definition every application of which a composition replaces emits no rule, since
+        // only the composition's own rules reach the element. Inlined definitions also apply
+        // through bound fields, which carry their class lists.
+        for application in &found {
+            if replaced.contains(&application.start) {
+                composed.insert(&*application.name);
+            } else {
+                applied.insert(&*application.name);
+            }
+        }
+
+        dead.extend(
+            local
+                .iter()
+                .flat_map(|local| local.values.keys())
+                .filter(|name| {
+                    composed.contains(&***name)
+                        && !applied.contains(&***name)
+                        && !inlined.contains(&**name)
+                })
+                .cloned(),
+        );
+        dead.extend(
+            options
+                .unapplied
+                .iter()
+                .flat_map(|names| names.iter())
+                .cloned(),
+        );
 
         if dead.is_empty() && standalone.is_empty() {
             extracted.styles.styles.clone()

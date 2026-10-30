@@ -489,15 +489,14 @@ namespace styles {
           ".z_i6Fywm1 { font-size: 12px }",
           ".zv7eXG394G1 { color: #0a0 }",
           ".zv7eXG394G2 { font-weight: 700 }",
-          ".z_i6Fywm2 { opacity: 1 }",
-          ".z_i6Fywm3 { padding: 2px }",
+          ".z_i6Fywm2 { padding: 2px }",
           ".zv27DIkWrC0 { height: 40px }",
           "@media (width>=1px) { .zv27DIkWrC0 { width: 40px } }",
           ".zv27DIkWrC1 { height: 20px }",
           ".zv27DIkWrC2 { color: #000 }",
           ".zv27DIkWrC3 { color: #0a0 }",
           ".zv27DIkWrC4 { opacity: .5 }",
-          ".z_i6Fywm4 { opacity: 1 }",
+          ".z_i6Fywm3 { opacity: 1 }",
         ]
       `)
       // The composition renames the recipe's choice classes to its own copies.

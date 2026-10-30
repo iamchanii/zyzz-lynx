@@ -83,6 +83,14 @@ describe('CSS Output examples', () => {
     expect(
       output.modules['CompactCard.tsx']!.css.includes('padding:4px;'),
     ).toMatchInlineSnapshot('true')
+    // Styles applied only inside cx leave only the combination's rules.
+    expect(rules(output.modules['Field.tsx']!.css)).toMatchInlineSnapshot(`
+      [
+        ".z_qSnJ-S0{color:red}",
+        ".z_qSnJ-S1{padding:8px}",
+        ".z_qSnJ-S2{padding:4px}",
+      ]
+    `)
   })
 
   test('compiles the documented grouped output', () => {

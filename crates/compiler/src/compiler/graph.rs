@@ -27,7 +27,7 @@ use crate::compiler::internal::stylesheets::{self, Rendered, Section};
 use crate::compiler::internal::syntax::{self, Parsed};
 use crate::compiler::internal::themes::{self, Link, LinkKind, Owner, VarsRead};
 use crate::compiler::internal::{
-    identifiers, literals, native_vars, relative, statics, vars, wrappers,
+    compositions, identifiers, literals, native_vars, relative, statics, unapplied, vars, wrappers,
 };
 use crate::compiler::native;
 use crate::compiler::source::{self, Code, Diagnostic, ExtractError, Extracted, Target};
@@ -69,7 +69,9 @@ type ImportTarget = (Vec<Arc<str>>, Option<usize>);
     reason = "Each flag is an independent host option."
 )]
 pub struct Options {
-    /// Lets modules reuse shared rule names from unrelated modules of this one graph.
+    /// The graph holds every module of the application, so modules may reuse shared rule names
+    /// from unrelated modules, and with [`Options::references`] an exported style whose every
+    /// application a composition replaces emits no rules.
     pub complete: bool,
     /// Rewrites authoring calls. `Some(false)` emits CSS for unchanged source.
     pub compiler: Option<bool>,
@@ -259,6 +261,8 @@ struct Module {
     native_vars: Vec<VarsRead>,
     /// Whether exports supply neither constants nor authoring links.
     opaque: bool,
+    /// Starts of applications whose class lists compositions replace.
+    replaced: FxHashSet<u32>,
     styles: style::Definition,
     theme_appearances: Vec<Arc<str>>,
     theme_calls: Vec<themes::Call>,
@@ -278,6 +282,7 @@ struct CallSummary {
     name: Arc<str>,
     portable: Option<Arc<str>>,
     runtime_composition: bool,
+    start: u32,
 }
 
 impl Module {
@@ -299,6 +304,7 @@ impl Module {
                     name: Arc::clone(&call.name),
                     portable: call.portable.clone(),
                     runtime_composition: call.runtime_composition.is_some(),
+                    start: call.start,
                 })
                 .collect(),
             contribution_starts: extracted.contribution_starts.clone(),
@@ -312,6 +318,7 @@ impl Module {
             namespaces: extracted.namespaces.clone(),
             native_vars: extracted.native_vars.clone(),
             opaque: false,
+            replaced: compositions::replaced(&extracted.calls),
             styles: extracted.styles.clone(),
             theme_appearances: extracted.theme_appearances.clone(),
             theme_calls: extracted.theme_calls.clone(),
@@ -368,6 +375,8 @@ struct Transformed {
     /// The settled import names the transform read.
     settled: Option<FxHashSet<Arc<str>>>,
     themes: Record<Arc<Definition>>,
+    /// The exported definitions the transform left without rules.
+    unapplied: Option<FxHashSet<Arc<str>>>,
 }
 
 /// Token resources a lean graph emitted once for the references of its deferred modules.
@@ -409,6 +418,7 @@ struct Cache {
     sources: Map<Arc<str>>,
     themes: Record<Arc<Definition>>,
     transformed: Map<Transformed>,
+    unapplied: Option<Arc<unapplied::Definitions>>,
 }
 
 /// The bound on cached extractions and transforms, evicting the earliest cached module. A recompile
@@ -3357,6 +3367,54 @@ impl Build<'_, '_> {
             transformed: previous
                 .map(|previous| previous.transformed.clone())
                 .unwrap_or_default(),
+            unapplied: None,
+        })
+    }
+
+    /// Exported definitions that no module applies outside the compositions replacing their
+    /// class lists, by module identity.
+    fn unapplied(&self) -> unapplied::Definitions {
+        let none = FxHashSet::default();
+        let mut modules = Vec::with_capacity(self.options.modules.len());
+
+        // Every supplied module may read a definition, extracted or not.
+        for id in self.options.modules.keys() {
+            // An unparsed module could read any definition.
+            let Some(parsed) = self.parse(id) else {
+                return FxHashMap::default();
+            };
+            let module = self.extracted.get(id);
+
+            modules.push(unapplied::Module {
+                definitions: module
+                    .iter()
+                    .flat_map(|module| &module.calls)
+                    .filter(|call| {
+                        !call.composition && !call.runtime_composition && !call.composition_case
+                    })
+                    .map(|call| (call.start, &call.name))
+                    .collect(),
+                id,
+                parsed,
+                replaced: module.map_or(&none, |module| &module.replaced),
+            });
+        }
+
+        // Hosts supply no edges for dynamic imports, so those resolve within the supplied modules.
+        unapplied::collect(&modules, |module_id, specifier, span| {
+            self.resolve(module_id, specifier, span).or_else(|_| {
+                match relative::resolve(module_id, specifier, |id| {
+                    self.options.modules.contains_key(id)
+                }) {
+                    Ok(Some(target)) => Ok(self
+                        .options
+                        .modules
+                        .get_key_value(target.as_str())
+                        .map(|(id, _)| Arc::clone(id))),
+                    Ok(None) if specifier.starts_with('.') => Ok(None),
+                    _ => Err(()),
+                }
+            })
         })
     }
 
@@ -4034,12 +4092,19 @@ impl Build<'_, '_> {
         let referenced = (rewrite && !options.development && options.references)
             .then(|| Arc::new(references(self.extracted.values().map(|module| &**module))));
         let same_references = previous.is_some_and(|previous| previous.referenced == referenced);
+        // Development keeps every definition's rules, as it keeps every identity. Only a graph
+        // holding every module sees every application, so a graph of one module's closure
+        // keeps them too.
+        let unapplied = (rewrite && !options.development && options.complete && options.references)
+            .then(|| Arc::new(self.unapplied()));
+        let same_unapplied = previous.is_some_and(|previous| previous.unapplied == unapplied);
 
         // Extraction visits dependencies first, and their emitted classes must precede consumers.
         for module_id in &order {
             let Some(module) = self.extracted.get(module_id).cloned() else {
                 continue;
             };
+            let module_unapplied = unapplied.as_ref().and_then(|names| names.get(module_id));
             let markers: Option<Box<[Arc<str>]>> = referenced.as_ref().map(|referenced| {
                 module
                     .calls
@@ -4086,6 +4151,7 @@ impl Build<'_, '_> {
                         .all(|(name, value)| style_classes.get(name) == value.as_ref())
                     && cached.owners == owner_signature
                     && cached.markers == markers
+                    && cached.unapplied.as_ref() == module_unapplied
             });
             // A module that re-extracts equal after a dependency edit keeps its identity, so an
             // evicted transform is checked against the classes and owners it read.
@@ -4115,6 +4181,7 @@ impl Build<'_, '_> {
                     .filter(|previous| {
                         same_themes
                             && same_references
+                            && same_unapplied
                             && previous.schemes == schemes
                             && previous
                                 .extracted
@@ -4174,6 +4241,7 @@ impl Build<'_, '_> {
                         }),
                         source: parsed.source,
                         style_classes: Some(&style_classes),
+                        unapplied: module_unapplied,
                         wrappers: (!imported.is_empty()).then_some(&imported),
                     },
                     &extracted,
@@ -4221,6 +4289,7 @@ impl Build<'_, '_> {
                     schemes,
                     settled: imports.cloned(),
                     themes: shared_themes.clone(),
+                    unapplied: module_unapplied.cloned(),
                 },
             );
 
@@ -4502,6 +4571,7 @@ impl Build<'_, '_> {
             sources: options.modules.clone(),
             themes: shared_themes,
             transformed: bounded(transformed),
+            unapplied,
         })
     }
 }

@@ -148,6 +148,9 @@ pub struct Call<'a> {
     /// Starts and guards of a compile-time composition's input applications that keep their
     /// guard only until a graph proves the module shares no import cycle.
     pub composition_acyclic: Vec<(u32, Arc<str>)>,
+    /// Starts of every input application of a compile-time composition, including those of the
+    /// compositions it contains. Guards read only truthiness, so none reads a class list.
+    pub composition_inputs: Vec<u32>,
     /// Starts of a compile-time composition's input applications that keep no guard, since
     /// they always follow their definition's initialization.
     pub composition_settled: Vec<u32>,
