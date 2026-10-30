@@ -1590,6 +1590,7 @@ impl<'p, 'a> Build<'p, 'a> {
             &source::Options {
                 compiler: None,
                 context: None,
+                css_output: None,
                 module_id,
                 parsed: None,
                 source: "",
@@ -1609,6 +1610,7 @@ impl<'p, 'a> Build<'p, 'a> {
                 &source::Options {
                     compiler: None,
                     context: None,
+                    css_output: None,
                     module_id,
                     parsed: None,
                     source,
@@ -1929,6 +1931,7 @@ impl<'p, 'a> Build<'p, 'a> {
             &source::Options {
                 compiler: options.compiler,
                 context: Some(&context),
+                css_output: options.css_output,
                 module_id,
                 parsed: Some(parsed),
                 source,

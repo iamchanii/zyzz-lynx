@@ -126,6 +126,166 @@ describe('zyzz', () => {
     }
   }, 60_000)
 
+  test('groups each style into one class with options.cssOutput', async () => {
+    const root = await fixture()
+    try {
+      const result = await (
+        await create(root, {}, { cssOutput: 'grouped' })
+      ).build()
+      await result.close()
+
+      const { css, mainThread } = await template(root)
+      expect(css).toMatchInlineSnapshot(`
+        [
+          ".z_i6Fywm0 { background-color: #06c; padding: 8px }",
+          ".z_i6Fywm1 { color: #fff; font-size: 20px }",
+        ]
+      `)
+      expect(mainThread.match(/"z_[\w-]+"/g)).toMatchInlineSnapshot(`
+        [
+          ""z_i6Fywm0"",
+          ""z_i6Fywm1"",
+        ]
+      `)
+    } finally {
+      await Fs.rm(root, { force: true, recursive: true })
+    }
+  }, 60_000)
+
+  test('merges a cx value of plain styles into one rule with options.cssOutput', async () => {
+    const root = await fixture()
+    try {
+      await Fs.writeFile(
+        Path.join(root, 'src/App.tsx'),
+        `import { cx, style } from 'zyzz'
+
+export function App() {
+  return <view {...pair} />
+}
+
+const wide = style({ margin: '1px', width: '40px' })
+
+const tall = style({ height: '9px', width: '20px' })
+
+const pair = cx(wide(), tall())
+`,
+      )
+
+      const result = await (
+        await create(root, {}, { cssOutput: 'grouped' })
+      ).build()
+      await result.close()
+
+      // The later width wins inside the one merged rule.
+      expect((await template(root)).css).toMatchInlineSnapshot(`
+        [
+          ".z_i6Fywm0 { width: 20px; height: 9px; margin: 1px }",
+        ]
+      `)
+    } finally {
+      await Fs.rm(root, { force: true, recursive: true })
+    }
+  }, 60_000)
+
+  test('keeps the choice rules of an imported recipe in a cx call with options.cssOutput', async () => {
+    const root = await fixture()
+    try {
+      await Fs.writeFile(
+        Path.join(root, 'src/badge.ts'),
+        `import { variants } from 'zyzz'
+
+export const badge = variants({
+  base: { padding: '2px' },
+  selection: 'className',
+  variants: { tone: { neutral: { color: '#000' }, success: { color: '#0a0' } } },
+})
+`,
+      )
+      await Fs.writeFile(
+        Path.join(root, 'src/App.tsx'),
+        `import { cx, style } from 'zyzz'
+import { badge } from './badge'
+
+export function App() {
+  return <view {...cx(badge({ tone: 'neutral' }), wide())} />
+}
+
+const wide = style({ width: '40px' })
+`,
+      )
+
+      const result = await (
+        await create(root, {}, { cssOutput: 'grouped' })
+      ).build()
+      await result.close()
+
+      // Each choice keeps its own class rule, so neutral never receives the success color.
+      expect((await template(root)).css).toMatchInlineSnapshot(`
+        [
+          ".z_jn9NAa0 { padding: 2px }",
+          ".zvaGVVfqps0 { color: #000 }",
+          ".zvaGVVfqps1 { color: #0a0 }",
+          ".z_i6Fywm0 { padding: 2px }",
+          ".zv76T8aF430 { color: #000 }",
+          ".zv76T8aF431 { color: #0a0 }",
+          ".z_i6Fywm1 { width: 40px }",
+        ]
+      `)
+    } finally {
+      await Fs.rm(root, { force: true, recursive: true })
+    }
+  }, 60_000)
+
+  test('groups recipe bases beside their choice rules with options.cssOutput', async () => {
+    const root = await fixture()
+    try {
+      await Fs.writeFile(
+        Path.join(root, 'src/App.tsx'),
+        `import { cx, style, variants } from 'zyzz'
+
+export function App() {
+  return (
+    <view className={styles.badge({ tone: 'success' })}>
+      <view {...cx(styles.badge({ tone: 'neutral' }), styles.wide())} />
+    </view>
+  )
+}
+
+namespace styles {
+  export const wide = style({ margin: '1px', width: '40px' })
+
+  export const badge = variants({
+    base: { height: '20px', padding: '2px' },
+    selection: 'className',
+    variants: { tone: { neutral: { color: '#000' }, success: { color: '#0a0' } } },
+  })
+}
+`,
+      )
+
+      const result = await (
+        await create(root, {}, { cssOutput: 'grouped' })
+      ).build()
+      await result.close()
+
+      // The base becomes one rule, also inside the cx composition, and each choice keeps its own
+      // class rule.
+      expect((await template(root)).css).toMatchInlineSnapshot(`
+        [
+          ".z_i6Fywm0 { height: 20px; padding: 2px }",
+          ".zv7eXG394G0 { color: #000 }",
+          ".zv7eXG394G1 { color: #0a0 }",
+          ".z_i6Fywm1 { height: 20px; padding: 2px }",
+          ".zv9ac31Fxc0 { color: #000 }",
+          ".zv9ac31Fxc1 { color: #0a0 }",
+          ".z_i6Fywm2 { width: 40px; margin: 1px }",
+        ]
+      `)
+    } finally {
+      await Fs.rm(root, { force: true, recursive: true })
+    }
+  }, 60_000)
+
   test('leaves entries without zyzz.css by default', async () => {
     const root = await fixture()
     try {

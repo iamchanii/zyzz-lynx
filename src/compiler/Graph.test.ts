@@ -3197,13 +3197,13 @@ export const Peer = () => <Cycle />`,
       const fragment = graphql(\`fragment Card on Card { id }\`)
       const Context = createContext(false)
       function Item(props: { on: boolean }) {
-        return <i className={(props.on)?"z_HXfo7a2 z_HXfo7a3":"z_HXfo7a2"}>{fragment}</i>
+        return <i className={(props.on)?"z_HXfo7a3":"z_HXfo7a2"}>{fragment}</i>
       }
       export function App() {
         return <main>
           <i className={"z_HXfo7a0"}>spread</i>
           <i className={"z_HXfo7a1"}>read</i>
-          <i className={"z_HXfo7a2 z_HXfo7a3"}>cx</i>
+          <i className={"z_HXfo7a4"}>cx</i>
           <Item on />
           <Item on={false} />
           <Cycle />
@@ -3259,14 +3259,14 @@ export const Peer = () => <Cycle />`,
         },
         {
           "borderLeftWidth": "1px",
-          "className": "z_HXfo7a2 z_HXfo7a3",
+          "className": "z_HXfo7a4",
           "color": "rgb(255, 0, 0)",
           "paddingLeft": "0px",
           "tag": "i",
         },
         {
           "borderLeftWidth": "1px",
-          "className": "z_HXfo7a2 z_HXfo7a3",
+          "className": "z_HXfo7a3",
           "color": "rgb(255, 0, 0)",
           "paddingLeft": "0px",
           "tag": "i",

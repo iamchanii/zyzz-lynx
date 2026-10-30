@@ -875,6 +875,7 @@ pub fn native_compile(input: &Value) -> Result<String> {
         &source::Options {
             compiler: None,
             context,
+            css_output: None,
             module_id,
             parsed: Some(&parsed),
             source,
@@ -948,6 +949,7 @@ pub fn transform(input: &Value, separate: Option<&str>) -> Result<String> {
         &crate::compiler::source::Options {
             compiler,
             context: None,
+            css_output: options.css_output,
             module_id,
             parsed: Some(&parsed),
             source,

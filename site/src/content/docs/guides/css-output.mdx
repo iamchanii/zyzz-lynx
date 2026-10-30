@@ -36,7 +36,7 @@ The compiler turns each reachable style into CSS ahead of time, and `cssOutput` 
   </table>
 </CssOutputTable>
 
-Set the mode in the config. It applies to config-bound helpers. Helpers imported directly from `zyzz` use the integration's mode instead, which is atomic unless an integration such as Babel sets `cssOutput`.
+Set the mode in the config. It applies to config-bound helpers. Helpers imported directly from `zyzz` use the integration's mode instead, which is atomic unless an integration such as Babel, Rspeedy, or the Unplugin plugins sets `cssOutput`.
 
 ```ts title="zyzz.config.ts"
 import { defineConfig } from 'zyzz'

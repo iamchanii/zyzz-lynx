@@ -96,6 +96,7 @@ fn linked(
     let options = Options {
         compiler: None,
         context: Some(&context),
+        css_output: None,
         module_id,
         parsed: None,
         source: text,

@@ -812,6 +812,26 @@ describe('Unplugin API page', () => {
     `)
   })
 
+  test('groups declarations with esbuild', async () => {
+    const snippet = await example('unplugin', 'options.cssOutput')
+    const { path, result } = await bundle(
+      'unplugin-css-output',
+      snippet.source,
+      'esbuild',
+    )
+
+    expect(result.stderr).toMatchInlineSnapshot(`""`)
+    expect(await stylesheet(Path.join(path, 'dist/zyzz.css')))
+      .toMatchInlineSnapshot(`
+      ".z_EQz5kA0 {
+        color: red;
+        padding: 8px;
+      }
+
+      "
+    `)
+  })
+
   test('prepends the reset layer with Rollup', async () => {
     const snippet = await example('unplugin', 'options.reset')
     const { path, result } = await bundle(
@@ -1575,7 +1595,7 @@ describe('integration API examples', () => {
       { cwd: root, encoding: 'utf8', timeout: 60_000 },
     )
 
-    expect(checked.length).toMatchInlineSnapshot(`37`)
+    expect(checked.length).toMatchInlineSnapshot(`38`)
     expect(result.stdout + result.stderr).toMatchInlineSnapshot(`""`)
     expect(result.status).toMatchInlineSnapshot(`0`)
   }, 120_000)

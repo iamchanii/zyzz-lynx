@@ -108,6 +108,7 @@ fn extract<'a>(
         &source::Options {
             compiler: None,
             context: None,
+            css_output: None,
             module_id: &input.module_id,
             parsed: Some(parsed),
             source: &input.source,

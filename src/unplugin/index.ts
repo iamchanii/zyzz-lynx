@@ -20,6 +20,11 @@ import * as ThemeRules from '../web/internal/Themes.js'
 export type Options = {
   /** Rewrite authoring calls. Defaults to true. */
   readonly compiler?: boolean | undefined
+  /**
+   * CSS representation of helpers imported directly from `zyzz`. Config-bound helpers keep
+   * their config's mode. `'grouped'` emits one class per style. Defaults to `'atomic'`.
+   */
+  readonly cssOutput?: Graph.compile.Options['cssOutput']
   /** Include the CSS reset. Defaults to false. */
   readonly reset?: boolean | undefined
   /** Source directory scanned for modules and global contributions. Defaults to the working directory. */
@@ -318,6 +323,7 @@ const portable = createUnplugin<Options | undefined, false>(
             compiler: options.compiler,
             reset: options.reset ? Reset.read() : undefined,
             contracts,
+            cssOutput: options.cssOutput,
             imports,
             modules,
             target: options.target,
