@@ -22,7 +22,7 @@ use crate::generated::literal::Kind;
 use crate::internal::token::{Composition, CssOutput, Part, Reference};
 use crate::internal::{identity, literal, targets};
 use crate::js;
-use crate::style::{Declaration, Label, Labels, NamedStyle, Value};
+use crate::style::{Declaration, Label, Labels, NamedStyle, Rule, Value};
 use crate::web::internal::class_name::{self, CreateOptions, Registry, Units, Used, Visibility};
 use crate::web::internal::contributions;
 use crate::web::internal::themes::{self, Emitted, Resource, Scope, Shared, Themes};
@@ -1410,8 +1410,39 @@ pub fn invalid_output(path: Vec<Arc<str>>) -> Error {
     )])
 }
 
+/// Gives a Lynx recipe base without its own mode the compilation's default output. The recipe
+/// prints atomically so its choices keep their own class rules, while the base beside them keeps
+/// the output of a style.
+fn recipe_base(style: Arc<NamedStyle>, default: Option<CssOutput>) -> Arc<NamedStyle> {
+    let Some(default) = default else {
+        return style;
+    };
+    let base = |rule: &Rule| rule.class.is_none() && rule.style.css_output.is_none();
+
+    if !style.rules.as_ref().is_some_and(|rules| {
+        rules.iter().any(|rule| rule.class.is_some()) && rules.iter().any(base)
+    }) {
+        return style;
+    }
+
+    let mut copy = (*style).clone();
+
+    for rule in copy.rules.iter_mut().flatten().filter(|rule| base(rule)) {
+        rule.style = Arc::new(NamedStyle {
+            css_output: Some(default),
+            ..(*rule.style).clone()
+        });
+    }
+
+    Arc::new(copy)
+}
+
 fn compile_with(options: &Options<'_>, units: &mut Units<'_>) -> Result<Output> {
-    let styles: Vec<Arc<NamedStyle>> = options.styles.iter().map(targets::web).collect();
+    let styles: Vec<Arc<NamedStyle>> = options
+        .styles
+        .iter()
+        .map(|style| recipe_base(targets::web(style), options.css_output))
+        .collect();
     let mut compiler = Compiler {
         conditional_rules: FxHashMap::default(),
         conflicts: FxHashMap::default(),

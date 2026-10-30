@@ -126,6 +126,71 @@ describe('zyzz', () => {
     }
   }, 60_000)
 
+  test('groups each style into one class with options.cssOutput', async () => {
+    const root = await fixture()
+    try {
+      const result = await (
+        await create(root, {}, { cssOutput: 'grouped' })
+      ).build()
+      await result.close()
+
+      const { css, mainThread } = await template(root)
+      expect(css).toMatchInlineSnapshot(`
+        [
+          ".z_i6Fywm0 { background-color: #06c; padding: 8px }",
+          ".z_i6Fywm1 { color: #fff; font-size: 20px }",
+        ]
+      `)
+      expect(mainThread.match(/"z_[\w-]+"/g)).toMatchInlineSnapshot(`
+        [
+          ""z_i6Fywm0"",
+          ""z_i6Fywm1"",
+        ]
+      `)
+    } finally {
+      await Fs.rm(root, { force: true, recursive: true })
+    }
+  }, 60_000)
+
+  test('groups recipe bases beside their choice rules with options.cssOutput', async () => {
+    const root = await fixture()
+    try {
+      await Fs.writeFile(
+        Path.join(root, 'src/App.tsx'),
+        `import { variants } from 'zyzz'
+
+export function App() {
+  return <view className={styles.badge({ tone: 'success' })} />
+}
+
+namespace styles {
+  export const badge = variants({
+    base: { height: '20px', padding: '2px' },
+    selection: 'className',
+    variants: { tone: { neutral: { color: '#000' }, success: { color: '#0a0' } } },
+  })
+}
+`,
+      )
+
+      const result = await (
+        await create(root, {}, { cssOutput: 'grouped' })
+      ).build()
+      await result.close()
+
+      // The base becomes one rule, and each choice keeps its own class rule.
+      expect((await template(root)).css).toMatchInlineSnapshot(`
+        [
+          ".z_i6Fywm0 { height: 20px; padding: 2px }",
+          ".zv7eXG394G0 { color: #000 }",
+          ".zv7eXG394G1 { color: #0a0 }",
+        ]
+      `)
+    } finally {
+      await Fs.rm(root, { force: true, recursive: true })
+    }
+  }, 60_000)
+
   test('leaves entries without zyzz.css by default', async () => {
     const root = await fixture()
     try {

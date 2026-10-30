@@ -170,6 +170,21 @@ import { zyzz } from 'zyzz/rspeedy'
 const plugin = zyzz({ compiler: false })
 ```
 
+### options.cssOutput
+
+- **Type:** `'atomic' | 'grouped'{:ts}`
+- **Default:** `'atomic'{:ts}`
+
+Sets the CSS representation of styles without their own mode, including helpers imported directly from `zyzz`. Grouped output emits one class per style, so the Lynx bundle stores fewer parsed rules and elements carry shorter class lists. The [CSS Output](/docs/guides/css-output) guide compares the modes.
+
+```ts title="lynx.config.ts"
+import { zyzz } from 'zyzz/rspeedy'
+
+// [!code hl:2]
+// Emits one rule per style
+const plugin = zyzz({ cssOutput: 'grouped' })
+```
+
 ### options.inject
 
 - **Type:** `boolean{:ts}`

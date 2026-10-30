@@ -111,7 +111,7 @@ describe('CSS Output examples', () => {
     `)
     expect(
       output.modules['CompactCard.tsx']!.code.includes('zyzz/runtime'),
-    ).toMatchInlineSnapshot('true')
+    ).toMatchInlineSnapshot('false')
   })
 
   test('compiles the independent config example', () => {
