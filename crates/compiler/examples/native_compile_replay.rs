@@ -394,6 +394,7 @@ fn extracted<'a, 'j>(
         lynx: false,
         namespaces: Vec::new(),
         native_vars,
+        scope_folds: Vec::new(),
         static_theme_references: Vec::new(),
         styles: style::Definition {
             labels: None,

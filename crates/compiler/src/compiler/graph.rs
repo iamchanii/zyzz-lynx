@@ -264,6 +264,8 @@ struct Module {
     opaque: bool,
     /// Starts of applications whose class lists compositions replace.
     replaced: FxHashSet<u32>,
+    /// Whether a folded scope application selects a color scheme.
+    scope_schemes: bool,
     styles: style::Definition,
     theme_appearances: Vec<Arc<str>>,
     theme_calls: Vec<themes::Call>,
@@ -320,6 +322,10 @@ impl Module {
             native_vars: extracted.native_vars.clone(),
             opaque: false,
             replaced: compositions::replaced(&extracted.calls),
+            scope_schemes: extracted
+                .scope_folds
+                .iter()
+                .any(|fold| fold.fold.scheme.is_some()),
             styles: extracted.styles.clone(),
             theme_appearances: extracted.theme_appearances.clone(),
             theme_calls: extracted.theme_calls.clone(),
@@ -4054,6 +4060,7 @@ impl Build<'_, '_> {
             !module.theme_appearances.is_empty()
                 || !module.theme_scripts.is_empty()
                 || !module.theme_selections.is_empty()
+                || module.scope_schemes
         });
         let owner_signature: Arc<[(Arc<str>, usize)]> = self
             .owners

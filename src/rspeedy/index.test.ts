@@ -332,6 +332,65 @@ describe('zyzz', () => {
     }
   }, 60_000)
 
+  test('folds literal scope selections so no thread loads the composition runtime', async () => {
+    const root = await fixture()
+    try {
+      await Fs.writeFile(
+        Path.join(root, 'src/config.ts'),
+        `import { defineConfig, defineVars } from 'zyzz'\n\nconst theme = defineVars({ color: { brand: '#0066cc' } })\n\nexport const { style, variants, vars } = defineConfig({ vars: theme })\n`,
+      )
+      await Fs.writeFile(
+        Path.join(root, 'src/App.tsx'),
+        `import { cx } from 'zyzz'\nimport { style, vars } from './config'\n\nexport function App() {\n  return <view {...cx(vars({}), styles.page())}><text {...vars({ colorScheme: 'dark' })}>Hello</text></view>\n}\n\nnamespace styles {\n  export const page = style({ color: vars.color.brand })\n}\n`,
+      )
+
+      const result = await (await create(root)).build()
+      await result.close()
+
+      const { css, mainThread } = await template(root)
+      expect(css).toMatchInlineSnapshot(`
+        [
+          ".z_scheme-dark { color-scheme: dark }",
+          ".z_scheme-light { color-scheme: light }",
+          ".z_scheme-light-dark { color-scheme: light dark }",
+          ".z-theme-theme {  }",
+          ".z_i6Fywm0 { color: {{--z-color-brand}} }",
+        ]
+      `)
+      expect(mainThread.match(/"z-theme-theme[^"]*"/g)).toMatchInlineSnapshot(`
+        [
+          ""z-theme-theme z_i6Fywm0"",
+          ""z-theme-theme z_scheme-dark"",
+        ]
+      `)
+      expect(
+        mainThread.includes('zyzz.composition.input.v1'),
+      ).toMatchInlineSnapshot(`false`)
+
+      // The composition runtime marks its module with this protocol key.
+      const chunks = (await files(Path.join(root, 'dist'))).filter((file) =>
+        file.endsWith('.js'),
+      )
+      const composed: string[] = []
+
+      for (const chunk of chunks) {
+        const source = await Fs.readFile(Path.join(root, 'dist', chunk), 'utf8')
+
+        if (source.includes('zyzz.composition.input.v1')) composed.push(chunk)
+      }
+
+      expect(chunks).toMatchInlineSnapshot(`
+        [
+          ".lynx/main/background.js",
+          ".lynx/main/main-thread.js",
+        ]
+      `)
+      expect(composed).toMatchInlineSnapshot(`[]`)
+    } finally {
+      await Fs.rm(root, { force: true, recursive: true })
+    }
+  }, 60_000)
+
   test('compiles sources before pre-enforced loaders', async () => {
     const root = await fixture()
     try {

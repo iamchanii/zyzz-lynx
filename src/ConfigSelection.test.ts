@@ -112,9 +112,10 @@ describe('create', () => {
       },
     })
 
-    expect(
-      app.modules['app.ts']!.code.includes('alias({set:'),
-    ).toMatchInlineSnapshot('true')
+    // The aliased selector folds to the constant props of the named set.
+    expect(app.modules['app.ts']!.code).toMatchInlineSnapshot(
+      `"import {config} from 'lib';const select=(config.vars as import('zyzz').Config.VariableConfig<{readonly "vars":{readonly "base":{readonly "color":{readonly "ink":"red"}}};readonly "defaultVars":"base"}>['vars']);const alias=(select as import('zyzz').Config.VariableConfig<{readonly "vars":{readonly "base":{readonly "color":{readonly "ink":"red"}}};readonly "defaultVars":"base"}>['vars']);export const props=({className:"z-theme-base"});"`,
+    )
   })
   test('destructures named selectors from packed full configurations', () => {
     const library = Graph.compile({

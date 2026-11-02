@@ -164,13 +164,24 @@ fn render(module_id: &str, source: &str, native: bool) -> String {
         }
 
         for (start, application) in &themes.scope_applications {
-            let _ = writeln!(
+            let _ = write!(
                 output,
                 "scope {}..{} output={}",
                 at(*start),
                 at(application.end),
                 application.output.map_or("None", |_| "html")
             );
+
+            if let Some(fold) = &application.fold {
+                let _ = write!(
+                    output,
+                    " fold={} scheme={}",
+                    fold.name,
+                    fold.scheme.unwrap_or("None")
+                );
+            }
+
+            output.push('\n');
         }
 
         for name in &themes.selections {
@@ -311,8 +322,7 @@ export const scope = vars({set: 'mint'});
     alias src-card-9DUtIHiEpjK-config-base 299..305 bindings=None retained=true
     style 327..374 recipe=false output=None contract=src-card-9DUtIHiEpjK-config
     token 341..357 color color.brand web=false
-    scope 397..416 output=None
-    selection src-card-9DUtIHiEpjK-config-base
+    scope 397..416 output=None fold=src-card-9DUtIHiEpjK-config-mint scheme=None
     native default=base sets=['base', 'mint']
     read 50 themes
     read 124 themes

@@ -670,18 +670,12 @@ export const nested=style({color:fields.foo.bar,vars:{[fields['foo-bar']]:'red',
     expect(output.modules['first.js']!.css).toMatchInlineSnapshot(`
       ".z-theme-first-theme{--z-first-color-brand:red;}
       .z-theme-second-theme{--z-second-color-brand:blue;}
-      .z_scheme-dark{color-scheme:dark;}
-      .z_scheme-light{color-scheme:light;}
-      .z_scheme-light-dark{color-scheme:light dark;}
       .z_first-bugww80{color:var(--z-first-color-brand,red);}
       .z_first-bugww81{&:hover{opacity:1;}}"
     `)
     expect(output.modules['second.js']!.css).toMatchInlineSnapshot(`
       ".z-theme-first-theme{--z-first-color-brand:red;}
       .z-theme-second-theme{--z-second-color-brand:blue;}
-      .z_scheme-dark{color-scheme:dark;}
-      .z_scheme-light{color-scheme:light;}
-      .z_scheme-light-dark{color-scheme:light dark;}
       .z_second-XWlTb20{color:var(--z-second-color-brand,blue);}
       .z_second-XWlTb21{&:hover{opacity:1;}}"
     `)
@@ -1891,20 +1885,18 @@ ${web.modules['app.ts']!.code}`,
 
     expect(output.modules['pkg/card.ts']!.css).toMatchInlineSnapshot(`
       ".z-theme-theme{--z-spacing-md:8px;--z-color-brand:#06c;}
-      .z_scheme-dark{color-scheme:dark;}
-      .z_scheme-light{color-scheme:light;}
-      .z_scheme-light-dark{color-scheme:light dark;}
       .z_LMAxOH0{padding:var(--z-spacing-md,8px);}
       .z_LMAxOH1{color:var(--z-color-brand,#06c);}"
     `)
     expect(output.modules['pkg/card.ts']!.code).toMatchInlineSnapshot(`
       "
       import { Props as __zyzzProps } from 'zyzz/runtime';
-      import { style, theme } from './index.js'; export namespace styles {
+      import { style, theme } from './index.js';
+      import './index.js'; export namespace styles {
         export const card = /*#__PURE__*/__zyzzProps.create({className:"z_LMAxOH0 z-style-LMAxOH-styles-card"})
 
         export const label = /*#__PURE__*/__zyzzProps.create({className:"z_LMAxOH1 z-style-LMAxOH-styles-label"})
-      } export const props = styles.card(); export const scope = theme().className;"
+      } export const props = styles.card(); export const scope = ({className:"z-theme-theme"}).className;"
     `)
 
     const packed = Graph.compile({
@@ -1919,9 +1911,6 @@ ${web.modules['app.ts']!.code}`,
 
     expect(packed.modules['app/card.ts']!.css).toMatchInlineSnapshot(`
       ".z-theme-theme{--z-color-brand:#06c;--z-spacing-md:8px;}
-      .z_scheme-dark{color-scheme:dark;}
-      .z_scheme-light{color-scheme:light;}
-      .z_scheme-light-dark{color-scheme:light dark;}
       .z_rnRBDm0{color:var(--z-color-brand,#06c);}"
     `)
   })
@@ -1936,9 +1925,6 @@ ${web.modules['app.ts']!.code}`,
 
     expect(output.modules['app/card.ts']!.css).toMatchInlineSnapshot(`
       ".z-theme-theme{--z-color-brand:#06c;}
-      .z_scheme-dark{color-scheme:dark;}
-      .z_scheme-light{color-scheme:light;}
-      .z_scheme-light-dark{color-scheme:light dark;}
       .z_rnRBDm0{color:var(--z-color-brand,#06c);}"
     `)
   })
@@ -2001,7 +1987,7 @@ ${web.modules['app.ts']!.code}`,
       `
       "
       import { Appearance as __zyzzAppearance, Selection as __zyzzSelection } from 'zyzz/runtime';
-       export const zyzz = ({appearance:__zyzzAppearance.root([["brand.dark","z-theme-brand_2e_dark"]],{"defaultVars":"brand.dark"}),script:__zyzzAppearance.create([["brand.dark","z-theme-brand_2e_dark"]]),vars:__zyzzSelection.create([["brand.dark","z-theme-brand_2e_dark"]],false,'set',"brand.dark")}); export const props = ({className:"z_TqLXxb0"}); export const scope = zyzz.vars({set:'brand.dark'}).className;"
+       export const zyzz = ({appearance:__zyzzAppearance.root([["brand.dark","z-theme-brand_2e_dark"]],{"defaultVars":"brand.dark"}),script:__zyzzAppearance.create([["brand.dark","z-theme-brand_2e_dark"]]),vars:__zyzzSelection.create([["brand.dark","z-theme-brand_2e_dark"]],false,'set',"brand.dark")}); export const props = ({className:"z_TqLXxb0"}); export const scope = ({className:"z-theme-brand_2e_dark"}).className;"
     `,
     )
 
@@ -2016,9 +2002,6 @@ ${web.modules['app.ts']!.code}`,
     expect(Graph.compile(options).modules['app/card.js']!.css)
       .toMatchInlineSnapshot(`
         ".z-theme-brand_2e_dark{--z-color-brand:#06c;}
-        .z_scheme-dark{color-scheme:dark;}
-        .z_scheme-light{color-scheme:light;}
-        .z_scheme-light-dark{color-scheme:light dark;}
         .z_jnRBM80{color:var(--z-color-brand,#06c);}"
       `)
     expect(() =>
@@ -2057,7 +2040,7 @@ ${web.modules['app.ts']!.code}`,
     `,
     )
     expect(output.modules['pkg/card.ts']!.code).toMatchInlineSnapshot(
-      `"import { design } from './index.js'; const zyzz = (design as import('zyzz').Config.VariableConfig<{readonly "layers":readonly ["reset","components"];readonly "vars":{readonly "mint":{readonly "color":{readonly "brand":{readonly "light":"#175";readonly "dark":"#afa"}};readonly "spacing":{readonly "md":"12px"}};readonly "base":{readonly "color":{readonly "brand":{readonly "light":"#06c";readonly "dark":"#9cf"}};readonly "spacing":{readonly "md":"8px"}}};readonly "defaultVars":"base"}>); const { style } = (zyzz as import('zyzz').Config.VariableConfig<{readonly "layers":readonly ["reset","components"];readonly "vars":{readonly "mint":{readonly "color":{readonly "brand":{readonly "light":"#175";readonly "dark":"#afa"}};readonly "spacing":{readonly "md":"12px"}};readonly "base":{readonly "color":{readonly "brand":{readonly "light":"#06c";readonly "dark":"#9cf"}};readonly "spacing":{readonly "md":"8px"}}};readonly "defaultVars":"base"}>); export const props = ({className:"z_LMAxOH0 z_LMAxOH1"}); export const scope = zyzz.vars({set:'mint'}).className;"`,
+      `"import { design } from './index.js'; const zyzz = (design as import('zyzz').Config.VariableConfig<{readonly "layers":readonly ["reset","components"];readonly "vars":{readonly "mint":{readonly "color":{readonly "brand":{readonly "light":"#175";readonly "dark":"#afa"}};readonly "spacing":{readonly "md":"12px"}};readonly "base":{readonly "color":{readonly "brand":{readonly "light":"#06c";readonly "dark":"#9cf"}};readonly "spacing":{readonly "md":"8px"}}};readonly "defaultVars":"base"}>); const { style } = (zyzz as import('zyzz').Config.VariableConfig<{readonly "layers":readonly ["reset","components"];readonly "vars":{readonly "mint":{readonly "color":{readonly "brand":{readonly "light":"#175";readonly "dark":"#afa"}};readonly "spacing":{readonly "md":"12px"}};readonly "base":{readonly "color":{readonly "brand":{readonly "light":"#06c";readonly "dark":"#9cf"}};readonly "spacing":{readonly "md":"8px"}}};readonly "defaultVars":"base"}>); export const props = ({className:"z_LMAxOH0 z_LMAxOH1"}); export const scope = ({className:"z-theme-mint"}).className;"`,
     )
 
     const updated = compiler.compile({
@@ -2097,14 +2080,14 @@ ${web.modules['app.ts']!.code}`,
       ".z-theme-base{--z-color-brand:light-dark(#06c,#9cf);--z-spacing-md:8px;}
       .z-theme-mint{--z-color-brand:light-dark(#175,#afa);--z-spacing-md:12px;}
       .z-theme-base{--z-color-brand:light-dark(#06c,#9cf);--z-spacing-md:8px;}
-      .z_scheme-dark{color-scheme:dark;}
-      .z_scheme-light{color-scheme:light;}
-      .z_scheme-light-dark{color-scheme:light dark;}
       .z_rnRBDm0{color:var(--z-color-brand,light-dark(#06c,#9cf));}
       .z_rnRBDm1{padding:var(--z-spacing-md,8px);}"
     `)
     expect(packed.modules['app/card.ts']!.code).toMatchInlineSnapshot(
-      `"import { design as zyzz } from '@acme/theme'; export const props = ({className:"z_rnRBDm0 z_rnRBDm1"}); export const scope = zyzz.vars({set:'mint'}).className;"`,
+      `
+      "import { design as zyzz } from '@acme/theme';
+      import '@acme/theme'; export const props = ({className:"z_rnRBDm0 z_rnRBDm1"}); export const scope = ({className:"z-theme-mint"}).className;"
+    `,
     )
   })
 
@@ -2235,18 +2218,11 @@ ${web.modules['app.ts']!.code}`,
       .z-theme-mint{--z-color-brand:#175;--z-spacing-md:8px;}
       .z-theme-mint-theme{--z-mint-color-brand:#175;--z-mint-spacing-md:8px;}
       .z-theme-local{--z-color-brand:#f00;--z-spacing-md:8px;}
-      .z_scheme-dark{color-scheme:dark;}
-      .z_scheme-light{color-scheme:light;}
-      .z_scheme-light-dark{color-scheme:light dark;}
       .z_rnRBDm0{color:var(--z-color-brand,#06c);}
       .z_rnRBDm1{padding:var(--z-spacing-md,8px);}"
     `)
     expect(output.modules['app/card.ts']!.code).toMatchInlineSnapshot(
-      `
-      "
-      import { Selection as __zyzzSelection } from 'zyzz/runtime';
-      import { mint, style, theme } from '@acme/theme';  export const local = ({} as import('zyzz').Vars.Definition<{readonly "color":{readonly "brand":"#06c"};readonly "spacing":{readonly "md":"8px"}}>); export const props = ({className:"z_rnRBDm0 z_rnRBDm1"}); const scopeConfig=({vars:__zyzzSelection.create([["default","z-theme-mint-theme"]],false,'set',"default")} as import('zyzz').Config.VariableConfig<{readonly "id":"mint";readonly "vars":{readonly "color":{readonly "brand":"#175"};readonly "spacing":{readonly "md":"8px"}}}>);export const scope=scopeConfig.vars().className;"
-    `,
+      `"import { mint, style, theme } from '@acme/theme';  export const local = ({} as import('zyzz').Vars.Definition<{readonly "color":{readonly "brand":"#06c"};readonly "spacing":{readonly "md":"8px"}}>); export const props = ({className:"z_rnRBDm0 z_rnRBDm1"}); const scopeConfig=({} as import('zyzz').Config.VariableConfig<{readonly "id":"mint";readonly "vars":{readonly "color":{readonly "brand":"#175"};readonly "spacing":{readonly "md":"8px"}}}>);export const scope=({className:"z-theme-mint-theme"}).className;"`,
     )
 
     const updated = compiler.compile({
@@ -2269,9 +2245,6 @@ ${web.modules['app.ts']!.code}`,
       .z-theme-mint{--z-color-brand:#080;--z-spacing-md:8px;}
       .z-theme-mint-theme{--z-mint-color-brand:#080;--z-mint-spacing-md:8px;}
       .z-theme-local{--z-color-brand:#f00;--z-spacing-md:8px;}
-      .z_scheme-dark{color-scheme:dark;}
-      .z_scheme-light{color-scheme:light;}
-      .z_scheme-light-dark{color-scheme:light dark;}
       .z_rnRBDm0{color:var(--z-color-brand,#06c);}
       .z_rnRBDm1{padding:var(--z-spacing-md,8px);}"
     `)
@@ -2460,14 +2433,14 @@ ${web.modules['app.ts']!.code}`,
       }
     `)
     expect(output.modules['pkg/card.ts']!.code).toMatchInlineSnapshot(
-      `"import { vars, style } from './index.js'; export const props = ({className:"z_LMAxOH0 z_LMAxOH1"}); export const scope = vars({set:'mint'}).className;"`,
+      `
+      "import { vars, style } from './index.js';
+      import './index.js'; export const props = ({className:"z_LMAxOH0 z_LMAxOH1"}); export const scope = ({className:"z-theme-mint"}).className;"
+    `,
     )
     expect(output.modules['pkg/card.ts']!.css).toMatchInlineSnapshot(`
       ".z-theme-base{--z-color-brand:#06c;--z-spacing-md:8px;}
       .z-theme-mint{--z-color-brand:#175;--z-spacing-md:8px;}
-      .z_scheme-dark{color-scheme:dark;}
-      .z_scheme-light{color-scheme:light;}
-      .z_scheme-light-dark{color-scheme:light dark;}
       .z_LMAxOH0{color:var(--z-color-brand,#06c);}
       .z_LMAxOH1{padding:var(--z-spacing-md,8px);}"
     `)
@@ -2585,30 +2558,18 @@ ${web.modules['app.ts']!.code}`,
       },
     })
 
-    expect(removed.modules['pkg/alternate.ts']!.css).toMatchInlineSnapshot(`
-      ".z-theme-mint-theme{--z-mint-color-brand:#175;--z-mint-spacing-md:8px;--z-mint-spacing-unused:99px;}
-      .z_scheme-dark{color-scheme:dark;}
-      .z_scheme-light{color-scheme:light;}
-      .z_scheme-light-dark{color-scheme:light dark;}"
-    `)
-    expect(removed.modules['pkg/card.ts']!.css).toMatchInlineSnapshot(`
-      ".z-theme-mint-theme{--z-mint-color-brand:#175;--z-mint-spacing-md:8px;--z-mint-spacing-unused:99px;}
-      .z_scheme-dark{color-scheme:dark;}
-      .z_scheme-light{color-scheme:light;}
-      .z_scheme-light-dark{color-scheme:light dark;}"
-    `)
-    expect(removed.modules['pkg/index.ts']!.css).toMatchInlineSnapshot(`
-      ".z-theme-mint-theme{--z-mint-color-brand:#175;--z-mint-spacing-md:8px;--z-mint-spacing-unused:99px;}
-      .z_scheme-dark{color-scheme:dark;}
-      .z_scheme-light{color-scheme:light;}
-      .z_scheme-light-dark{color-scheme:light dark;}"
-    `)
-    expect(removed.modules['pkg/theme.ts']!.css).toMatchInlineSnapshot(`
-      ".z-theme-mint-theme{--z-mint-color-brand:#175;--z-mint-spacing-md:8px;--z-mint-spacing-unused:99px;}
-      .z_scheme-dark{color-scheme:dark;}
-      .z_scheme-light{color-scheme:light;}
-      .z_scheme-light-dark{color-scheme:light dark;}"
-    `)
+    expect(removed.modules['pkg/alternate.ts']!.css).toMatchInlineSnapshot(
+      `".z-theme-mint-theme{--z-mint-color-brand:#175;--z-mint-spacing-md:8px;--z-mint-spacing-unused:99px;}"`,
+    )
+    expect(removed.modules['pkg/card.ts']!.css).toMatchInlineSnapshot(
+      `".z-theme-mint-theme{--z-mint-color-brand:#175;--z-mint-spacing-md:8px;--z-mint-spacing-unused:99px;}"`,
+    )
+    expect(removed.modules['pkg/index.ts']!.css).toMatchInlineSnapshot(
+      `".z-theme-mint-theme{--z-mint-color-brand:#175;--z-mint-spacing-md:8px;--z-mint-spacing-unused:99px;}"`,
+    )
+    expect(removed.modules['pkg/theme.ts']!.css).toMatchInlineSnapshot(
+      `".z-theme-mint-theme{--z-mint-color-brand:#175;--z-mint-spacing-md:8px;--z-mint-spacing-unused:99px;}"`,
+    )
   })
 
   test('linked scopes render inherited values in Chromium', async () => {
@@ -4165,18 +4126,12 @@ export const App = () => <Box>box</Box>`,
     expect(after.modules['pkg/card0.ts']!.css).toMatchInlineSnapshot(`
       ".z-theme-base{--z-color-brand:#06c;}
       .z-theme-mint{--z-color-brand:#175;}
-      .z_scheme-dark{color-scheme:dark;}
-      .z_scheme-light{color-scheme:light;}
-      .z_scheme-light-dark{color-scheme:light dark;}
       .z_I2R_br0{color:var(--z-color-brand,#06c);}
       .z_I2R_br1{padding:20px;}"
     `)
     expect(before.modules['pkg/card0.ts']!.css).toMatchInlineSnapshot(`
       ".z-theme-base{--z-color-brand:#06c;}
       .z-theme-mint{--z-color-brand:#175;}
-      .z_scheme-dark{color-scheme:dark;}
-      .z_scheme-light{color-scheme:light;}
-      .z_scheme-light-dark{color-scheme:light dark;}
       .z_I2R_br0{color:var(--z-color-brand,#06c);}
       .z_I2R_br1{padding:0px;}"
     `)
@@ -4198,9 +4153,6 @@ export const App = () => <Box>box</Box>`,
     expect(after.modules['pkg/card.ts']!.css).toMatchInlineSnapshot(`
       ".z-theme-base{--z-color-brand:#f00;--z-spacing-md:8px;}
       .z-theme-mint{--z-color-brand:#175;--z-spacing-md:8px;}
-      .z_scheme-dark{color-scheme:dark;}
-      .z_scheme-light{color-scheme:light;}
-      .z_scheme-light-dark{color-scheme:light dark;}
       .z_LMAxOH0{color:var(--z-color-brand,#f00);}
       .z_LMAxOH1{padding:var(--z-spacing-md,8px);}"
     `)
@@ -4251,11 +4203,7 @@ export const App = () => <Box>box</Box>`,
         "pkg/theme.ts",
       ]
     `)
-    expect(after.modules['pkg/card.ts']!.css).toMatchInlineSnapshot(`
-      ".z_scheme-dark{color-scheme:dark;}
-      .z_scheme-light{color-scheme:light;}
-      .z_scheme-light-dark{color-scheme:light dark;}"
-    `)
+    expect(after.modules['pkg/card.ts']!.css).toMatchInlineSnapshot(`""`)
   })
 
   test('import edits preserve the new graph scope order', () => {
@@ -4322,9 +4270,6 @@ export const App = () => <Box>box</Box>`,
     `)
     expect(after.modules['pkg/card.ts']!.css).toMatchInlineSnapshot(`
       ".z-theme-mint-theme{--z-mint-color-brand:#f00;--z-mint-spacing-md:8px;--z-mint-spacing-unused:99px;}
-      .z_scheme-dark{color-scheme:dark;}
-      .z_scheme-light{color-scheme:light;}
-      .z_scheme-light-dark{color-scheme:light dark;}
       .z_mint-LMAxOH0{color:var(--z-mint-color-brand,#f00);}"
     `)
   })
@@ -4357,11 +4302,7 @@ export const App = () => <Box>box</Box>`,
     expect(after.modules['pkg/card.ts']!.code).toMatchInlineSnapshot(
       `"export const value = 'recovered';"`,
     )
-    expect(after.modules['pkg/card.ts']!.css).toMatchInlineSnapshot(`
-      ".z_scheme-dark{color-scheme:dark;}
-      .z_scheme-light{color-scheme:light;}
-      .z_scheme-light-dark{color-scheme:light dark;}"
-    `)
+    expect(after.modules['pkg/card.ts']!.css).toMatchInlineSnapshot(`""`)
   })
 
   test('file additions recheck ambiguity and removals drop stale scopes', () => {
@@ -6111,9 +6052,6 @@ export const vars=({gap:variable('signedLength', {inherits:false,initialValue:'}
 
       expect(result.modules['app.ts']!.css).toMatchInlineSnapshot(`
         ".z-theme-theme{--z-color-ink:#123;}
-        .z_scheme-dark{color-scheme:dark;}
-        .z_scheme-light{color-scheme:light;}
-        .z_scheme-light-dark{color-scheme:light dark;}
         .z_Zf5JrJ0{width:10px;}
         .z_Zf5JrJ1{color:var(--z-color-ink,#123);}"
       `)

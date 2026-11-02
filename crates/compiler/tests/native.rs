@@ -80,6 +80,7 @@ fn extracted<'a>(source: &str, definitions: &[(&str, &str, &str)]) -> Extracted<
         lynx: false,
         namespaces: Vec::new(),
         native_vars: Vec::new(),
+        scope_folds: Vec::new(),
         static_theme_references: Vec::new(),
         styles: definition,
         theme_aliases: Vec::new(),

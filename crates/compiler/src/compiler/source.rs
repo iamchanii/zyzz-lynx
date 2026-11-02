@@ -34,7 +34,9 @@ use crate::compiler::internal::lightning::Options as Transform;
 use crate::compiler::internal::scope::{self, Declaration, Mode};
 use crate::compiler::internal::statics::{self, Static};
 use crate::compiler::internal::syntax::{self, Parsed};
-use crate::compiler::internal::themes::{self, Alias, Context, Link, Output, Themes, VarsRead};
+use crate::compiler::internal::themes::{
+    self, Alias, Context, Fold, Link, Output, Themes, VarsRead,
+};
 use crate::compiler::internal::vars::{self, Variables};
 use crate::compiler::internal::{
     at_rules, base_ui, compositions, contributions, identifiers, names, packed_styles,
@@ -151,6 +153,9 @@ pub struct Call<'a> {
     /// Starts of every input application of a compile-time composition, including those of the
     /// compositions it contains. Guards read only truthiness, so none reads a class list.
     pub composition_inputs: Vec<u32>,
+    /// Folded scope applications a compile-time composition merges into its constant props, in
+    /// argument order.
+    pub composition_scopes: Vec<Fold>,
     /// Starts of a compile-time composition's input applications that keep no guard, since
     /// they always follow their definition's initialization.
     pub composition_settled: Vec<u32>,
@@ -281,6 +286,22 @@ impl ExtractError {
     }
 }
 
+/// A scope application with literal arguments, replaced by the constant props its selector
+/// would return.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ScopeFold {
+    /// Exclusive offset of the callee, whose import read the fold consumes.
+    pub callee_end: u32,
+    /// Exclusive offset of the application.
+    pub end: u32,
+    /// The selected set and scheme.
+    pub fold: Fold,
+    /// `html` when the configuration emits HTML attributes.
+    pub output: Option<Output>,
+    /// Inclusive offset of the application.
+    pub start: u32,
+}
+
 /// A scope read in a static binding, replaced by its serialized class constant.
 #[derive(Clone, Debug, PartialEq)]
 pub struct StaticThemeReference {
@@ -344,6 +365,8 @@ pub struct Extracted<'a> {
     pub namespaces: Vec<namespace::Definition>,
     /// Readonly native variable arguments and their complete catalogs.
     pub native_vars: Vec<VarsRead>,
+    /// Scope applications replaced by constant props.
+    pub scope_folds: Vec<ScopeFold>,
     /// Scope reads replaced by class constants.
     pub static_theme_references: Vec<StaticThemeReference>,
     /// Validated definitions accepted by `Css.compile`, with readable class labels.
@@ -3374,6 +3397,7 @@ pub fn extract<'a>(allocator: &'a Allocator, options: &Options<'_, 'a>) -> Resul
             lynx: options.target == Target::Lynx,
             namespaces,
             native_vars: Vec::new(),
+            scope_folds: Vec::new(),
             static_theme_references: Vec::new(),
             styles: style::Definition {
                 labels: Some(Arc::new(labels)),
@@ -3408,6 +3432,19 @@ pub fn extract<'a>(allocator: &'a Allocator, options: &Options<'_, 'a>) -> Resul
     } else {
         &themes.selections
     };
+    let scope_folds = themes
+        .scope_applications
+        .iter()
+        .filter_map(|(start, scope)| {
+            Some(ScopeFold {
+                callee_end: scope.callee_end,
+                end: scope.end,
+                fold: scope.fold.clone()?,
+                output: scope.output,
+                start: *start,
+            })
+        })
+        .collect();
 
     Ok(Extracted {
         calls,
@@ -3419,6 +3456,7 @@ pub fn extract<'a>(allocator: &'a Allocator, options: &Options<'_, 'a>) -> Resul
         lynx: options.target == Target::Lynx,
         namespaces,
         native_vars: themes.vars_reads,
+        scope_folds,
         static_theme_references,
         styles: style::Definition {
             labels: Some(Arc::new(labels)),

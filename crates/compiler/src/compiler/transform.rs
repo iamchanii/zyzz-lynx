@@ -1725,7 +1725,11 @@ pub fn compile<'a>(
     let schemes = options.schemes.unwrap_or(
         !extracted.theme_appearances.is_empty()
             || !extracted.theme_scripts.is_empty()
-            || !extracted.theme_selections.is_empty(),
+            || !extracted.theme_selections.is_empty()
+            || extracted
+                .scope_folds
+                .iter()
+                .any(|fold| fold.fold.scheme.is_some()),
     );
     let mut styles: Vec<Arc<NamedStyle>> = if portable || options.development {
         extracted.styles.styles.clone()
@@ -3006,6 +3010,50 @@ impl<'a> Generator<'_, 'a> {
         json_class(&self.classes, name)
     }
 
+    /// The class list and constant props of folded scope applications, as the runtime selector
+    /// and composition would merge them: each scope class with its scheme class, then
+    /// `classes`, and the inline `color-scheme` of the last selected scheme.
+    fn scoped(
+        &self,
+        scopes: &[themes::Fold],
+        classes: Option<&str>,
+        html: bool,
+    ) -> (String, String) {
+        let mut names: Vec<&str> = Vec::new();
+
+        for fold in scopes {
+            if let Some(class) = self.emitted.vars.get(&fold.name) {
+                names.push(class);
+            }
+
+            if let Some(class) = fold.scheme.and_then(scheme::class) {
+                names.push(class);
+            }
+        }
+
+        names.extend(classes.filter(|classes| !classes.is_empty()));
+
+        let class_list = names.join(" ");
+        let mut props = String::from(if html { "{class:" } else { "{className:" });
+
+        js::write_string(&mut props, &class_list);
+
+        if let Some(scheme) = scopes.iter().filter_map(|fold| fold.scheme).next_back() {
+            if html {
+                props.push_str(",style:");
+                js::write_string(&mut props, &format!("color-scheme:{scheme}"));
+            } else {
+                props.push_str(",style:{colorScheme:");
+                js::write_string(&mut props, scheme);
+                props.push('}');
+            }
+        }
+
+        props.push('}');
+
+        (class_list, props)
+    }
+
     /// The generated class list that applications of a composed definition carry.
     fn input_class(&self, name: &str) -> Option<&str> {
         self.classes.get(name).map(String::as_str).or_else(|| {
@@ -3431,6 +3479,31 @@ impl<'a> Generator<'_, 'a> {
                 .map(|call| (call.start, call.end))
                 .collect(),
         );
+
+        // A literal scope application becomes the constant props its selector would return. A
+        // compile-time composition replaces the whole call and merges them itself. HTML props
+        // keep their canonical form beside the attributes, as the selector did, so a runtime
+        // HTML composition can still read them.
+        for fold in &extracted.scope_folds {
+            // The callee read is gone, so its import keeps a bare import for the module's effects.
+            state.consumed.push((fold.start, fold.callee_end));
+
+            if composed.contains(fold.start, fold.end) {
+                continue;
+            }
+
+            let (_, react) = self.scoped(std::slice::from_ref(&fold.fold), None, false);
+            let replacement = if fold.output == Some(ThemeOutput::Html) {
+                state.uses_composition_html = true;
+
+                format!("{}.from({react})", state.composition_html)
+            } else {
+                format!("({react})")
+            };
+
+            module.overwrite(fold.start, fold.end, replacement)?;
+        }
+
         // Arguments of rewritten compositions that follow initialization read nothing at runtime.
         // A contained composition is never rewritten, so its arguments keep their reads.
         let settled: FxHashSet<u32> = extracted
@@ -3637,6 +3710,23 @@ impl<'a> Generator<'_, 'a> {
                     )
                 }
             } else if let Some(guards) = &call.composition {
+                let scopes = &call.composition_scopes;
+                let schemed = scopes.iter().any(|fold| fold.scheme.is_some());
+                let from = format!("{{className:{class_name}}}");
+                // Folded scope classes join the composed class list, as the runtime merge would.
+                let (class_name, props, from) = if scopes.is_empty() {
+                    (class_name, props, from)
+                } else {
+                    let classes = self.classes.get(&call.name).map(String::as_str);
+                    let (list, react) = self.scoped(scopes, classes, false);
+                    let props = if html {
+                        self.scoped(scopes, classes, true).1
+                    } else {
+                        react.clone()
+                    };
+
+                    (quote(&list), props, react)
+                };
                 let mut settled: Vec<&Arc<str>> = if self.acyclic {
                     call.composition_acyclic
                         .iter()
@@ -3656,27 +3746,31 @@ impl<'a> Generator<'_, 'a> {
 
                 if guards.is_empty()
                     && !html
+                    && !schemed
                     && let Some(classes) = self.classes.get(&call.name)
                 {
-                    state
-                        .constants
-                        .insert(call.start, (call.end, classes.clone()));
+                    let classes = if scopes.is_empty() {
+                        classes.clone()
+                    } else {
+                        self.scoped(scopes, Some(classes), false).0
+                    };
+
+                    state.constants.insert(call.start, (call.end, classes));
                 }
 
                 // A composition spread alone onto a DOM element becomes its className, as
-                // runtime compositions do.
+                // runtime compositions do. A selected scheme adds an inline style, so it keeps
+                // the props form.
                 if guards.is_empty()
                     && !html
+                    && !schemed
                     && let Some(spread) = call.spread
                 {
                     module.overwrite(spread.start, call.start, "className={")?;
                     class_name
                 } else {
                     let base = if compose_html {
-                        format!(
-                            "{}.from({{className:{class_name}}})",
-                            state.composition_html
-                        )
+                        format!("{}.from({from})", state.composition_html)
                     } else {
                         format!("({props})")
                     };

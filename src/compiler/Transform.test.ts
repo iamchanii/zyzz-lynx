@@ -1739,9 +1739,6 @@ describe('compile', () => {
 
     expect(output.css).toMatchInlineSnapshot(`
       ".z-theme-theme{--z-spacing-space:12px;}
-      .z_scheme-dark{color-scheme:dark;}
-      .z_scheme-light{color-scheme:light;}
-      .z_scheme-light-dark{color-scheme:light dark;}
       .z_i9aFWE0{width:60px;}
       .z_i9aFWE1{inline-size:70px;inline-size:80px!important;}
       .z_i9aFWE2{block-size:40px;}
@@ -2056,9 +2053,6 @@ describe('compile', () => {
 
     expect(output.css).toMatchInlineSnapshot(`
       ".z-theme-theme{--z-spacing-2-5:10px;--z-spacing-0-5:2px;--z-spacing-0:0px;}
-      .z_scheme-dark{color-scheme:dark;}
-      .z_scheme-light{color-scheme:light;}
-      .z_scheme-light-dark{color-scheme:light dark;}
       .z_OyLMsc0{gap:var(--z-spacing-2-5,10px);}
       .z_OyLMsc1{margin:var(--z-spacing-0-5,2px);}
       .z_OyLMsc2{padding:var(--z-spacing-0,0px);}"
@@ -2103,9 +2097,6 @@ describe('compile', () => {
 
     expect(output.css).toMatchInlineSnapshot(`
       ".z-theme-theme{--z-color-brand:#06c;}
-      .z_scheme-dark{color-scheme:dark;}
-      .z_scheme-light{color-scheme:light;}
-      .z_scheme-light-dark{color-scheme:light dark;}
       .z_wjwnAQ0{color:#000;color:var(--z-color-brand,#06c);color:var(--z-color-brand,#06c)!important;}
       .z_wjwnAQ1{display:block;display:flex;}
       .z_wjwnAQ2{opacity:0.25!important;opacity:0.75;}
@@ -2191,21 +2182,16 @@ describe('compile', () => {
 
     expect(result.code).toMatchInlineSnapshot(`
       "
-      import { Selection as __zyzzSelection } from 'zyzz/runtime';
-
 
       const theme = ({} as import('zyzz').Vars.Definition<{readonly "color":{readonly "transparent":"#06c";readonly "palette":{readonly 500:"#123"}};readonly "spacing":{readonly 0:"8px";readonly 4:"16px"}}>); const themeConfig=({} as import('zyzz').Config.VariableConfig<{readonly "vars":{readonly "color":{readonly "transparent":"#06c";readonly "palette":{readonly "500":"#123"}};readonly "spacing":{readonly "0":"8px";readonly "4":"16px"}}}>);
-      const alternate = ({} as import('zyzz').Vars.Definition<{readonly "color":{readonly "transparent":"#06c";readonly "palette":{readonly 500:"#123"}};readonly "spacing":{readonly 0:"8px";readonly 4:"16px"}}>); const alternateConfig=({vars:__zyzzSelection.create([["default","z-theme-theme"]],false,'set',"default")} as import('zyzz').Config.VariableConfig<{readonly "vars":{readonly "color":{readonly "transparent":"#175";readonly "palette":{readonly "500":"#456"}};readonly "spacing":{readonly "0":"8px";readonly "4":"16px"}}}>);
+      const alternate = ({} as import('zyzz').Vars.Definition<{readonly "color":{readonly "transparent":"#06c";readonly "palette":{readonly 500:"#123"}};readonly "spacing":{readonly 0:"8px";readonly 4:"16px"}}>); const alternateConfig=({} as import('zyzz').Config.VariableConfig<{readonly "vars":{readonly "color":{readonly "transparent":"#175";readonly "palette":{readonly "500":"#456"}};readonly "spacing":{readonly "0":"8px";readonly "4":"16px"}}}>);
       const { style } = (themeConfig as import('zyzz').Config.VariableConfig<{readonly "vars":{readonly "color":{readonly "transparent":"#06c";readonly "palette":{readonly "500":"#123"}};readonly "spacing":{readonly "0":"8px";readonly "4":"16px"}}}>);
-      export const scope = alternateConfig.vars().className;
+      export const scope = ({className:"z-theme-theme"}).className;
       export const props = ({className:"z_tVIWWz0 z_tVIWWz1 z_tVIWWz2"});
       "
     `)
     expect(result.css).toMatchInlineSnapshot(`
       ".z-theme-theme{--z-color-transparent:#06c;--z-color-palette-500:#123;--z-spacing-0:8px;}
-      .z_scheme-dark{color-scheme:dark;}
-      .z_scheme-light{color-scheme:light;}
-      .z_scheme-light-dark{color-scheme:light dark;}
       .z_tVIWWz0{color:var(--z-color-transparent,#06c);}
       .z_tVIWWz1{border-color:var(--z-color-palette-500,#123);}
       .z_tVIWWz2{padding:var(--z-spacing-0,8px);}"
@@ -2389,20 +2375,15 @@ describe('compile', () => {
 
     expect(result.code).toMatchInlineSnapshot(`
       "
-      import { Selection as __zyzzSelection } from 'zyzz/runtime';
-
 
       const theme = ({} as import('zyzz').Vars.Definition<{readonly "color":{readonly "brand":{readonly "dark":"#fff";readonly "light":"#000"}};readonly "spacing":{readonly 1:"4px";readonly "md":"8px"}}>); const themeConfig=({} as import('zyzz').Config.VariableConfig<{readonly "vars":{readonly "color":{readonly "brand":{readonly "light":"#000";readonly "dark":"#fff"}};readonly "spacing":{readonly "1":"4px";readonly "md":"8px"}}}>);
-      const alternate = ({} as import('zyzz').Vars.Definition<{readonly "color":{readonly "brand":{readonly "dark":"#fff";readonly "light":"#000"}};readonly "spacing":{readonly 1:"4px";readonly "md":"8px"}}>); const alternateConfig=({vars:__zyzzSelection.create([["default","z-theme-theme"]],false,'set',"default")} as import('zyzz').Config.VariableConfig<{readonly "vars":{readonly "color":{readonly "brand":"#f00"};readonly "spacing":{readonly "1":"4px";readonly "md":"8px"}}}>);
+      const alternate = ({} as import('zyzz').Vars.Definition<{readonly "color":{readonly "brand":{readonly "dark":"#fff";readonly "light":"#000"}};readonly "spacing":{readonly 1:"4px";readonly "md":"8px"}}>); const alternateConfig=({} as import('zyzz').Config.VariableConfig<{readonly "vars":{readonly "color":{readonly "brand":"#f00"};readonly "spacing":{readonly "1":"4px";readonly "md":"8px"}}}>);
       export type Brand = typeof theme.color.brand;
-      export const scope = alternateConfig.vars().className;
+      export const scope = ({className:"z-theme-theme"}).className;
       export const props = ({className:"z_pXWEgW0 z_pXWEgW1"});"
     `)
     expect(result.css).toMatchInlineSnapshot(`
       ".z-theme-theme{--z-color-brand:light-dark(#000,#fff);--z-spacing-md:8px;}
-      .z_scheme-dark{color-scheme:dark;}
-      .z_scheme-light{color-scheme:light;}
-      .z_scheme-light-dark{color-scheme:light dark;}
       .z_pXWEgW0{color:var(--z-color-brand,light-dark(#000,#fff));}
       .z_pXWEgW1{padding:var(--z-spacing-md,8px);}"
     `)
@@ -5324,6 +5305,70 @@ namespace styles {
           `[Source.ExtractError: App.tsx:34: The lynx target does not support \`:first-child\`.]`,
         )
       })
+    })
+
+    test('folds literal scope selections to constant props on both targets', () => {
+      const source = `import { cx, defineConfig, defineVars } from 'zyzz'
+const theme = defineVars({ color: { brand: '#06c' } })
+const { style, vars } = defineConfig({ vars: theme })
+namespace styles {
+  export const page = style({ color: 'brand' })
+}
+export const page = <view {...cx(vars({}), styles.page())} />
+export const dark = <text {...vars({ colorScheme: 'dark' })} />
+export const plain = <text {...vars()} />
+export const light = <text {...cx(vars({ colorScheme: 'light' }), styles.page())} />`
+      const lynx = Transform.compile({
+        moduleId: 'App.tsx',
+        source,
+        target: 'lynx',
+      })
+
+      // Each selection becomes the props its runtime selector would return, so neither the
+      // module nor its configuration needs the selection runtime.
+      expect(lynx.code).toMatchInlineSnapshot(`
+        "
+        const theme = ({} as import('zyzz').Vars.Definition<{readonly "color":{readonly "brand":"#06c"}}>)
+        const { style, vars } = ({} as import('zyzz').Config.VariableConfig<{readonly "vars":{readonly "color":{readonly "brand":"#06c"}}}>)
+
+        export const page = <view className={"z-theme-theme z_l0kPgl0"} />
+        export const dark = <text {...({className:"z-theme-theme z_scheme-dark",style:{colorScheme:"dark"}})} />
+        export const plain = <text {...({className:"z-theme-theme"})} />
+        export const light = <text {...({className:"z-theme-theme z_scheme-light z_l0kPgl0",style:{colorScheme:"light"}})} />"
+      `)
+      expect(lynx.code.includes('zyzz/runtime')).toMatchInlineSnapshot(`false`)
+      expect(lynx.css).toMatchInlineSnapshot(`
+        ".z-theme-theme{--z-color-brand:#06c;}
+        .z_scheme-dark{color-scheme:dark;}
+        .z_scheme-light{color-scheme:light;}
+        .z_scheme-light-dark{color-scheme:light dark;}
+        .z_l0kPgl0{color:var(--z-color-brand,#06c);}"
+      `)
+
+      const web = Transform.compile({ moduleId: 'App.tsx', source })
+
+      expect(web.code).toBe(lynx.code)
+
+      // A selection with a dynamic argument keeps the runtime selector.
+      const dynamic = Transform.compile({
+        moduleId: 'App.tsx',
+        source: source.replace(
+          "vars({ colorScheme: 'dark' })",
+          "vars({ colorScheme: Math.random() > 0.5 ? 'dark' : 'light' })",
+        ),
+        target: 'lynx',
+      })
+
+      expect(
+        dynamic.code.includes(
+          '__zyzzSelection.create([["default","z-theme-theme"]],false,\'set\',"default")',
+        ),
+      ).toMatchInlineSnapshot(`true`)
+      expect(
+        dynamic.code.includes(
+          "<text {...vars({ colorScheme: Math.random() > 0.5 ? 'dark' : 'light' })} />",
+        ),
+      ).toMatchInlineSnapshot(`true`)
     })
   })
 })
@@ -12686,6 +12731,10 @@ export const dynamic = styles.dynamic({ width: '20px' });`
         ".z_dRwjil0{color:red;}
         .z_dRwjil1{color:blue;}"
       `)
+      // Both namespaces erase with their records once every application folds.
+      expect(output.code.trim()).toMatchInlineSnapshot(
+        `"export const cards = ["z_dRwjil0", "z_dRwjil1"];"`,
+      )
     })
 
     test('rejects mutation of reused namespace declarations', () => {
@@ -12729,13 +12778,6 @@ import { Css } from 'zyzz/web';export const { style, variants, vars:theme } = Co
           `)
           expect(app.css).toMatchInlineSnapshot(`
             ".z-theme-theme{--z-color-brand:red;}
-            .z_scheme-dark{color-scheme:dark;}
-            .z_scheme-light{color-scheme:light;}
-      // Both namespaces erase with their records once every application folds.
-      expect(output.code.trim()).toMatchInlineSnapshot(
-        `"export const cards = ["z_dRwjil0", "z_dRwjil1"];"`,
-      )
-            .z_scheme-light-dark{color-scheme:light dark;}
             .z_Zf5JrJ0{color:var(--z-color-brand,red);}
             .z_Zf5JrJ1{padding:8px;}
             .z_Zf5JrJ2{padding:8px;}
@@ -12754,9 +12796,6 @@ import { Css } from 'zyzz/web';export const { style, variants, vars:theme } = Co
           `)
           expect(app.css).toMatchInlineSnapshot(`
             ".z-theme-theme{--z-color-brand:red;}
-            .z_scheme-dark{color-scheme:dark;}
-            .z_scheme-light{color-scheme:light;}
-            .z_scheme-light-dark{color-scheme:light dark;}
             .z_Zf5JrJ0{color:var(--z-color-brand,red);padding:8px;}
             .z_Zf5JrJ1{color:var(--z-color-brand,red);padding:8px;}
             .z_Zf5JrJ2{color:var(--z-color-brand,red);padding:8px;&:where([data-size="large"]){padding:12px;}}"
@@ -13651,45 +13690,6 @@ describe('performance', () => {
       `)
     })
 
-    test('erases namespaces read only by functions that no earlier statement can call', async () => {
-      const { consumer, output } = await execute(`import {cx,style} from 'zyzz';
-      type Tone = 'quiet' | 'loud';
-      const tones: readonly Tone[] = ['quiet', 'loud'];
-      export const apply = () => [styles.card(), styles.label().className];
-      export const pick = (loud: boolean) => cx(styles.card(), loud && styles.label());
-      export const both = () => cx(styles.card(), styles.label());
-      export default function () { return tones }
-      namespace styles {export const card=style({color:'red'});export const label=style({color:'blue'})}`)
-
-      // Function expressions run only when called, and every statement before the namespace only declares.
-      expect(output.code).toMatchInlineSnapshot(`
-        "
-        const __zyzzComposition244=/*#__PURE__*/[{className:"z_iFQJXQ2"},{className:"z_iFQJXQ3 z_iFQJXQ4"}].map(Object.freeze);
-
-              type Tone = 'quiet' | 'loud';
-              const tones: readonly Tone[] = ['quiet', 'loud'];
-              export const apply = () => [({className:"z_iFQJXQ0"}), "z_iFQJXQ1"];
-              export const pick = (loud: boolean) => __zyzzComposition244[((loud)?1:0)];
-              export const both = () => ({className:"z_iFQJXQ3 z_iFQJXQ4"});
-              export default function () { return tones }
-              "
-      `)
-      expect(consumer.apply()).toMatchInlineSnapshot(`
-        [
-          {
-            "className": "z_iFQJXQ0",
-          },
-          "z_iFQJXQ1",
-        ]
-      `)
-      expect(consumer.pick(true)).toMatchInlineSnapshot(`
-        {
-          "className": "z_iFQJXQ3 z_iFQJXQ4",
-        }
-      `)
-      expect(consumer.pick(false)).toMatchInlineSnapshot(`
-        {
-          "className": "z_iFQJXQ2",
     test('composes members of namespaces that hold spread records', () => {
       const source = `import { cx, style } from 'zyzz'
 
@@ -13809,6 +13809,45 @@ export const Chip = (props: { checked: boolean }) => <view {...cx(styles.root(),
       `)
     })
 
+    test('erases namespaces read only by functions that no earlier statement can call', async () => {
+      const { consumer, output } = await execute(`import {cx,style} from 'zyzz';
+      type Tone = 'quiet' | 'loud';
+      const tones: readonly Tone[] = ['quiet', 'loud'];
+      export const apply = () => [styles.card(), styles.label().className];
+      export const pick = (loud: boolean) => cx(styles.card(), loud && styles.label());
+      export const both = () => cx(styles.card(), styles.label());
+      export default function () { return tones }
+      namespace styles {export const card=style({color:'red'});export const label=style({color:'blue'})}`)
+
+      // Function expressions run only when called, and every statement before the namespace only declares.
+      expect(output.code).toMatchInlineSnapshot(`
+        "
+        const __zyzzComposition244=/*#__PURE__*/[{className:"z_iFQJXQ2"},{className:"z_iFQJXQ3 z_iFQJXQ4"}].map(Object.freeze);
+
+              type Tone = 'quiet' | 'loud';
+              const tones: readonly Tone[] = ['quiet', 'loud'];
+              export const apply = () => [({className:"z_iFQJXQ0"}), "z_iFQJXQ1"];
+              export const pick = (loud: boolean) => __zyzzComposition244[((loud)?1:0)];
+              export const both = () => ({className:"z_iFQJXQ3 z_iFQJXQ4"});
+              export default function () { return tones }
+              "
+      `)
+      expect(consumer.apply()).toMatchInlineSnapshot(`
+        [
+          {
+            "className": "z_iFQJXQ0",
+          },
+          "z_iFQJXQ1",
+        ]
+      `)
+      expect(consumer.pick(true)).toMatchInlineSnapshot(`
+        {
+          "className": "z_iFQJXQ3 z_iFQJXQ4",
+        }
+      `)
+      expect(consumer.pick(false)).toMatchInlineSnapshot(`
+        {
+          "className": "z_iFQJXQ2",
         }
       `)
       expect(consumer.both()).toMatchInlineSnapshot(`
@@ -17056,17 +17095,10 @@ describe('variables', () => {
 
       expect(result.modules['app.ts']!.css).toMatchInlineSnapshot(`
         ".z-theme-theme{--z-spacing-md:8px;--z-color-brand:light-dark(red,blue);}
-        .z_scheme-dark{color-scheme:dark;}
-        .z_scheme-light{color-scheme:light;}
-        .z_scheme-light-dark{color-scheme:light dark;}
         .z_Zf5JrJ0{width:calc(100% - var(--z-spacing-md,8px));}
         .z_Zf5JrJ1{color:var(--z-color-brand,light-dark(red,blue));}"
       `)
-      expect(result.modules['theme.ts']!.css).toMatchInlineSnapshot(`
-        ".z_scheme-dark{color-scheme:dark;}
-        .z_scheme-light{color-scheme:light;}
-        .z_scheme-light-dark{color-scheme:light dark;}"
-      `)
+      expect(result.modules['theme.ts']!.css).toMatchInlineSnapshot(`""`)
     })
 
     test('compiles named configuration variables from packed contracts', () => {

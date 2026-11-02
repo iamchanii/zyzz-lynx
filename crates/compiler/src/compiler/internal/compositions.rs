@@ -27,7 +27,7 @@ use crate::compiler::internal::expression::unwrap;
 use crate::compiler::internal::recipes;
 use crate::compiler::internal::scope::{self, Kind, Mode};
 use crate::compiler::internal::statics::key_literal;
-use crate::compiler::internal::themes::{Link, Output, ScopeApplication};
+use crate::compiler::internal::themes::{Fold, Link, Output, ScopeApplication};
 use crate::compiler::source::{Call, ImportedApplication, KnownInput, Rename, RuntimeInput};
 use crate::error::{Error, Result};
 use crate::internal::identity;
@@ -947,6 +947,7 @@ fn compose<'o, 'a>(
     let mut settled: Vec<u32> = Vec::new();
     let mut contained: Vec<u32> = Vec::new();
     let mut acyclic: Vec<(u32, Arc<str>)> = Vec::new();
+    let mut scopes: Vec<Fold> = Vec::new();
 
     let mut input = |inputs: &mut Vec<RuntimeInput>,
                      call: &Call<'a>,
@@ -1058,7 +1059,14 @@ fn compose<'o, 'a>(
         {
             outputs.push(scope.output);
             inputs.push(placeholder(expression.span()));
-            runtime = true;
+
+            // The transform rewrites a literal selection to constant props, which a compile-time
+            // composition merges and a runtime composition receives as an ordinary argument.
+            match &scope.fold {
+                Some(fold) => scopes.push(fold.clone()),
+                None => runtime = true,
+            }
+
             continue;
         }
 
@@ -1133,6 +1141,7 @@ fn compose<'o, 'a>(
             settled.extend_from_slice(&nested.composition_settled);
             contained.extend_from_slice(&nested.composition_inputs);
             acyclic.extend_from_slice(&nested.composition_acyclic);
+            scopes.extend(nested.composition_scopes.iter().cloned());
             input(
                 &mut inputs,
                 &nested,
@@ -1350,6 +1359,7 @@ fn compose<'o, 'a>(
     } else {
         call.composition = Some(guards);
         call.composition_acyclic = acyclic;
+        call.composition_scopes = scopes;
         call.composition_inputs = inputs
             .iter()
             .filter_map(|input| input.application_start)

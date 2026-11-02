@@ -584,9 +584,6 @@ export const button=variants({variants:{intent:{primary:{color:'brand'},quiet:{c
       expect(result.modules['app.ts']!.css).toMatchInlineSnapshot(
         `
         ".z-theme-theme{--z-color-brand:#06c;}
-        .z_scheme-dark{color-scheme:dark;}
-        .z_scheme-light{color-scheme:light;}
-        .z_scheme-light-dark{color-scheme:light dark;}
         .z_Zf5JrJ0{padding-left:8px;}
         .z_Zf5JrJ1{padding-right:8px;}
         .z_Zf5JrJ2{&:where([data-intent="primary"]){color:var(--z-color-brand,#06c);}}

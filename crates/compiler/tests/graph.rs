@@ -23,9 +23,6 @@ mod compile {
         insta::assert_snapshot!(output["error"], @"null");
         insta::assert_snapshot!(output["modules"]["select.ts"]["css"].as_str().unwrap_or_default(), @"
         .z-theme-theme{--z-color-brand:red;}
-        .z_scheme-dark{color-scheme:dark;}
-        .z_scheme-light{color-scheme:light;}
-        .z_scheme-light-dark{color-scheme:light dark;}
         .z_PAxzm40{&[data-highlighted]{color:var(--z-color-brand,red);}}
         ");
 
@@ -579,9 +576,6 @@ mod transform {
         insta::assert_snapshot!(output["error"], @"null");
         insta::assert_snapshot!(output["css"].as_str().unwrap_or_default(), @"
         .z-theme-theme{--z-color-brand:red;}
-        .z_scheme-dark{color-scheme:dark;}
-        .z_scheme-light{color-scheme:light;}
-        .z_scheme-light-dark{color-scheme:light dark;}
         .z_PAxzm40{&[data-highlighted]{color:var(--z-color-brand,red);}}
         ");
     }
