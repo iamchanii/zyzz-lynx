@@ -1,4 +1,4 @@
-import { style, variants, vars } from '../../zyzz.config.js'
+import { variants, vars } from '../../zyzz.config.js'
 import type { BadgeTone } from '../../fixtures.js'
 
 /** Compact label whose background and text color follow a tone. */
