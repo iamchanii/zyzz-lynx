@@ -5345,9 +5345,19 @@ export const light = <text {...cx(vars({ colorScheme: 'light' }), styles.page())
         .z0{color:var(--z-color-brand,#06c);}"
       `)
 
+      // The web target folds the same selections under its readable names.
       const web = Transform.compile({ moduleId: 'App.tsx', source })
 
-      expect(web.code).toBe(lynx.code)
+      expect(web.code).toMatchInlineSnapshot(`
+        "
+        const theme = ({} as import('zyzz').Vars.Definition<{readonly "color":{readonly "brand":"#06c"}}>)
+        const { style, vars } = ({} as import('zyzz').Config.VariableConfig<{readonly "vars":{readonly "color":{readonly "brand":"#06c"}}}>)
+
+        export const page = <view className={"z-theme-theme z_l0kPgl0"} />
+        export const dark = <text {...({className:"z-theme-theme z_scheme-dark",style:{colorScheme:"dark"}})} />
+        export const plain = <text {...({className:"z-theme-theme"})} />
+        export const light = <text {...({className:"z-theme-theme z_scheme-light z_l0kPgl0",style:{colorScheme:"light"}})} />"
+      `)
 
       // A selection with a dynamic argument keeps the runtime selector.
       const dynamic = Transform.compile({
@@ -13735,10 +13745,30 @@ namespace styles {
         .z_Ve3Ri63{padding:8px;}
         .z_Ve3Ri64{background-color:#000;}"
       `)
+      // The lynx target composes the same members under its dense names.
       expect(
         Transform.compile({ moduleId: 'Chip.tsx', source, target: 'lynx' })
           .code,
-      ).toBe(output.code)
+      ).toMatchInlineSnapshot(`
+        "
+        const __zyzzComposition105=["z0 z1 z2 z3","z0 z1 z2 z3 z4"];
+
+        import { Props as __zyzzProps } from 'zyzz/runtime';
+
+
+        export function Chip(props: { checked: boolean }) {
+          return <view className={__zyzzComposition105[((styles.root as unknown)||styles.root(),0)|((props.checked)?((styles.selected as unknown)||styles.selected(),1):0)]} />
+        }
+
+        namespace styles {
+          const row = { alignItems: 'center', display: 'flex', flexDirection: 'row' } as const
+
+          export const root = /*#__PURE__*/__zyzzProps.create({className:""})
+
+          export const selected = /*#__PURE__*/__zyzzProps.create({className:""})
+        }
+        "
+      `)
 
       const exported = Transform.compile({
         moduleId: 'Chip.tsx',
