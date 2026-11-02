@@ -388,6 +388,61 @@ fn write_defaults(output: &mut String, recipe: &runtime::Definition) {
     );
 }
 
+/// Own property names of `Object.prototype`. A direct read of one of these keys on a plain
+/// object reaches the inherited function or prototype instead of `undefined`, so an axis with
+/// such a name keeps the own-property guard `Recipe.create` applies to every axis. The axis
+/// grammar admits only `constructor` of these, and the list stays complete so the guard does not
+/// depend on that grammar.
+const PROTOTYPE_KEYS: [&str; 12] = [
+    "__defineGetter__",
+    "__defineSetter__",
+    "__lookupGetter__",
+    "__lookupSetter__",
+    "__proto__",
+    "constructor",
+    "hasOwnProperty",
+    "isPrototypeOf",
+    "propertyIsEnumerable",
+    "toLocaleString",
+    "toString",
+    "valueOf",
+];
+
+/// Whether a class-selection axis compares `String(value)` instead of the raw selection.
+/// `Recipe.create` coerces every selection, so `true` selects the `"true"` choice and `1` the
+/// `"1"` choice. Choices are strings, so a raw comparison misses only a non-string input whose
+/// coercion spells a choice: `true` and `false`, numbers and bigints, which start with an ASCII
+/// digit or `-`, and `NaN` and `Infinity`. Arrays, objects, and symbols are outside the typed
+/// input and compare raw. An axis without such a choice compares the raw value.
+fn coerces(choices: &[Arc<str>]) -> bool {
+    choices.iter().any(|choice| {
+        matches!(&**choice, "true" | "false" | "NaN" | "Infinity")
+            || choice
+                .as_bytes()
+                .first()
+                .is_some_and(|byte| byte.is_ascii_digit() || *byte == b'-')
+    })
+}
+
+/// Writes the selection read of one axis into `value`, as `Recipe.create` reads it. A missing
+/// key and an explicit `undefined` both read `undefined`, which the `null` check that follows
+/// treats alike, so a direct property read matches the own-property guard for every key that
+/// `Object.prototype` does not define.
+fn write_axis_read(output: &mut String, axis: &str) {
+    let mut key = String::new();
+
+    js::write_string(&mut key, axis);
+
+    if PROTOTYPE_KEYS.contains(&axis) {
+        let _ = write!(
+            output,
+            "value=Object.prototype.hasOwnProperty.call(input,{key})?input[{key}]:void 0;"
+        );
+    } else {
+        let _ = write!(output, "value=input[{key}];");
+    }
+}
+
 /// Writes a selector equivalent to `Recipe.create` for one unconditional recipe without payloads.
 /// Its fixed axes read constant keys, so each call stays monomorphic.
 fn write_selector(
@@ -415,13 +470,7 @@ fn write_selector(
     );
 
     for axis in recipe.axes.keys() {
-        let mut key = String::new();
-
-        js::write_string(&mut key, axis);
-        let _ = write!(
-            output,
-            "value=Object.prototype.hasOwnProperty.call(input,{key})?input[{key}]:void 0;"
-        );
+        write_axis_read(output, axis);
 
         if let Some(Some(fallback)) = recipe.defaults.get(axis) {
             output.push_str("if(value===void 0)value=");
@@ -483,13 +532,7 @@ fn write_class_selector(
     let positions = recipes::Positions::new(&recipe.axes);
 
     for (index, (axis, choices)) in recipe.axes.iter().enumerate() {
-        let mut key = String::new();
-
-        js::write_string(&mut key, axis);
-        let _ = write!(
-            output,
-            "value=Object.prototype.hasOwnProperty.call(input,{key})?input[{key}]:void 0;"
-        );
+        write_axis_read(output, axis);
 
         if let Some(Some(fallback)) = recipe.defaults.get(axis) {
             output.push_str("if(value===void 0)value=");
@@ -497,8 +540,11 @@ fn write_class_selector(
             output.push(';');
         }
 
-        // `String` matches the attribute value an attribute recipe would write.
-        output.push_str("if(value!==null&&value!==void 0){value=String(value);");
+        output.push_str(if coerces(choices) {
+            "if(value!==null&&value!==void 0){value=String(value);"
+        } else {
+            "if(value!==null&&value!==void 0){"
+        });
 
         if !compounds.is_empty() {
             let _ = write!(output, "s{index}=value;");

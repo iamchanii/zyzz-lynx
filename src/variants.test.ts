@@ -1840,8 +1840,8 @@ export const html = variants({
 
       expect(compiled.modules['app.ts']!.code).toMatchInlineSnapshot(`
         "
-        export const button = (((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className;let value,className="z_Zf5JrJ0 z_Zf5JrJ1 z_Zf5JrJ2 z_Zf5JrJ3 z_Zf5JrJ4 z_Zf5JrJ5 z-style-id-button";value=Object.prototype.hasOwnProperty.call(input,"size")?input["size"]:void 0;if(value===void 0)value="sm";if(value!==null&&value!==void 0){value=String(value);className+=value==="sm"?" zv1AOB2t480":value==="lg"?" zv1AOB2t481":""}value=Object.prototype.hasOwnProperty.call(input,"tone")?input["tone"]:void 0;if(value!==null&&value!==void 0){value=String(value);className+=value==="loud"?" zv1AOB2t482":""}if(external)className+=" "+external;return className}) as unknown as import('zyzz').variants.ReturnType<{selection:'className';variants:{"size":{"sm":{};"lg":{}};"tone":{"loud":{};"quiet":{}}}}>)
-        export const html = (((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className;let value,className="z_Zf5JrJ6 z-style-id-html";value=Object.prototype.hasOwnProperty.call(input,"size")?input["size"]:void 0;if(value!==null&&value!==void 0){value=String(value);className+=value==="sm"?" zvaOmHkFDw0":""}if(external)className+=" "+external;return className}) as unknown as import('zyzz').variants.ReturnType<{selection:'className';variants:{"size":{"sm":{}}}}>)"
+        export const button = (((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className;let value,className="z_Zf5JrJ0 z_Zf5JrJ1 z_Zf5JrJ2 z_Zf5JrJ3 z_Zf5JrJ4 z_Zf5JrJ5 z-style-id-button";value=input["size"];if(value===void 0)value="sm";if(value!==null&&value!==void 0){className+=value==="sm"?" zv1AOB2t480":value==="lg"?" zv1AOB2t481":""}value=input["tone"];if(value!==null&&value!==void 0){className+=value==="loud"?" zv1AOB2t482":""}if(external)className+=" "+external;return className}) as unknown as import('zyzz').variants.ReturnType<{selection:'className';variants:{"size":{"sm":{};"lg":{}};"tone":{"loud":{};"quiet":{}}}}>)
+        export const html = (((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className;let value,className="z_Zf5JrJ6 z-style-id-html";value=input["size"];if(value!==null&&value!==void 0){className+=value==="sm"?" zvaOmHkFDw0":""}if(external)className+=" "+external;return className}) as unknown as import('zyzz').variants.ReturnType<{selection:'className';variants:{"size":{"sm":{}}}}>)"
       `)
 
       const browser = await chromium.launch({
@@ -1891,6 +1891,116 @@ export const html = variants({
       } finally {
         await browser.close()
       }
+    })
+
+    test('reads axes directly and coerces only boolean-like and numeric choices, compiled and uncompiled', async () => {
+      const source = `import { variants } from 'zyzz'
+export const chip = variants({
+  selection: 'className',
+  variants: {
+    tone: { loud: { color: 'red' }, quiet: { color: 'gray' } },
+    solid: { true: { fontWeight: 700 }, false: { fontWeight: 400 } },
+    level: { '0': { opacity: 0 }, '1': { opacity: 1 } },
+    constructor: { on: { textTransform: 'uppercase' } },
+  },
+  defaultVariants: { tone: 'quiet' },
+}, { id: 'chip' })`
+      const compiled = Graph.compile({ modules: { 'app.ts': source } })
+      const code = await Packed.bundle({
+        entry: 'app.ts',
+        modules: { 'app.ts': compiled.modules['app.ts']!.code },
+      })
+      const authored = await Packed.bundle({
+        entry: 'app.ts',
+        modules: { 'app.ts': source },
+      })
+
+      // String axes read the key directly without coercion. Boolean-like and numeric choices keep
+      // `String(value)`, and `constructor`, the one `Object.prototype` name the axis grammar admits,
+      // keeps the own-property guard.
+      expect(compiled.modules['app.ts']!.code).toMatchInlineSnapshot(`
+        "
+        export const chip = (((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className;let value,className="z_Zf5JrJ0 z_Zf5JrJ1 z_Zf5JrJ2 z_Zf5JrJ3 z_Zf5JrJ4 z_Zf5JrJ5 z_Zf5JrJ6 z-style-id-chip";value=input["tone"];if(value===void 0)value="quiet";if(value!==null&&value!==void 0){className+=value==="loud"?" zv10R12RDv0":value==="quiet"?" zv10R12RDv1":""}value=input["solid"];if(value!==null&&value!==void 0){value=String(value);className+=value==="true"?" zv10R12RDv2":value==="false"?" zv10R12RDv3":""}value=input["level"];if(value!==null&&value!==void 0){value=String(value);className+=value==="0"?" zv10R12RDv4":value==="1"?" zv10R12RDv5":""}value=Object.prototype.hasOwnProperty.call(input,"constructor")?input["constructor"]:void 0;if(value!==null&&value!==void 0){className+=value==="on"?" zv10R12RDv6":""}if(external)className+=" "+external;return className}) as unknown as import('zyzz').variants.ReturnType<{selection:'className';variants:{"tone":{"loud":{};"quiet":{}};"solid":{"true":{};"false":{}};"level":{"0":{};"1":{}};"constructor":{"on":{}}}}>)"
+      `)
+
+      type Library = { chip: (input?: object) => string }
+      const App = new Function(`${code};return Fixture`)() as Library
+      const Authored = new Function(`${authored};return Fixture`)() as Library
+      const inputs: Record<string, object | undefined> = {
+        omitted: undefined,
+        'tone loud': { tone: 'loud' },
+        'tone undefined': { tone: undefined },
+        'tone null': { tone: null },
+        'solid true': { solid: true },
+        'solid "true"': { solid: 'true' },
+        'solid false': { solid: false },
+        'level 1': { level: 1 },
+        'level "0"': { level: '0' },
+        'constructor on': { constructor: 'on' },
+      }
+
+      // Compiled and uncompiled selections agree on every input, including an omitted key and an
+      // explicit `undefined`, `true` selecting the `"true"` choice, and an inherited `constructor`.
+      expect(
+        Object.entries(inputs).map(([label, input]) => [
+          label,
+          App.chip(input),
+          Authored.chip(input),
+        ]),
+      ).toMatchInlineSnapshot(`
+        [
+          [
+            "omitted",
+            "z_Zf5JrJ0 z_Zf5JrJ1 z_Zf5JrJ2 z_Zf5JrJ3 z_Zf5JrJ4 z_Zf5JrJ5 z_Zf5JrJ6 z-style-id-chip zv10R12RDv1",
+            "z-style-id-chip zv10R12RDv1",
+          ],
+          [
+            "tone loud",
+            "z_Zf5JrJ0 z_Zf5JrJ1 z_Zf5JrJ2 z_Zf5JrJ3 z_Zf5JrJ4 z_Zf5JrJ5 z_Zf5JrJ6 z-style-id-chip zv10R12RDv0",
+            "z-style-id-chip zv10R12RDv0",
+          ],
+          [
+            "tone undefined",
+            "z_Zf5JrJ0 z_Zf5JrJ1 z_Zf5JrJ2 z_Zf5JrJ3 z_Zf5JrJ4 z_Zf5JrJ5 z_Zf5JrJ6 z-style-id-chip zv10R12RDv1",
+            "z-style-id-chip zv10R12RDv1",
+          ],
+          [
+            "tone null",
+            "z_Zf5JrJ0 z_Zf5JrJ1 z_Zf5JrJ2 z_Zf5JrJ3 z_Zf5JrJ4 z_Zf5JrJ5 z_Zf5JrJ6 z-style-id-chip",
+            "z-style-id-chip",
+          ],
+          [
+            "solid true",
+            "z_Zf5JrJ0 z_Zf5JrJ1 z_Zf5JrJ2 z_Zf5JrJ3 z_Zf5JrJ4 z_Zf5JrJ5 z_Zf5JrJ6 z-style-id-chip zv10R12RDv1 zv10R12RDv2",
+            "z-style-id-chip zv10R12RDv1 zv10R12RDv2",
+          ],
+          [
+            "solid "true"",
+            "z_Zf5JrJ0 z_Zf5JrJ1 z_Zf5JrJ2 z_Zf5JrJ3 z_Zf5JrJ4 z_Zf5JrJ5 z_Zf5JrJ6 z-style-id-chip zv10R12RDv1 zv10R12RDv2",
+            "z-style-id-chip zv10R12RDv1 zv10R12RDv2",
+          ],
+          [
+            "solid false",
+            "z_Zf5JrJ0 z_Zf5JrJ1 z_Zf5JrJ2 z_Zf5JrJ3 z_Zf5JrJ4 z_Zf5JrJ5 z_Zf5JrJ6 z-style-id-chip zv10R12RDv1 zv10R12RDv3",
+            "z-style-id-chip zv10R12RDv1 zv10R12RDv3",
+          ],
+          [
+            "level 1",
+            "z_Zf5JrJ0 z_Zf5JrJ1 z_Zf5JrJ2 z_Zf5JrJ3 z_Zf5JrJ4 z_Zf5JrJ5 z_Zf5JrJ6 z-style-id-chip zv10R12RDv1 zv10R12RDv5",
+            "z-style-id-chip zv10R12RDv1 zv10R12RDv5",
+          ],
+          [
+            "level "0"",
+            "z_Zf5JrJ0 z_Zf5JrJ1 z_Zf5JrJ2 z_Zf5JrJ3 z_Zf5JrJ4 z_Zf5JrJ5 z_Zf5JrJ6 z-style-id-chip zv10R12RDv1 zv10R12RDv4",
+            "z-style-id-chip zv10R12RDv1 zv10R12RDv4",
+          ],
+          [
+            "constructor on",
+            "z_Zf5JrJ0 z_Zf5JrJ1 z_Zf5JrJ2 z_Zf5JrJ3 z_Zf5JrJ4 z_Zf5JrJ5 z_Zf5JrJ6 z-style-id-chip zv10R12RDv1 zv10R12RDv6",
+            "z-style-id-chip zv10R12RDv1 zv10R12RDv6",
+          ],
+        ]
+      `)
     })
 
     test('numbers array-index choice names in Object.keys order, compiled and uncompiled', async () => {
@@ -2157,7 +2267,7 @@ export const initialized = renderToStaticMarkup(<button {...classes.button({ var
         `false`,
       )
       expect(output.code.includes('{...classes.button(')).toMatchInlineSnapshot(
-        `true`,
+        `false`,
       )
       expect(
         output.code.includes('{...attributes.button('),
