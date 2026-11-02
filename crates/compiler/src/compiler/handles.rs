@@ -33,7 +33,7 @@ use crate::internal::theme::Definition;
 use crate::internal::token::{Composition, CssOutput};
 use crate::js::{self, Record};
 use crate::web::internal::class_name::{Registry, Visibility};
-use crate::web::internal::themes::Shared;
+use crate::web::internal::themes::{self as theme_rules, Shared};
 
 /// The sources of the last decoded snapshot, which a later snapshot names as `0`.
 struct Sources {
@@ -961,8 +961,14 @@ pub fn transform(input: &Value, separate: Option<&str>) -> Result<String> {
         },
     )?;
     // A single module is a complete graph of one module, so a Lynx production transform names
-    // its classes densely, as `Graph.compile` does for the whole application.
+    // its classes, token custom properties, and keyframes densely, as `Graph.compile` does for
+    // the whole application.
     let dense_names = extracted.lynx && compiler != Some(false) && !options.development;
+    let variables = dense_names.then(|| {
+        Arc::new(theme_rules::dense_names(
+            extracted.vars.iter().map(|(_, theme)| &theme.metadata),
+        ))
+    });
     let mut registry = if dense_names {
         Registry::dense()
     } else {
@@ -982,6 +988,10 @@ pub fn transform(input: &Value, separate: Option<&str>) -> Result<String> {
                 options.development,
             )
         });
+
+        let keyframes = dense::keyframes(extracted.contributions.iter());
+
+        dense::rename_keyframes(&mut extracted, &keyframes);
     }
 
     let output = transform::compile(
@@ -1003,6 +1013,7 @@ pub fn transform(input: &Value, separate: Option<&str>) -> Result<String> {
             source,
             style_classes: None,
             unapplied: None,
+            variables: variables.as_ref(),
             wrappers: None,
         },
         &extracted,

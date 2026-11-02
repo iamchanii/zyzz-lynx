@@ -377,7 +377,7 @@ describe('zyzz', () => {
           ".z_scheme-light { color-scheme: light }",
           ".z_scheme-light-dark { color-scheme: light dark }",
           ".z-theme-theme {  }",
-          ".z0 { color: {{--z-color-brand}} }",
+          ".z0 { color: {{--z0}} }",
         ]
       `)
       expect(mainThread.match(/"z-theme-theme[^"]*"/g)).toMatchInlineSnapshot(`

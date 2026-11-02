@@ -1,11 +1,16 @@
-//! Renames the hashed choice-class prefixes of a module to dense graph-wide prefixes before the
-//! module is transformed.
+//! Renames the hashed choice-class prefixes and keyframes of a module to dense graph-wide names
+//! before the module is transformed.
 //!
 //! Extraction names a recipe's choice classes from its definition identity, so an extracted module
 //! stays valid in any graph. A dense table instead allocates names in graph compilation order, so
 //! the rename runs once per transform over the module's own recipes and the compositions that
 //! copy their rules. Prefixes of packed libraries keep their published names, since the library's
 //! stylesheet prints them.
+//!
+//! Extraction likewise names a `@keyframes` definition from its module qualifier and binding, and
+//! bakes that name into every style value that reads the binding. A graph allocates dense
+//! keyframe names up front from every module's contributions, so each module renames its
+//! definitions, its binding constants, and the names its values carry from the same table.
 
 use std::sync::Arc;
 
@@ -13,8 +18,14 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::compiler::internal::recipes;
 use crate::compiler::source::{Call, Extracted};
-use crate::style::{NamedStyle, Rule};
+use crate::internal::token::{Expression, Part};
+use crate::js;
+use crate::style::{Declaration, NamedStyle, Rule, Targets, Value};
 use crate::web::internal::class_name::Units;
+use crate::web::internal::contributions::{Definition, Kind};
+
+/// Dense keyframe names keyed by the extracted names they replace.
+pub type Keyframes = FxHashMap<Arc<str>, Arc<str>>;
 
 /// Hashed prefixes and the dense prefixes that replace them.
 type Renamed = FxHashMap<Arc<str>, Arc<str>>;
@@ -181,4 +192,228 @@ fn rename_class(class: &str, renamed: &Renamed) -> Option<Arc<str>> {
     let dense = renamed.get(prefix)?;
 
     Some(Arc::from(format!("{dense}{rest}")))
+}
+
+/// Allocates one dense name per `@keyframes` contribution, in the given order, as `z` and a
+/// base-36 index. Animation names share no namespace with classes, so the table starts at zero.
+pub fn keyframes<'c>(contributions: impl IntoIterator<Item = &'c Definition>) -> Keyframes {
+    let mut renamed = Keyframes::default();
+
+    for definition in contributions {
+        let Kind::Keyframes { name, .. } = &definition.kind else {
+            continue;
+        };
+
+        if renamed.contains_key(name) {
+            continue;
+        }
+
+        let dense: Arc<str> = format!("z{}", js::radix(renamed.len() as u64, 36)).into();
+
+        renamed.insert(Arc::clone(name), dense);
+    }
+
+    renamed
+}
+
+/// Replaces every keyframe name of `renamed` in the module's contributions, in the constants
+/// that bind its own definitions, and in the values of its styles.
+pub fn rename_keyframes(extracted: &mut Extracted<'_>, renamed: &Keyframes) {
+    for definition in &mut extracted.contributions {
+        if let Some(updated) = rename_contribution(definition, renamed) {
+            *definition = updated;
+        }
+    }
+
+    for call in &mut extracted.contribution_calls {
+        if let Some(dense) = call.name.as_ref().and_then(|name| renamed.get(name)) {
+            call.name = Some(Arc::clone(dense));
+        }
+    }
+
+    for style in &mut extracted.styles.styles {
+        if let Some(updated) = rename_keyframes_style(style, renamed) {
+            *style = updated;
+        }
+    }
+}
+
+/// The contribution with its keyframe names replaced, or `None` when it carries none. A
+/// `@keyframes` definition renames itself and its frames, and a global rule renames its values.
+pub fn rename_contribution(definition: &Definition, renamed: &Keyframes) -> Option<Definition> {
+    let kind = match &definition.kind {
+        Kind::Keyframes { frames, name } => {
+            let dense = renamed.get(name);
+            let mut changed = dense.is_some();
+            let frames: Vec<(Arc<str>, Arc<NamedStyle>)> = frames
+                .iter()
+                .map(|(selector, style)| {
+                    let updated = rename_keyframes_style(style, renamed);
+
+                    changed |= updated.is_some();
+
+                    (
+                        Arc::clone(selector),
+                        updated.unwrap_or_else(|| Arc::clone(style)),
+                    )
+                })
+                .collect();
+
+            changed.then(|| Kind::Keyframes {
+                frames,
+                name: dense.map_or_else(|| Arc::clone(name), Arc::clone),
+            })
+        }
+        Kind::Rule { selector, style } => {
+            rename_keyframes_style(style, renamed).map(|style| Kind::Rule {
+                selector: Arc::clone(selector),
+                style,
+            })
+        }
+        _ => None,
+    }?;
+
+    Some(Definition {
+        kind,
+        within: definition.within.clone(),
+    })
+}
+
+/// The style with every keyframe name in its values replaced, or `None` when none changed.
+fn rename_keyframes_style(style: &Arc<NamedStyle>, renamed: &Keyframes) -> Option<Arc<NamedStyle>> {
+    let mut changed = false;
+    let declarations: Vec<Declaration> = style
+        .declarations
+        .iter()
+        .map(
+            |declaration| match rename_value(&declaration.value, renamed) {
+                Some(value) => {
+                    changed = true;
+
+                    Declaration {
+                        value,
+                        ..declaration.clone()
+                    }
+                }
+                None => declaration.clone(),
+            },
+        )
+        .collect();
+    let rules: Option<Vec<Rule>> = style.rules.as_ref().map(|rules| {
+        rules
+            .iter()
+            .map(|rule| match rename_keyframes_style(&rule.style, renamed) {
+                Some(nested) => {
+                    changed = true;
+
+                    Rule {
+                        style: nested,
+                        ..rule.clone()
+                    }
+                }
+                None => rule.clone(),
+            })
+            .collect()
+    });
+    let targets: Option<Targets> = style.targets.as_ref().map(|targets| {
+        match targets
+            .web
+            .as_ref()
+            .and_then(|web| rename_keyframes_style(web, renamed))
+        {
+            Some(web) => {
+                changed = true;
+
+                Targets {
+                    web: Some(web),
+                    ..targets.clone()
+                }
+            }
+            None => targets.clone(),
+        }
+    });
+
+    changed.then(|| {
+        Arc::new(NamedStyle {
+            declarations,
+            rules,
+            targets,
+            ..(**style).clone()
+        })
+    })
+}
+
+/// The value with every keyframe name replaced, or `None` when it names none.
+fn rename_value(value: &Value, renamed: &Keyframes) -> Option<Value> {
+    match value {
+        Value::String(text) => rename_text(text, renamed).map(|text| Value::String(text.into())),
+        Value::Expression(expression) => {
+            let mut changed = false;
+            let parts: Vec<Part> = expression
+                .parts
+                .iter()
+                .map(|part| match part {
+                    Part::Text(text) => match rename_text(text, renamed) {
+                        Some(text) => {
+                            changed = true;
+                            Part::Text(text.into())
+                        }
+                        None => part.clone(),
+                    },
+                    _ => part.clone(),
+                })
+                .collect();
+
+            changed.then(|| {
+                Value::Expression(Arc::new(Expression {
+                    group: expression.group.clone(),
+                    parts,
+                }))
+            })
+        }
+        _ => None,
+    }
+}
+
+/// `text` with every whole identifier that names a keyframe in `renamed` replaced, or `None`
+/// when it names none. Extracted keyframe names start with `z-k`, so only those tokens are read.
+fn rename_text(text: &str, renamed: &Keyframes) -> Option<String> {
+    let bytes = text.as_bytes();
+    let mut output = String::new();
+    let mut last = 0;
+
+    for (index, _) in text.match_indices("z-k") {
+        if index < last
+            || index
+                .checked_sub(1)
+                .and_then(|previous| bytes.get(previous))
+                .is_some_and(|byte| is_ident(*byte))
+        {
+            continue;
+        }
+
+        let end = bytes
+            .get(index..)
+            .and_then(|rest| rest.iter().position(|byte| !is_ident(*byte)))
+            .map_or(text.len(), |length| index + length);
+        let Some(dense) = text.get(index..end).and_then(|token| renamed.get(token)) else {
+            continue;
+        };
+
+        output.push_str(text.get(last..index).unwrap_or_default());
+        output.push_str(dense);
+        last = end;
+    }
+
+    if last == 0 {
+        return None;
+    }
+
+    output.push_str(text.get(last..).unwrap_or_default());
+    Some(output)
+}
+
+/// Whether a byte continues a CSS identifier. Every non-ASCII byte does.
+const fn is_ident(byte: u8) -> bool {
+    byte.is_ascii_alphanumeric() || byte == b'-' || byte == b'_' || byte >= 0x80
 }

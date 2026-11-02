@@ -6326,12 +6326,13 @@ export const light = <text {...cx(vars({ colorScheme: 'light' }), styles.page())
         export const light = <text {...({className:"z-theme-theme z_scheme-light z0",style:{colorScheme:"light"}})} />"
       `)
       expect(lynx.code.includes('zyzz/runtime')).toMatchInlineSnapshot(`false`)
+      // A production Lynx module names its token property densely and prints no fallback.
       expect(lynx.css).toMatchInlineSnapshot(`
-        ".z-theme-theme{--z-color-brand:#06c;}
+        ".z-theme-theme{--z0:#06c;}
         .z_scheme-dark{color-scheme:dark;}
         .z_scheme-light{color-scheme:light;}
         .z_scheme-light-dark{color-scheme:light dark;}
-        .z0{color:var(--z-color-brand,#06c);}"
+        .z0{color:var(--z0);}"
       `)
 
       // The web target folds the same selections under its readable names.
@@ -6368,6 +6369,68 @@ export const light = <text {...cx(vars({ colorScheme: 'light' }), styles.page())
           "<text {...vars({ colorScheme: Math.random() > 0.5 ? 'dark' : 'light' })} />",
         ),
       ).toMatchInlineSnapshot(`true`)
+    })
+
+    test('names token properties and keyframes densely and prints no fallbacks', () => {
+      const source = `import { defineConfig, defineVars } from 'zyzz'
+import { keyframes } from 'zyzz/web'
+const theme = defineVars({ color: { brand: '#06c', muted: '#555' } })
+const { style, vars } = defineConfig({ vars: theme })
+export const fade = keyframes({ from: { opacity: 0 }, to: { opacity: 1 } })
+export const toast = style({ animation: \`\${fade} 1s\`, animationName: fade, color: vars.color.muted })`
+      const lynx = Transform.compile({
+        moduleId: 'App.tsx',
+        source,
+        target: 'lynx',
+      })
+
+      // The keyframes rule, the binding constant, and both animation values share one dense
+      // name. The theme table names each token property in path order, so the referenced
+      // `muted` prints as `--z1` in the root rule and the declaration, without a fallback.
+      expect(lynx.css).toMatchInlineSnapshot(`
+        "@keyframes z0{from{opacity:0;}to{opacity:1;}}
+        .z-theme-theme{--z1:#555;}
+        .z0{animation:z0 1s;}
+        .z1{animation-name:z0;}
+        .z2{color:var(--z1);}"
+      `)
+      expect(lynx.code).toMatchInlineSnapshot(`
+        "
+        import { Props as __zyzzProps } from 'zyzz/runtime';
+
+
+        const theme = ({} as import('zyzz').Vars.Definition<{readonly "color":{readonly "brand":"#06c";readonly "muted":"#555"}}>)
+        const { style, vars } = ({} as import('zyzz').Config.VariableConfig<{readonly "vars":{readonly "color":{readonly "brand":"#06c";readonly "muted":"#555"}}}>)
+        export const fade = "z0"
+        export const toast = /*#__PURE__*/__zyzzProps.create({className:"z0 z1 z2 z-style-l0kPgl-toast"})"
+      `)
+
+      // A development build keeps readable names and still prints no fallback on Lynx.
+      const development = Transform.compile({
+        development: true,
+        moduleId: 'App.tsx',
+        source,
+        target: 'lynx',
+      })
+
+      expect(development.css).toMatchInlineSnapshot(`
+        "@keyframes z-k-l0kPgl-fade{from{opacity:0;}to{opacity:1;}}
+        .z-theme-theme{--z-color-muted:#555;}
+        .z-l0kPgl-toast-animation-0{animation:z-k-l0kPgl-fade 1s;}
+        .z-l0kPgl-toast-animation-name-1{animation-name:z-k-l0kPgl-fade;}
+        .z-l0kPgl-text-\\5b var\\28 --z-color-muted\\29 \\5d{color:var(--z-color-muted);}"
+      `)
+
+      // The web target keeps readable names and fallbacks.
+      const web = Transform.compile({ moduleId: 'App.tsx', source })
+
+      expect(web.css).toMatchInlineSnapshot(`
+        "@keyframes z-k-l0kPgl-fade{from{opacity:0;}to{opacity:1;}}
+        .z-theme-theme{--z-color-muted:#555;}
+        .z_l0kPgl0{animation:z-k-l0kPgl-fade 1s;}
+        .z_l0kPgl1{animation-name:z-k-l0kPgl-fade;}
+        .z_l0kPgl2{color:var(--z-color-muted,#555);}"
+      `)
     })
   })
 })

@@ -366,9 +366,11 @@ pub struct ScopeFold {
 pub struct StaticThemeReference {
     /// Exclusive offset of the read.
     pub end: u32,
+    /// The token read, which a target serializes under its own names.
+    pub reference: Arc<token::Reference>,
     /// Inclusive offset of the read.
     pub start: u32,
-    /// Serialized CSS value.
+    /// Serialized CSS value with readable names and the defining fallback.
     pub value: String,
 }
 
@@ -3495,6 +3497,7 @@ pub fn extract<'a>(allocator: &'a Allocator, options: &Options<'_, 'a>) -> Resul
 
             Some(StaticThemeReference {
                 end: node.end,
+                reference: Arc::clone(&token.reference),
                 start: node.start,
                 value: web_themes::Themes::new().serialize(&token.reference),
             })

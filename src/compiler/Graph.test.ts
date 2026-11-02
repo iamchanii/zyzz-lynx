@@ -256,6 +256,178 @@ export const badge = variants({
     expect(recompiled.modules['styles.ts']).toEqual(fresh.modules['styles.ts'])
   })
 
+  test('names lynx production token properties and keyframes densely and prints no fallbacks', async () => {
+    const modules = {
+      'config.ts': `import { defineConfig, defineVars } from 'zyzz'
+const theme = defineVars({ color: { brand: 'rgb(0, 102, 204)', muted: 'rgb(85, 93, 109)' }, spacing: { gap: '8px' } })
+export const { style, vars } = defineConfig({ vars: theme })`,
+      'motion.ts': `import { keyframes } from 'zyzz/web'
+import { style, vars } from './config.ts'
+export const fade = keyframes({ from: { opacity: 0 }, to: { opacity: 1 } })
+export const toast = style({ animation: \`\${fade} 1s linear\`, color: vars.color.brand })`,
+      'index.tsx': `import { style, vars } from './config.ts'
+import { fade, toast } from './motion.ts'
+const badge = style({ animationName: fade, color: vars.color.muted, paddingLeft: vars.spacing.gap })
+export const App = () => <main {...vars({})}>
+  <b {...toast()}>toast</b>
+  <i {...badge()}>badge</i>
+</main>`,
+    }
+    const options = {
+      [ClassName.complete]: true,
+      [ClassName.references]: true,
+      [ThemeRules.shared]: 'all',
+      modules,
+      target: 'lynx',
+    } as const
+    const compiler = Graph.create()
+    const output = compiler.compile(options)
+
+    // The theme table names each token property once, in path order, and the graph's keyframes
+    // take one table in module order. Every module prints those names: the root rule, the
+    // keyframes rule, the binding constant, and each declaration. No reference carries a
+    // fallback, since the Lynx root carries the theme scope.
+    expect(output.sharedCss).toMatchInlineSnapshot(`
+      "@keyframes z0{from{opacity:0;}to{opacity:1;}}
+      .z-theme-theme{--z0:rgb(0, 102, 204);}
+      .z-theme-theme{--z1:rgb(85, 93, 109);--z2:8px;}"
+    `)
+    expect(output.modules['motion.ts']!.css).toMatchInlineSnapshot(`
+      ".z0{animation:z0 1s linear;}
+      .z1{color:var(--z0);}"
+    `)
+    expect(output.modules['motion.ts']!.code).toMatchInlineSnapshot(`
+      "
+      import { Props as __zyzzProps } from 'zyzz/runtime';
+
+      import { style, vars } from './config.ts'
+      export const fade = "z0"
+      export const toast = /*#__PURE__*/__zyzzProps.create({className:"z0 z1"})"
+    `)
+    expect(output.modules['index.tsx']!.css).toMatchInlineSnapshot(`
+      ".z2{animation-name:z0;}
+      .z3{color:var(--z1);}
+      .z4{padding-left:var(--z2);}"
+    `)
+    expect(output.modules['index.tsx']!.code).toMatchInlineSnapshot(`
+      "import { style, vars } from './config.ts'
+      import './config.ts';
+      import { fade, toast } from './motion.ts'
+      import './motion.ts';
+      const badge = (void 0 as unknown as import('zyzz').style.ReturnType)
+      export const App = () => <main {...({className:"z-theme-theme"})}>
+        <b className={"z0 z1"}>toast</b>
+        <i className={"z2 z3 z4"}>badge</i>
+      </main>"
+    `)
+
+    const css = (result: Graph.compile.ReturnType) =>
+      [
+        result.sharedCss,
+        ...Object.values(result.modules).map((module) => module.css),
+      ].join('\n')
+    const web = Graph.compile({ ...options, target: 'web' })
+
+    // The web target keeps readable names and fallbacks.
+    expect(web.sharedCss).toMatchInlineSnapshot(`
+      "@keyframes z-k-GyRc6i-fade{from{opacity:0;}to{opacity:1;}}
+      .z-theme-theme{--z-color-brand:rgb(0, 102, 204);}
+      .z-theme-theme{--z-color-muted:rgb(85, 93, 109);--z-spacing-gap:8px;}"
+    `)
+    expect(web.modules['motion.ts']!.css).toMatchInlineSnapshot(`
+      ".z_GyRc6i0{animation:z-k-GyRc6i-fade 1s linear;}
+      .z_GyRc6i1{color:var(--z-color-brand,rgb(0, 102, 204));}"
+    `)
+
+    // A development Lynx build keeps readable names and still prints no fallback.
+    const development = Graph.compile({ ...options, development: true })
+
+    expect(development.modules['motion.ts']!.css).toMatchInlineSnapshot(`
+      ".z-GyRc6i-animation-\\5b z-k-GyRc6i-fade_20_1s_20_linear\\5d{animation:z-k-GyRc6i-fade 1s linear;}
+      .z-GyRc6i-text-\\5b var\\28 --z-color-brand\\29 \\5d{color:var(--z-color-brand);}"
+    `)
+    expect(development.sharedCss?.includes('@keyframes z-k-')).toBe(true)
+
+    // Rendered under the theme scope, the dense stylesheet computes what the web one does.
+    const browser = await chromium.launch()
+    try {
+      const page = await browser.newPage()
+      const computed = async (result: Graph.compile.ReturnType) => {
+        const rendered = await Wrappers.render({
+          css: css(result),
+          entry: 'index.tsx',
+          modules: Object.fromEntries(
+            Object.entries(result.modules).map(([id, module]) => [
+              id,
+              module.code,
+            ]),
+          ),
+        })
+
+        await page.setContent(`<style>${css(result)}</style>${rendered.markup}`)
+
+        return page.locator('main > *').evaluateAll((nodes) =>
+          nodes.map((node) => {
+            const style = getComputedStyle(node)
+
+            return {
+              animationName: style.animationName,
+              color: style.color,
+              paddingLeft: style.paddingLeft,
+            }
+          }),
+        )
+      }
+      const lynx = await computed(output)
+
+      expect(lynx).toMatchInlineSnapshot(`
+        [
+          {
+            "animationName": "z0",
+            "color": "rgb(0, 102, 204)",
+            "paddingLeft": "0px",
+          },
+          {
+            "animationName": "z0",
+            "color": "rgb(85, 93, 109)",
+            "paddingLeft": "8px",
+          },
+        ]
+      `)
+      expect(await computed(web)).toEqual(
+        lynx.map((element) => ({
+          ...element,
+          animationName: expect.stringMatching(/^z-k-/),
+        })),
+      )
+    } finally {
+      await browser.close()
+    }
+
+    // A keyframes definition added to the dependency shifts the keyframe table, so the cached
+    // consumer, whose source is unchanged, recompiles to the names a fresh compilation chooses.
+    const edited = {
+      ...options,
+      modules: {
+        ...modules,
+        'motion.ts': modules['motion.ts'].replace(
+          'export const fade',
+          "export const spin = keyframes({ to: { transform: 'rotate(1turn)' } })\nexport const fade",
+        ),
+      },
+    }
+    const recompiled = compiler.compile(edited)
+    const fresh = Graph.compile(edited)
+
+    expect(recompiled.modules['index.tsx']!.css).toMatchInlineSnapshot(`
+      ".z2{animation-name:z1;}
+      .z3{color:var(--z1);}
+      .z4{padding-left:var(--z2);}"
+    `)
+    expect(recompiled.modules['index.tsx']).toEqual(fresh.modules['index.tsx'])
+    expect(recompiled.modules['motion.ts']).toEqual(fresh.modules['motion.ts'])
+  })
+
   test('publishes lynx flat class rules in version 37 contracts', () => {
     const publisher = Graph.compile({
       modules: {

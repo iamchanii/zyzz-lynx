@@ -94,6 +94,7 @@ fn options(input: &Input) -> transform::Options<'_, '_> {
         source: &input.source,
         style_classes: None,
         unapplied: None,
+        variables: None,
         wrappers: None,
     }
 }

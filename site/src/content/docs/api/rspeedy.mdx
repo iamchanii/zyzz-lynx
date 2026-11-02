@@ -41,7 +41,9 @@ root.render(<App />)
 
 Each environment compiles separately, so `lynx` and `web` environments receive their own stylesheet. Watch rebuilds recompile the stylesheet after any source edit.
 
-Generated classes take their names from one table in compilation order, such as `z3` for a declaration and `zA00` for a recipe choice, since no stylesheet outside the bundle reads them. An edit can rename the classes of modules compiled after it, and those modules rebuild with the stylesheet.
+Generated classes take their names from one table in compilation order, such as `z3` for a declaration and `zA00` for a recipe choice, since no stylesheet outside the bundle reads them. Token custom properties and `@keyframes` rules take dense names as well, such as `--z5` in theme path order and `z1` in module order, and the constant a `keyframes()` binding exports carries the same name. An edit can rename the classes and keyframes of modules compiled after it, and those modules rebuild with the stylesheet.
+
+Token references print as `var(--z5)` without a fallback on every Lynx build, since the encoder stores each fallback beside the value and in a per-rule map. The root element must carry the theme scope through `vars({})` for tokens to resolve. Development builds keep the readable `z-…`, `--z-color-…`, and `z-k-…` names.
 
 With [`options.inject`](#optionsinject), the plugin imports `zyzz.css` ahead of every entry's own modules instead. A manual import then resolves to the same module, which stays in its injected position.
 

@@ -148,6 +148,7 @@ impl Input {
             scope: self.scope.as_deref(),
             shared: self.shared,
             styles: &self.styles,
+            variables: None,
             vars: self.vars.as_deref(),
         }
     }

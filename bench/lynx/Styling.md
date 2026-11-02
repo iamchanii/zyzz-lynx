@@ -140,6 +140,8 @@ The `zyzz/rspeedy` plugin compiles every environment for the `lynx` target, beca
 - Nested conditions flatten: `&` becomes the style's class, and a query wraps the class rule.
 - Lengths accept the Lynx `rpx` and `sp` units.
 - Lynx encodes `var(--x)` references as `{{--x}}` and keeps custom property declarations in a rule's `variables` map rather than its `style` list. Both are visible in a development build's `dist/.lynx/<entry>/tasm.json`.
+- The compiler prints token references without their fallback on Lynx, as `var(--x)`, since the encoder stores each fallback beside the value and in a per-rule map, and the root element must carry the `z-theme-theme` class through `vars({})` for any token to resolve.
+- A production build names generated classes, token custom properties, and keyframes from dense tables: a class becomes `z3`, a token property `--z5` in theme path order, and a `@keyframes` rule `z1` in module order, in the stylesheet and in the binding constants the modules export. Development builds keep the readable `z-…`, `--z-color-…`, and `z-k-…` names.
 - The `zyzz/rspeedy` plugin composes definitions independently by default: a declaration repeated across styles shares one rule, and conflict order holds inside `cx` calls and each style. `options.composition: 'ordered'` or a config's `composition` restores per-module rule positions.
 - The default output is atomic, one rule per declaration, so an element's class list grows with its declaration count. `defineConfig({ output: 'grouped' })` emits one rule per definition instead. The [CSS Output](https://zyzz.style/docs/guides/css-output) guide covers the trade-off.
 

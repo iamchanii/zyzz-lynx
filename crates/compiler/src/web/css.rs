@@ -67,6 +67,9 @@ pub struct Options<'a> {
     pub shared: Option<Shared>,
     /// Ordered definitions; no themes or source adapter is required.
     pub styles: &'a [Arc<NamedStyle>],
+    /// Dense custom property names of a Lynx production graph, which every token reference and
+    /// scope rule prints instead of the readable names.
+    pub variables: Option<&'a Arc<themes::Names>>,
     /// Named scopes; only variables referenced by these styles are emitted.
     pub vars: Option<&'a [(Arc<str>, Scope)]>,
 }
@@ -402,6 +405,8 @@ struct Compiler<'a> {
     runs: FxHashMap<usize, FxHashMap<u32, usize>>,
     selectors: FxHashMap<String, Arc<str>>,
     serialized: FxHashMap<usize, Rc<str>>,
+    /// How the lazily created collector prints references.
+    theme_options: themes::Options,
     themes: Option<Themes>,
     /// Reused buffer for the body of the unit being named.
     unit_body: String,
@@ -771,6 +776,14 @@ impl<'a> Compiler<'a> {
         id
     }
 
+    /// The reference collector, created on the first reference or scope.
+    fn themes(&mut self) -> &mut Themes {
+        let options = &self.theme_options;
+
+        self.themes
+            .get_or_insert_with(|| Themes::create(options.clone()))
+    }
+
     fn serialize_token(&mut self, reference: &Arc<Reference>) -> Rc<str> {
         let key = Arc::as_ptr(reference).addr();
 
@@ -778,11 +791,7 @@ impl<'a> Compiler<'a> {
             return Rc::clone(value);
         }
 
-        let value: Rc<str> = self
-            .themes
-            .get_or_insert_with(Themes::new)
-            .serialize(reference)
-            .into();
+        let value: Rc<str> = self.themes().serialize(reference).into();
 
         self.serialized.insert(key, Rc::clone(&value));
         self.references.push(Arc::clone(reference));
@@ -1468,6 +1477,10 @@ fn compile_with(options: &Options<'_>, units: &mut Units<'_>) -> Result<Output> 
         runs: FxHashMap::default(),
         selectors: FxHashMap::default(),
         serialized: FxHashMap::default(),
+        theme_options: themes::Options {
+            lynx: options.lynx,
+            names: options.variables.cloned(),
+        },
         themes: None,
         unit_body: String::new(),
         unit_key: String::new(),
@@ -1965,8 +1978,7 @@ fn run<'a>(
         }
     } else if compiler.themes.is_some() || options.vars.is_some() || options.schemes {
         compiler
-            .themes
-            .get_or_insert_with(Themes::new)
+            .themes()
             .emit(
                 options.vars.unwrap_or_default(),
                 options.schemes,

@@ -51,7 +51,7 @@ use crate::web::internal::class_name::{self, Registry, Units, Used, Visibility};
 use crate::web::internal::combination;
 use crate::web::internal::contributions;
 use crate::web::internal::flat;
-use crate::web::internal::themes::{Resource, Scope, Shared};
+use crate::web::internal::themes::{self as theme_rules, Resource, Scope, Shared};
 
 /// Inputs of one module's web transform.
 #[expect(
@@ -105,6 +105,8 @@ pub struct Options<'s, 'a> {
     pub shared: Option<Shared>,
     /// Complete module text.
     pub source: &'a str,
+    /// Dense custom property names of a Lynx production graph.
+    pub variables: Option<&'s Arc<theme_rules::Names>>,
 }
 
 /// Defining calls of theme scopes, by scope key, in registration order.
@@ -1983,6 +1985,7 @@ pub fn compile<'a>(
         scope: None,
         shared: options.shared,
         styles: &styles,
+        variables: options.variables,
         vars: (!vars.is_empty()).then_some(vars.as_slice()),
     };
     let mut emitted = if let Some(units) = units {
@@ -2030,6 +2033,7 @@ pub fn compile<'a>(
         parsed,
         typed,
         unapplied: options.unapplied,
+        variables: options.variables,
     };
     let runtime = unique(&walker.identifiers, "__zyzzProps");
     let taken = |name: &str| walker.identifiers.contains_key(name);
@@ -3117,6 +3121,8 @@ struct Generator<'g, 'a> {
     typed: bool,
     /// Exports a complete graph proved no module reads at runtime.
     unapplied: Option<&'g unapplied::Unused>,
+    /// Dense custom property names of a Lynx production graph.
+    variables: Option<&'g Arc<theme_rules::Names>>,
 }
 
 impl<'a> Generator<'_, 'a> {
@@ -4870,10 +4876,26 @@ impl<'a> Generator<'_, 'a> {
 
         replacements.sort_by_key(|(start, _)| *start);
 
+        // Extraction serialized each read with readable names and fallbacks. Lynx prints the
+        // reference as its stylesheet does, without the fallback and under any dense name.
+        let mut collector = extracted.lynx.then(|| {
+            theme_rules::Themes::create(theme_rules::Options {
+                lynx: true,
+                names: self.variables.cloned(),
+            })
+        });
+
         for reference in &extracted.static_theme_references {
-            if !replaced(&replacements, reference.start, reference.end) {
-                module.overwrite(reference.start, reference.end, quote(&reference.value))?;
+            if replaced(&replacements, reference.start, reference.end) {
+                continue;
             }
+
+            let value = match &mut collector {
+                Some(collector) => collector.serialize(&reference.reference),
+                None => reference.value.clone(),
+            };
+
+            module.overwrite(reference.start, reference.end, quote(&value))?;
         }
 
         for reference in &extracted.theme_references {
@@ -5486,10 +5508,10 @@ impl<'a> Generator<'_, 'a> {
             }
 
             if rule.starts_with(":root{")
-                || rule.starts_with(":where(*){--z-")
+                || rule.starts_with(":where(*){--z")
                 || (rule.starts_with("@media ")
                     && (rule.contains(":root{")
-                        || rule.contains(":where(*){--z-")
+                        || rule.contains(":where(*){--z")
                         || emitted
                             .vars
                             .values()

@@ -3,6 +3,10 @@
 //! A [`Themes`] collector belongs to one compilation. Anonymous contracts receive graph-local
 //! variable names in first-reference order, so callers must serialize references in the order
 //! the TypeScript compiler does.
+//!
+//! A collector created with [`Options::names`] prints the dense names of a Lynx production
+//! graph wherever a token's custom property appears, and one created with [`Options::lynx`]
+//! prints references without their fallbacks, since the Lynx root carries the theme scope.
 
 use std::fmt::Write as _;
 use std::sync::Arc;
@@ -59,6 +63,21 @@ pub enum Scope {
     Nullish,
 }
 
+/// Dense custom property names keyed by the readable names they replace.
+pub type Names = FxHashMap<Box<str>, Arc<str>>;
+
+/// How a collector prints token references.
+#[derive(Clone, Debug, Default)]
+pub struct Options {
+    /// Prints `var(--x)` without the defining fallback. The Lynx template encoder stores each
+    /// fallback beside the value and in a per-rule map, and the Lynx root carries the theme
+    /// scope that defines every variable, so the fallback never resolves there.
+    pub lynx: bool,
+    /// Dense names that replace readable custom property names. A name outside the table keeps
+    /// its readable spelling.
+    pub names: Option<Arc<Names>>,
+}
+
 /// Theme scope classes and rules emitted for one compilation.
 #[derive(Clone, Debug, Default)]
 pub struct Emitted {
@@ -87,6 +106,7 @@ pub struct Themes {
     defaults: IndexMap<Arc<str>, Vec<Rule>, FxBuildHasher>,
     ids: Vec<Arc<Contract>>,
     next_variable: u64,
+    options: Options,
 }
 
 fn truthy(value: Option<&Arc<str>>) -> Option<&str> {
@@ -110,9 +130,17 @@ fn conditions(value: &Value) -> Option<&[(Arc<str>, Value)]> {
 }
 
 impl Themes {
-    /// Creates an empty collector.
+    /// Creates an empty collector that prints readable names and fallbacks.
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Creates an empty collector that prints references as `options` says.
+    pub fn create(options: Options) -> Self {
+        Self {
+            options,
+            ..Self::default()
+        }
     }
 
     /// Identifies a contract by pointer, as JavaScript maps key frozen contract objects.
@@ -131,7 +159,17 @@ impl Themes {
 
     fn property(&mut self, id: usize, contract: &Contract, path: &Arc<str>) -> Arc<str> {
         if let Some(identity) = truthy(contract.identity.as_ref()) {
-            return variable(Some(identity), path).into();
+            let readable = variable(Some(identity), path);
+
+            return match self
+                .options
+                .names
+                .as_ref()
+                .and_then(|names| names.get(&*readable))
+            {
+                Some(dense) => Arc::clone(dense),
+                None => readable.into(),
+            };
         }
 
         let key = (id, Arc::clone(path));
@@ -173,6 +211,11 @@ impl Themes {
 
             name
         };
+
+        if self.options.lynx {
+            return format!("var({name})");
+        }
+
         let fallback = self.literal(&token.value, Some(&token.path), Some(&token.contract));
         let mut output = String::with_capacity(name.len() + fallback.len() + 6);
 
@@ -448,8 +491,10 @@ impl Themes {
                 };
 
                 // An inherited base reference resolves through its fallback, unless a sibling
-                // set overrides it.
-                if inherited(value, &path, &data.contract)
+                // set overrides it. Lynx prints no fallback, so the scope assigns the base
+                // variable instead.
+                if !self.options.lynx
+                    && inherited(value, &path, &data.contract)
                     && !varied
                         .get(&Arc::as_ptr(&data.contract).addr())
                         .is_some_and(|paths| paths.contains(&path))
@@ -915,6 +960,33 @@ pub fn scope(value: &str, identity: Option<&str>) -> String {
 
     output.push_str(&identity::name(value));
     output
+}
+
+/// Allocates one dense name per readable custom property of the given scopes, in scope order
+/// and then path order, as `--z` and a base-36 index. Scopes that share a readable name share
+/// its dense name, as they share the property.
+pub fn dense_names<'m>(scopes: impl IntoIterator<Item = &'m Metadata>) -> Names {
+    let mut names = Names::default();
+
+    for data in scopes {
+        let Some(identity) = truthy(data.contract.identity.as_ref()) else {
+            continue;
+        };
+
+        for path in data.values.keys() {
+            let readable = variable(Some(identity), path);
+
+            if names.contains_key(&*readable) {
+                continue;
+            }
+
+            let dense: Arc<str> = format!("--z{}", js::radix(names.len() as u64, 36)).into();
+
+            names.insert(readable.into_boxed_str(), dense);
+        }
+    }
+
+    names
 }
 
 fn variable(identity: Option<&str>, path: &str) -> String {
