@@ -138,6 +138,34 @@ The `zyzz` sample measured against a worktree of each `lynx-bundle` compiler com
 
 The vanilla-extract sample measures 247.3 kB, 131.4 / 29.0 kB, 37.3 / 12.3 kB, and 47.6 / 6.4 kB with 503 / 1827 / 462 throughout.
 
+## Compressed Size Analysis
+
+Recorded on 2026-11-02 at `904924f`. Three analyses attributed the compressed bundle by re-encoding `tasm.json` sections with the `@lynx-js/tasm` encoder and by rewriting the thread sources and CSS before re-encoding, all with `node:zlib` gzip level 9 and default Brotli.
+
+| Section                        | vanilla-extract gzip / br | Zyzz gzip / br | Δ gzip / br    |
+| ------------------------------ | ------------------------- | -------------- | -------------- |
+| Main thread (LepusNG bytecode) | 42.6 / 35.0 kB            | 42.1 / 35.4 kB | −0.5 / +0.5 kB |
+| Encoded CSS                    | 8.2 / 6.7 kB              | 6.7 / 5.3 kB   | −1.5 / −1.4 kB |
+| Background thread (source)     | 12.4 / 10.4 kB            | 12.0 / 9.9 kB  | −0.4 / −0.5 kB |
+| Header and config              | 0.5 / 0.5 kB              | 0.5 / 0.5 kB   | 0              |
+
+The main thread ships as QuickJS bytecode, which compresses about 12 kB worse than its source in both builds and is nearly equal between them, so it is a shared floor rather than a Zyzz cost. The whole compressed advantage comes from the stylesheet and the background thread. Class-list literals are about 8% of the Zyzz bundle's gzip size, and source-level savings in them survive the bytecode almost entirely (85–100% in re-encoding tests), while renaming experiments (frequency order, first-use order, fixed width, sorted lists, hoisted constants) all moved the bundle by 0.3 kB or less, so the names are at their floor and the remaining lever is the number of tokens per element. Rule emission order does not change the bundle at all, since the encoder restructures rules.
+
+Measured levers, each by re-encoding the sample with the change applied by hand:
+
+| Lever                                                                                                                                                      | Δ gzip / br             | Status                                                               |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- | -------------------------------------------------------------------- |
+| Merge units whose usage sets are identical across the graph (212 classes → 77)                                                                             | −0.89 / −0.44 kB        | Planned last, needs a graph-wide pass                                |
+| Dense token custom property names on Lynx                                                                                                                  | −0.83 / −0.61 kB        | Planned                                                              |
+| Omit `var()` fallbacks on Lynx                                                                                                                             | −0.55 / −0.51 kB        | Planned                                                              |
+| Simplify recipe callable guards                                                                                                                            | −0.12 / −0.11 kB        | Planned                                                              |
+| Dense keyframe names on Lynx                                                                                                                               | −0.11 / −0.07 kB        | Planned                                                              |
+| All five together (measured)                                                                                                                               | −2.40 / −1.63 kB        |                                                                      |
+| Also drop the encoder's `defaultValueMap` keys                                                                                                             | −0.49 / −0.29 kB        | Deferred: needs a template plugin hook, native semantics unverified  |
+| `chunkSplit: 'all-in-one'`                                                                                                                                 | −6.8 / −5.9 kB transfer | App configuration, same for both samples, loses shared chunk caching |
+| One class per element (grouped output)                                                                                                                     | −2.2 kB gzip in JS      | Rejected: the stylesheet grows by 1100 declarations                  |
+| Dropping the `z` prefix, name reordering, in-list sorting, constant hoisting, selector-list merging, `extractStr`, `compress.passes`, CSS selector toggles | ≤ 0.3 kB or worse       | Rejected                                                             |
+
 ## Visual Comparison
 
 `visual/Compare.ts` renders both samples' web bundles (`lynx.web.config.ts` in each sample, built with `rspeedy build -c lynx.web.config.ts`) through `@lynx-js/web-core` in headless Chromium at 390×844 CSS px and device scale factor 2, drives both through the same eleven states, and compares the screenshots with `pixelmatch` at threshold 0.1 with anti-aliasing excluded. The states are the loading skeleton, the ready screen with the notification nudge, the nudge dismissed, the snackbar after saving an interest, the snackbar closed through its action after removing the interest, the scrolled screen with the solid app bar, the calendar opened, the description expanded, the bottom of the screen, the error screen after the call button, and the recovered screen after retry. Screenshots, diff images, and a summary land in `bench/results/lynx/visual/`.
