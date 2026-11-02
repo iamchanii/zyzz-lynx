@@ -5230,6 +5230,127 @@ namespace styles {
       `)
     })
 
+    test('shares recipe base declarations with independent styles', async () => {
+      const source = `import { style, variants } from 'zyzz'
+type P = { className?: string | undefined; tone?: 'brand' | undefined }
+const Badge = (props: P) => <span className={styles.badge({ className: props.className, tone: props.tone })}>badge</span>
+export const App = () => <main>
+<span {...styles.row()}>row</span>
+<span {...styles.row({ className: 'external' })}>external</span>
+<Badge />
+<Badge tone="brand" />
+<span {...styles.later()}>later</span>
+</main>
+namespace styles {
+  export const row = style({ alignItems: 'center', color: 'rgb(0, 0, 0)' })
+
+  export const badge = variants({
+    base: { alignItems: 'center', color: 'rgb(0, 0, 0)', paddingLeft: '2px' },
+    selection: 'className',
+    variants: { tone: { brand: { color: 'rgb(255, 0, 0)' } } },
+  })
+
+  export const later = style({ paddingLeft: '2px' })
+}`
+      const output = Transform.compile({
+        composition: 'independent',
+        moduleId: 'App.tsx',
+        source,
+        target: 'lynx',
+      })
+
+      // The recipe base reads the units of `row`, `later` reads the unit the base introduced,
+      // and the choice rule prints after the base units it overrides.
+      expect(output.css).toMatchInlineSnapshot(`
+        ".z1{align-items:center;}
+        .z2{color:rgb(0, 0, 0);}
+        .z3{padding-left:2px;}
+        .zA00{color:rgb(255, 0, 0);}"
+      `)
+      expect(output.code).toMatchInlineSnapshot(`
+        "
+        import { Props as __zyzzProps } from 'zyzz/runtime';
+
+        type P = { className?: string | undefined; tone?: 'brand' | undefined }
+        const Badge = (props: P) => <span className={styles.badge({ className: props.className, tone: props.tone })}>badge</span>
+        export const App = () => <main>
+        <span className={"z1 z2"}>row</span>
+        <span className={__zyzzProps.merge("z1 z2",'external')}>external</span>
+        <Badge />
+        <Badge tone="brand" />
+        <span className={"z3"}>later</span>
+        </main>
+        namespace styles {
+          export declare const row: import('zyzz').style.ReturnType
+
+          export const badge = (((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className;let value,className="z1 z2 z3";value=Object.prototype.hasOwnProperty.call(input,"tone")?input["tone"]:void 0;if(value!==null&&value!==void 0){value=String(value);className+=value==="brand"?" zA00":""}if(external)className+=" "+external;return className}) as unknown as import('zyzz').variants.ReturnType<{selection:'className';variants:{"tone":{"brand":{}}}}>)
+
+          export declare const later: import('zyzz').style.ReturnType
+        }"
+      `)
+
+      const rendered = await Wrappers.render({
+        css: output.css,
+        entry: 'App.tsx',
+        modules: { 'App.tsx': output.code },
+      })
+
+      expect(rendered.elements).toMatchInlineSnapshot(`
+        [
+          {
+            "borderLeftWidth": "0px",
+            "className": "z1 z2",
+            "color": "rgb(0, 0, 0)",
+            "paddingLeft": "0px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "0px",
+            "className": "z1 z2 external",
+            "color": "rgb(0, 0, 0)",
+            "paddingLeft": "0px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "0px",
+            "className": "z1 z2 z3",
+            "color": "rgb(0, 0, 0)",
+            "paddingLeft": "2px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "0px",
+            "className": "z1 z2 z3 zA00",
+            "color": "rgb(255, 0, 0)",
+            "paddingLeft": "2px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "0px",
+            "className": "z3",
+            "color": "rgb(0, 0, 0)",
+            "paddingLeft": "2px",
+            "tag": "span",
+          },
+        ]
+      `)
+
+      // The web target nests choices under the base, so it keeps its own units.
+      expect(
+        Transform.compile({
+          composition: 'independent',
+          moduleId: 'App.tsx',
+          source,
+        }).css,
+      ).toMatchInlineSnapshot(`
+        ".z_l0kPgl0{align-items:center;}
+        .z_l0kPgl1{color:rgb(0, 0, 0);}
+        .z_l0kPgl2{color:rgb(0, 0, 0);}
+        .z_l0kPgl3{&:where(.zv9WvyhNQ-0){color:rgb(255, 0, 0);}}
+        .z_l0kPgl4{padding-left:2px;}"
+      `)
+    })
+
     test('rejects attribute selection and conditions', () => {
       const compile = (definition: string) =>
         Transform.compile({

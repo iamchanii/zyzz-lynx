@@ -871,13 +871,15 @@ impl<'a> Compiler<'a> {
     }
 
     /// Lists declaration groups in authored order. `None` marks styles whose nested grouped
-    /// output or anonymous layers emit one opaque rule.
+    /// output or anonymous layers emit one opaque rule. Class rules make the style opaque as
+    /// well, unless `skip_classes` leaves them out for `class_rule` to print.
     /// `prepared` holds the serialized declarations of a top-level style.
     fn flatten(
         &mut self,
         style: &'a NamedStyle,
         conditions: &[Arc<str>],
         prepared: Option<&Prepared>,
+        skip_classes: bool,
     ) -> Option<Vec<Item<'a>>> {
         if style.css_output == Some(CssOutput::Grouped) {
             return None;
@@ -887,13 +889,17 @@ impl<'a> Compiler<'a> {
             let mut items = Vec::new();
 
             for rule in rules {
+                if rule.class.is_some() && skip_classes {
+                    continue;
+                }
+
                 if rule.class.is_some() || is_layer(rule.condition.as_ref()) {
                     return None;
                 }
 
                 let next = with(conditions, rule.condition.as_ref());
 
-                items.extend(self.flatten(&rule.style, &next, None)?);
+                items.extend(self.flatten(&rule.style, &next, None, skip_classes)?);
             }
 
             return Some(items);
@@ -950,6 +956,24 @@ impl<'a> Compiler<'a> {
         }
 
         result
+    }
+
+    /// Prints a class rule under its own class, which applications add, so it joins no class
+    /// list and shares no unit.
+    fn class_rule(
+        &mut self,
+        state: &mut Application<'a>,
+        class: &'a Arc<str>,
+        style: &'a NamedStyle,
+        conditions: &[Arc<str>],
+        units: &mut Units<'_>,
+    ) {
+        let explicit = state.explicit.replace(class);
+        let names = state.names.len();
+
+        self.atoms(state, style, conditions, None, units);
+        state.explicit = explicit;
+        state.names.truncate(names);
     }
 
     fn collision(&mut self, name: &Arc<str>) {
@@ -1129,15 +1153,8 @@ impl<'a> Compiler<'a> {
 
         if let Some(rules) = &style.rules {
             for rule in rules {
-                // A class rule prints under its own class, which applications add, so it joins
-                // no class list and shares no unit.
                 if let Some(class) = &rule.class {
-                    let explicit = state.explicit.replace(class);
-                    let names = state.names.len();
-
-                    self.atoms(state, &rule.style, conditions, None, units);
-                    state.explicit = explicit;
-                    state.names.truncate(names);
+                    self.class_rule(state, class, &rule.style, conditions, units);
                     continue;
                 }
 
@@ -1279,7 +1296,15 @@ impl<'a> Compiler<'a> {
             return;
         }
 
-        let Some(items) = self.flatten(style, &[], prepared) else {
+        // A Lynx recipe prints each choice under a class rule that applications add to its base.
+        // Under independent composition the base shares units like a plain style, and the class
+        // rules print after them, so a choice still overrides the base.
+        let classes = style
+            .rules
+            .iter()
+            .flatten()
+            .any(|rule| rule.class.is_some());
+        let Some(items) = self.flatten(style, &[], prepared, classes) else {
             self.atoms(state, style, &[], prepared, units);
             return;
         };
@@ -1318,6 +1343,12 @@ impl<'a> Compiler<'a> {
             }
 
             self.unit(state, &body, units);
+        }
+
+        for rule in style.rules.iter().flatten() {
+            if let Some(class) = &rule.class {
+                self.class_rule(state, class, &rule.style, &[], units);
+            }
         }
     }
 
@@ -1664,7 +1695,7 @@ fn run<'a>(
             let items = if style.css_output.unwrap_or(default_mode) == CssOutput::Atomic
                 && explicit_name(style).is_none()
             {
-                compiler.flatten(style, &[], prepared.get(index))
+                compiler.flatten(style, &[], prepared.get(index), false)
             } else {
                 None
             };

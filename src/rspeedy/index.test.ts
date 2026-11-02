@@ -545,17 +545,18 @@ namespace styles {
           ".z9 { padding: 4px }",
           ".zA10 { padding-left: 8px }",
           ".zA12,.zA13 { padding-right: 8px }",
+          ".za { margin-left: 2px }",
           ".zA20 { padding-left: 8px }",
           ".zA22,.zA23 { padding-right: 8px }",
-          ".za { margin-left: 2px }",
+          ".zb { margin-right: 2px }",
           ".zA30 { padding-left: 8px }",
           ".zA32,.zA33 { padding-right: 8px }",
-          ".zb { margin-right: 2px }",
+          ".zc { margin-left: 2px; margin-right: 2px }",
           ".zA40 { padding-left: 8px }",
           ".zA42,.zA43 { padding-right: 8px }",
+          ".zd { color: #0a0 }",
           ".zA50 { padding-left: 8px }",
           ".zA52,.zA53 { padding-right: 8px }",
-          ".zc { color: #0a0 }",
           ".zA60 { padding-left: 8px }",
           ".zA62,.zA63 { padding-right: 8px }",
           ".zA70 { padding-left: 8px }",
@@ -610,6 +611,7 @@ namespace styles {
           "za",
           "zb",
           "zc",
+          "zd",
         ]
       `)
       expect(classes.filter((name) => !selectors.has(`.${name}`))).toEqual([])
@@ -820,7 +822,6 @@ namespace styles {
           ".zA32 { color: #000 }",
           ".zA33 { color: #0a0 }",
           ".zA34 { opacity: .5 }",
-          ".z6 { opacity: 1 }",
         ]
       `)
       // The composition renames the recipe's choice classes to its own copies.
@@ -972,6 +973,73 @@ namespace styles {
           ".z4 { display: flex }",
           ".z5,.z6 { padding: 8px }",
           ".z7 { padding: 4px }",
+        ]
+      `)
+    } finally {
+      await Fs.rm(root, { force: true, recursive: true })
+    }
+  }, 120_000)
+
+  test('shares recipe base declarations with the units of plain styles', async () => {
+    const root = await fixture()
+    try {
+      await Fs.writeFile(
+        Path.join(root, 'src/App.tsx'),
+        `import { style } from 'zyzz'
+import { Badge } from './Badge'
+
+export function App(props: { tone: 'brand' | 'neutral' }) {
+  return <view {...styles.row()}><Badge tone={props.tone} /></view>
+}
+
+namespace styles {
+  export const row = style({ alignItems: 'center', display: 'flex' })
+}
+`,
+      )
+      await Fs.writeFile(
+        Path.join(root, 'src/Badge.tsx'),
+        `import { variants } from 'zyzz'
+
+export function Badge(props: { className?: string | undefined; tone: 'brand' | 'neutral' }) {
+  return <text className={styles.badge({ className: props.className, tone: props.tone })} />
+}
+
+namespace styles {
+  export const badge = variants({
+    base: { alignItems: 'center', display: 'flex', height: '20px' },
+    selection: 'className',
+    variants: { tone: { brand: { color: '#f60' }, neutral: { color: '#333' } } },
+  })
+}
+`,
+      )
+
+      const result = await (await create(root)).build()
+      await result.close()
+
+      const { css, mainThread } = await template(root)
+
+      // The recipe base reads the \`row\` units, so no declaration body repeats.
+      expect(css).toMatchInlineSnapshot(`
+        [
+          ".z1 { align-items: center }",
+          ".z2 { display: flex }",
+          ".z3 { height: 20px }",
+          ".zA00 { color: #f60 }",
+          ".zA01 { color: #333 }",
+        ]
+      `)
+      expect(
+        new Set(css.map((rule) => rule.slice(rule.indexOf('{')))).size,
+      ).toBe(css.length)
+
+      // The recipe stays callable for its dynamic tone and lists the shared units as its base.
+      expect(mainThread.match(/"z[0-9a-z]+(?: z[0-9a-z]+)+"/g))
+        .toMatchInlineSnapshot(`
+        [
+          ""z1 z2"",
+          ""z1 z2 z3"",
         ]
       `)
     } finally {
