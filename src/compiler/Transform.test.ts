@@ -3756,6 +3756,183 @@ export const button = variants({ base: { display: 'flex' }, defaultVariants: { t
         await browser.close()
       }
     })
+
+    test('selects class-selection recipe and conditional style compositions from class tables', async () => {
+      const output = Transform.compile({
+        moduleId: 'App.tsx',
+        source: `import { cx, style, variants } from 'zyzz'
+type P = { middle?: boolean; segment?: 'none' | 'start' | 'middle' | 'end' | null; today?: boolean; tone?: 'loud' | 'quiet' | null }
+export const App = (props: P) => <main>
+<span {...cx(styles.cell({ segment: props.segment }), props.middle && props.today === false && styles.weekStart(), props.middle && props.today && styles.weekEnd(), props.today && styles.today())}>calendar</span>
+<span {...cx(styles.badge({ tone: props.tone }), props.today && styles.today())}>badge</span>
+<span {...cx(styles.badge({ tone: 'loud' }), styles.cell({ segment: 'end' }))}>both</span>
+<span {...cx(styles.badge(), styles.today())}>default</span>
+<span {...cx(styles.badge({ tone: null }), props.today && styles.today())}>null</span>
+</main>
+namespace styles {
+  export const cell = variants({ base: { color: 'rgb(0, 0, 0)', paddingLeft: '1px' }, selection: 'class', variants: { segment: { none: {}, start: { paddingLeft: '2px' }, middle: { color: 'rgb(0, 0, 255)' }, end: { paddingLeft: '3px' } } } })
+  export const badge = variants({ base: { borderLeft: '1px solid' }, defaultVariants: { tone: 'quiet' }, selection: 'class', variants: { tone: { loud: { color: 'rgb(255, 0, 0)' }, quiet: { color: 'rgb(128, 128, 128)' } } } })
+  export const weekStart = style({ paddingLeft: '4px' })
+  export const weekEnd = style({ paddingLeft: '5px' })
+  export const today = style({ color: 'rgb(0, 128, 0)' })
+}`,
+      })
+
+      // The web target copies no choice rules, so every entry keeps the recipe's own choice
+      // class, which the alternative's nested rules select.
+      expect(output.code.includes('zyzz/runtime')).toMatchInlineSnapshot(
+        `false`,
+      )
+      expect(output.code).toMatchInlineSnapshot(`
+        "
+        const __zyzzClasses0=["z_l0kPgl0 z_l0kPgl1 z_l0kPgl2 z_l0kPgl3 z_l0kPgl4","z_l0kPgl0 z_l0kPgl3 z_l0kPgl5 z_l0kPgl6 z_l0kPgl7 z_l0kPgl8","z_l0kPgl0 z_l0kPgl3 z_l0kPgl9 z_l0kPgla z_l0kPglb z_l0kPglc","z_l0kPgl0 z_l0kPgl3 z_l0kPgld z_l0kPgle z_l0kPglf z_l0kPglg z_l0kPglh","z_l0kPgli z_l0kPglj z_l0kPglk z_l0kPgll z_l0kPglm z_l0kPgln","z_l0kPgli z_l0kPgll z_l0kPgln z_l0kPglo z_l0kPglp z_l0kPglq z_l0kPglr","z_l0kPgli z_l0kPgll z_l0kPgln z_l0kPgls z_l0kPglt z_l0kPglu z_l0kPglv","z_l0kPgli z_l0kPgll z_l0kPgln z_l0kPglw z_l0kPglx z_l0kPgly z_l0kPglz z_l0kPgl10","z_l0kPgl0 z_l0kPgl1 z_l0kPgl2 z_l0kPgl3 z_l0kPgl4 zv6gXUp5h61","z_l0kPgl0 z_l0kPgl3 z_l0kPgl5 z_l0kPgl6 z_l0kPgl7 z_l0kPgl8 zv6gXUp5h61","z_l0kPgl0 z_l0kPgl3 z_l0kPgl9 z_l0kPgla z_l0kPglb z_l0kPglc zv6gXUp5h61","z_l0kPgl0 z_l0kPgl3 z_l0kPgld z_l0kPgle z_l0kPglf z_l0kPglg z_l0kPglh zv6gXUp5h61","z_l0kPgli z_l0kPglj z_l0kPglk z_l0kPgll z_l0kPglm z_l0kPgln zv6gXUp5h61","z_l0kPgli z_l0kPgll z_l0kPgln z_l0kPglo z_l0kPglp z_l0kPglq z_l0kPglr zv6gXUp5h61","z_l0kPgli z_l0kPgll z_l0kPgln z_l0kPgls z_l0kPglt z_l0kPglu z_l0kPglv zv6gXUp5h61","z_l0kPgli z_l0kPgll z_l0kPgln z_l0kPglw z_l0kPglx z_l0kPgly z_l0kPglz z_l0kPgl10 zv6gXUp5h61","z_l0kPgl0 z_l0kPgl1 z_l0kPgl2 z_l0kPgl3 z_l0kPgl4 zv6gXUp5h62","z_l0kPgl0 z_l0kPgl3 z_l0kPgl5 z_l0kPgl6 z_l0kPgl7 z_l0kPgl8 zv6gXUp5h62","z_l0kPgl0 z_l0kPgl3 z_l0kPgl9 z_l0kPgla z_l0kPglb z_l0kPglc zv6gXUp5h62","z_l0kPgl0 z_l0kPgl3 z_l0kPgld z_l0kPgle z_l0kPglf z_l0kPglg z_l0kPglh zv6gXUp5h62","z_l0kPgli z_l0kPglj z_l0kPglk z_l0kPgll z_l0kPglm z_l0kPgln zv6gXUp5h62","z_l0kPgli z_l0kPgll z_l0kPgln z_l0kPglo z_l0kPglp z_l0kPglq z_l0kPglr zv6gXUp5h62","z_l0kPgli z_l0kPgll z_l0kPgln z_l0kPgls z_l0kPglt z_l0kPglu z_l0kPglv zv6gXUp5h62","z_l0kPgli z_l0kPgll z_l0kPgln z_l0kPglw z_l0kPglx z_l0kPgly z_l0kPglz z_l0kPgl10 zv6gXUp5h62","z_l0kPgl0 z_l0kPgl1 z_l0kPgl2 z_l0kPgl3 z_l0kPgl4 zv6gXUp5h63","z_l0kPgl0 z_l0kPgl3 z_l0kPgl5 z_l0kPgl6 z_l0kPgl7 z_l0kPgl8 zv6gXUp5h63","z_l0kPgl0 z_l0kPgl3 z_l0kPgl9 z_l0kPgla z_l0kPglb z_l0kPglc zv6gXUp5h63","z_l0kPgl0 z_l0kPgl3 z_l0kPgld z_l0kPgle z_l0kPglf z_l0kPglg z_l0kPglh zv6gXUp5h63","z_l0kPgli z_l0kPglj z_l0kPglk z_l0kPgll z_l0kPglm z_l0kPgln zv6gXUp5h63","z_l0kPgli z_l0kPgll z_l0kPgln z_l0kPglo z_l0kPglp z_l0kPglq z_l0kPglr zv6gXUp5h63","z_l0kPgli z_l0kPgll z_l0kPgln z_l0kPgls z_l0kPglt z_l0kPglu z_l0kPglv zv6gXUp5h63","z_l0kPgli z_l0kPgll z_l0kPgln z_l0kPglw z_l0kPglx z_l0kPgly z_l0kPglz z_l0kPgl10 zv6gXUp5h63"];
+        function __zyzzSelect0(p0:unknown,p1:unknown){return __zyzzClasses0[p1+(p0==="start"?8:p0==="middle"?16:p0==="end"?24:0)]}
+        const __zyzzClasses1=["z_l0kPgl11 z_l0kPgl12 z_l0kPgl13","z_l0kPgl11 z_l0kPgl14 z_l0kPgl15 z_l0kPgl16","z_l0kPgl11 z_l0kPgl12 z_l0kPgl13 zv9WvyhNQ-0","z_l0kPgl11 z_l0kPgl14 z_l0kPgl15 z_l0kPgl16 zv9WvyhNQ-0","z_l0kPgl11 z_l0kPgl12 z_l0kPgl13 zv9WvyhNQ-1","z_l0kPgl11 z_l0kPgl14 z_l0kPgl15 z_l0kPgl16 zv9WvyhNQ-1"];
+        function __zyzzSelect1(p0:unknown,p1:unknown){return __zyzzClasses1[p1+(p0===void 0?4:p0==="loud"?2:p0==="quiet"?4:0)]}
+        const __zyzzClasses2=["z_l0kPgl11 z_l0kPgl1h z_l0kPgl1i","z_l0kPgl11 z_l0kPgl1j z_l0kPgl1k z_l0kPgl1l","z_l0kPgl11 z_l0kPgl1h z_l0kPgl1i zv9WvyhNQ-0","z_l0kPgl11 z_l0kPgl1j z_l0kPgl1k z_l0kPgl1l zv9WvyhNQ-0","z_l0kPgl11 z_l0kPgl1h z_l0kPgl1i zv9WvyhNQ-1","z_l0kPgl11 z_l0kPgl1j z_l0kPgl1k z_l0kPgl1l zv9WvyhNQ-1"];
+        function __zyzzSelect2(p0:unknown){return __zyzzClasses2[p0]}
+
+        type P = { middle?: boolean; segment?: 'none' | 'start' | 'middle' | 'end' | null; today?: boolean; tone?: 'loud' | 'quiet' | null }
+        export const App = (props: P) => <main>
+        <span className={__zyzzSelect0(props.segment,((props.middle && props.today === false)?1:0)|((props.middle && props.today)?2:0)|((props.today)?4:0))}>calendar</span>
+        <span className={__zyzzSelect1(props.tone,((props.today)?1:0))}>badge</span>
+        <span className={"z_l0kPgl11 z_l0kPgl17 z_l0kPgl18 z_l0kPgl19 z_l0kPgl1a z_l0kPgl1b z_l0kPgl1c z_l0kPgl1d zv9WvyhNQ-0 zv6gXUp5h63"}>both</span>
+        <span className={"z_l0kPgl11 z_l0kPgl1e z_l0kPgl1f z_l0kPgl1g zv9WvyhNQ-1"}>default</span>
+        <span className={__zyzzSelect2(((props.today)?1:0))}>null</span>
+        </main>
+        "
+      `)
+      expect(output.css).toMatchInlineSnapshot(`
+        ".z_l0kPgl0{color:rgb(0, 0, 0);}
+        .z_l0kPgl1{padding-left:1px;}
+        .z_l0kPgl2{&:where(.zv6gXUp5h61){padding-left:2px;}}
+        .z_l0kPgl3{&:where(.zv6gXUp5h62){color:rgb(0, 0, 255);}}
+        .z_l0kPgl4{&:where(.zv6gXUp5h63){padding-left:3px;}}
+        .z_l0kPgl5{padding-left:1px;}
+        .z_l0kPgl6{&:where(.zv6gXUp5h61){padding-left:2px;}}
+        .z_l0kPgl7{&:where(.zv6gXUp5h63){padding-left:3px;}}
+        .z_l0kPgl8{padding-left:4px;}
+        .z_l0kPgl9{padding-left:1px;}
+        .z_l0kPgla{&:where(.zv6gXUp5h61){padding-left:2px;}}
+        .z_l0kPglb{&:where(.zv6gXUp5h63){padding-left:3px;}}
+        .z_l0kPglc{padding-left:5px;}
+        .z_l0kPgld{padding-left:1px;}
+        .z_l0kPgle{&:where(.zv6gXUp5h61){padding-left:2px;}}
+        .z_l0kPglf{&:where(.zv6gXUp5h63){padding-left:3px;}}
+        .z_l0kPglg{padding-left:4px;}
+        .z_l0kPglh{padding-left:5px;}
+        .z_l0kPgli{color:rgb(0, 0, 0);}
+        .z_l0kPglj{padding-left:1px;}
+        .z_l0kPglk{&:where(.zv6gXUp5h61){padding-left:2px;}}
+        .z_l0kPgll{&:where(.zv6gXUp5h62){color:rgb(0, 0, 255);}}
+        .z_l0kPglm{&:where(.zv6gXUp5h63){padding-left:3px;}}
+        .z_l0kPgln{color:rgb(0, 128, 0);}
+        .z_l0kPglo{padding-left:1px;}
+        .z_l0kPglp{&:where(.zv6gXUp5h61){padding-left:2px;}}
+        .z_l0kPglq{&:where(.zv6gXUp5h63){padding-left:3px;}}
+        .z_l0kPglr{padding-left:4px;}
+        .z_l0kPgls{padding-left:1px;}
+        .z_l0kPglt{&:where(.zv6gXUp5h61){padding-left:2px;}}
+        .z_l0kPglu{&:where(.zv6gXUp5h63){padding-left:3px;}}
+        .z_l0kPglv{padding-left:5px;}
+        .z_l0kPglw{padding-left:1px;}
+        .z_l0kPglx{&:where(.zv6gXUp5h61){padding-left:2px;}}
+        .z_l0kPgly{&:where(.zv6gXUp5h63){padding-left:3px;}}
+        .z_l0kPglz{padding-left:4px;}
+        .z_l0kPgl10{padding-left:5px;}
+        .z_l0kPgl11{border-left:1px solid;}
+        .z_l0kPgl12{&:where(.zv9WvyhNQ-0){color:rgb(255, 0, 0);}}
+        .z_l0kPgl13{&:where(.zv9WvyhNQ-1){color:rgb(128, 128, 128);}}
+        .z_l0kPgl14{&:where(.zv9WvyhNQ-0){color:rgb(255, 0, 0);}}
+        .z_l0kPgl15{&:where(.zv9WvyhNQ-1){color:rgb(128, 128, 128);}}
+        .z_l0kPgl16{color:rgb(0, 128, 0);}
+        .z_l0kPgl17{&:where(.zv9WvyhNQ-0){color:rgb(255, 0, 0);}}
+        .z_l0kPgl18{&:where(.zv9WvyhNQ-1){color:rgb(128, 128, 128);}}
+        .z_l0kPgl19{color:rgb(0, 0, 0);}
+        .z_l0kPgl1a{padding-left:1px;}
+        .z_l0kPgl1b{&:where(.zv6gXUp5h61){padding-left:2px;}}
+        .z_l0kPgl1c{&:where(.zv6gXUp5h62){color:rgb(0, 0, 255);}}
+        .z_l0kPgl1d{&:where(.zv6gXUp5h63){padding-left:3px;}}
+        .z_l0kPgl1e{&:where(.zv9WvyhNQ-0){color:rgb(255, 0, 0);}}
+        .z_l0kPgl1f{&:where(.zv9WvyhNQ-1){color:rgb(128, 128, 128);}}
+        .z_l0kPgl1g{color:rgb(0, 128, 0);}
+        .z_l0kPgl1h{&:where(.zv9WvyhNQ-0){color:rgb(255, 0, 0);}}
+        .z_l0kPgl1i{&:where(.zv9WvyhNQ-1){color:rgb(128, 128, 128);}}
+        .z_l0kPgl1j{&:where(.zv9WvyhNQ-0){color:rgb(255, 0, 0);}}
+        .z_l0kPgl1k{&:where(.zv9WvyhNQ-1){color:rgb(128, 128, 128);}}
+        .z_l0kPgl1l{color:rgb(0, 128, 0);}"
+      `)
+
+      const rendered = await Wrappers.render({
+        css: output.css,
+        entry: 'App.tsx',
+        modules: { 'App.tsx': output.code },
+      })
+
+      expect(rendered.elements).toMatchInlineSnapshot(`
+        [
+          {
+            "borderLeftWidth": "0px",
+            "className": "z_l0kPgl0 z_l0kPgl1 z_l0kPgl2 z_l0kPgl3 z_l0kPgl4",
+            "color": "rgb(0, 0, 0)",
+            "paddingLeft": "1px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "1px",
+            "className": "z_l0kPgl11 z_l0kPgl12 z_l0kPgl13 zv9WvyhNQ-1",
+            "color": "rgb(128, 128, 128)",
+            "paddingLeft": "0px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "1px",
+            "className": "z_l0kPgl11 z_l0kPgl17 z_l0kPgl18 z_l0kPgl19 z_l0kPgl1a z_l0kPgl1b z_l0kPgl1c z_l0kPgl1d zv9WvyhNQ-0 zv6gXUp5h63",
+            "color": "rgb(0, 0, 0)",
+            "paddingLeft": "3px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "1px",
+            "className": "z_l0kPgl11 z_l0kPgl1e z_l0kPgl1f z_l0kPgl1g zv9WvyhNQ-1",
+            "color": "rgb(0, 128, 0)",
+            "paddingLeft": "0px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "1px",
+            "className": "z_l0kPgl11 z_l0kPgl1h z_l0kPgl1i",
+            "color": "rgb(0, 0, 0)",
+            "paddingLeft": "0px",
+            "tag": "span",
+          },
+        ]
+      `)
+    })
+
+    test.each(['lynx', 'web'] as const)(
+      'keeps the runtime helper for a %s composition above 256 table entries',
+      (target) => {
+        const output = Transform.compile({
+          moduleId: 'App.tsx',
+          source: `import { cx, style, variants } from 'zyzz'
+export const App = (p: { a: string; b: string; c: string; d: string; on: boolean }) => <span {...cx(styles.grid({ a: p.a, b: p.b, c: p.c, d: p.d }), p.on && styles.on())} />
+namespace styles {
+  export const grid = variants({ base: { color: 'black' }, selection: 'class', variants: { a: { x: { top: '1px' }, y: { top: '2px' }, z: { top: '3px' } }, b: { x: { left: '1px' }, y: { left: '2px' }, z: { left: '3px' } }, c: { x: { right: '1px' }, y: { right: '2px' }, z: { right: '3px' } }, d: { x: { bottom: '1px' }, y: { bottom: '2px' }, z: { bottom: '3px' } } } })
+  export const on = style({ opacity: 0.5 })
+}`,
+          target,
+        })
+
+        // Two presence alternatives times four axes of four slots make 512 entries.
+        expect(
+          output.code.includes('Composition as __zyzzComposition'),
+        ).toMatchInlineSnapshot(`true`)
+        expect(output.code.includes('__zyzzClasses')).toMatchInlineSnapshot(
+          `false`,
+        )
+      },
+    )
   })
 })
 
@@ -5130,6 +5307,181 @@ namespace styles {
             "className": "zA00 zA01",
             "color": "rgb(0, 0, 255)",
             "paddingLeft": "2px",
+            "tag": "span",
+          },
+        ]
+      `)
+    })
+
+    test('selects recipe and conditional style compositions from class tables', async () => {
+      const output = Transform.compile({
+        moduleId: 'App.tsx',
+        source: `import { cx, style, variants } from 'zyzz'
+type P = { middle?: boolean; segment?: 'none' | 'start' | 'middle' | 'end' | null; today?: boolean; tone?: 'loud' | 'quiet' | null }
+export const App = (props: P) => <main>
+<span {...cx(styles.cell({ segment: props.segment }), props.middle && props.today === false && styles.weekStart(), props.middle && props.today && styles.weekEnd(), props.today && styles.today())}>calendar</span>
+<span {...cx(styles.badge({ tone: props.tone }), props.today && styles.today())}>badge</span>
+<span {...cx(styles.badge({ tone: 'loud' }), styles.cell({ segment: 'end' }))}>both</span>
+<span {...cx(styles.badge(), styles.today())}>default</span>
+<span {...cx(styles.badge({ tone: null }), props.today && styles.today())}>null</span>
+</main>
+namespace styles {
+  export const cell = variants({ base: { color: 'rgb(0, 0, 0)', paddingLeft: '1px' }, variants: { segment: { none: {}, start: { paddingLeft: '2px' }, middle: { color: 'rgb(0, 0, 255)' }, end: { paddingLeft: '3px' } } } })
+  export const badge = variants({ base: { borderLeft: '1px solid' }, defaultVariants: { tone: 'quiet' }, variants: { tone: { loud: { color: 'rgb(255, 0, 0)' }, quiet: { color: 'rgb(128, 128, 128)' } } } })
+  export const weekStart = style({ paddingLeft: '4px' })
+  export const weekEnd = style({ paddingLeft: '5px' })
+  export const today = style({ color: 'rgb(0, 128, 0)' })
+}`,
+        target: 'lynx',
+      })
+
+      // Each table entry is one presence alternative's classes with the recipe's choice class
+      // under that alternative's prefix, so no module imports the composition runtime.
+      expect(output.code.includes('zyzz/runtime')).toMatchInlineSnapshot(
+        `false`,
+      )
+      expect(output.code).toMatchInlineSnapshot(`
+        "
+        const __zyzzClasses0=["zh zi","zj zk zl","zm zn zo","zp zq zr zs","zt zu zv","zw zx zy zz","z10 z11 z12 z13","z14 z15 z16 z17 z18","zh zi zA21","zj zk zl zA31","zm zn zo zA41","zp zq zr zs zA51","zt zu zv zA61","zw zx zy zz zA71","z10 z11 z12 z13 zA81","z14 z15 z16 z17 z18 zA91","zh zi zA22","zj zk zl zA32","zm zn zo zA42","zp zq zr zs zA52","zt zu zv zA62","zw zx zy zz zA72","z10 z11 z12 z13 zA82","z14 z15 z16 z17 z18 zA92","zh zi zA23","zj zk zl zA33","zm zn zo zA43","zp zq zr zs zA53","zt zu zv zA63","zw zx zy zz zA73","z10 z11 z12 z13 zA83","z14 z15 z16 z17 z18 zA93"];
+        function __zyzzSelect0(p0:unknown,p1:unknown){return __zyzzClasses0[p1+(p0==="start"?8:p0==="middle"?16:p0==="end"?24:0)]}
+        const __zyzzClasses1=["z19","z1a z1b","z19 zAa0","z1a z1b zAb0","z19 zAa1","z1a z1b zAb1"];
+        function __zyzzSelect1(p0:unknown,p1:unknown){return __zyzzClasses1[p1+(p0===void 0?4:p0==="loud"?2:p0==="quiet"?4:0)]}
+        const __zyzzClasses2=["z1h","z1i z1j","z1h zAf0","z1i z1j zAg0","z1h zAf1","z1i z1j zAg1"];
+        function __zyzzSelect2(p0:unknown){return __zyzzClasses2[p0]}
+
+        type P = { middle?: boolean; segment?: 'none' | 'start' | 'middle' | 'end' | null; today?: boolean; tone?: 'loud' | 'quiet' | null }
+        export const App = (props: P) => <main>
+        <span className={__zyzzSelect0(props.segment,((props.middle && props.today === false)?1:0)|((props.middle && props.today)?2:0)|((props.today)?4:0))}>calendar</span>
+        <span className={__zyzzSelect1(props.tone,((props.today)?1:0))}>badge</span>
+        <span className={"z1c z1d z1e zAc0 zAd3"}>both</span>
+        <span className={"z1f z1g zAe1"}>default</span>
+        <span className={__zyzzSelect2(((props.today)?1:0))}>null</span>
+        </main>
+        "
+      `)
+      expect(output.css).toMatchInlineSnapshot(`
+        ".zh{color:rgb(0, 0, 0);}
+        .zi{padding-left:1px;}
+        .zA21{padding-left:2px;}
+        .zA22{color:rgb(0, 0, 255);}
+        .zA23{padding-left:3px;}
+        .zj{color:rgb(0, 0, 0);}
+        .zk{padding-left:1px;}
+        .zA31{padding-left:2px;}
+        .zA32{color:rgb(0, 0, 255);}
+        .zA33{padding-left:3px;}
+        .zl{padding-left:4px;}
+        .zm{color:rgb(0, 0, 0);}
+        .zn{padding-left:1px;}
+        .zA41{padding-left:2px;}
+        .zA42{color:rgb(0, 0, 255);}
+        .zA43{padding-left:3px;}
+        .zo{padding-left:5px;}
+        .zp{color:rgb(0, 0, 0);}
+        .zq{padding-left:1px;}
+        .zA51{padding-left:2px;}
+        .zA52{color:rgb(0, 0, 255);}
+        .zA53{padding-left:3px;}
+        .zr{padding-left:4px;}
+        .zs{padding-left:5px;}
+        .zt{color:rgb(0, 0, 0);}
+        .zu{padding-left:1px;}
+        .zA61{padding-left:2px;}
+        .zA62{color:rgb(0, 0, 255);}
+        .zA63{padding-left:3px;}
+        .zv{color:rgb(0, 128, 0);}
+        .zw{color:rgb(0, 0, 0);}
+        .zx{padding-left:1px;}
+        .zA71{padding-left:2px;}
+        .zA72{color:rgb(0, 0, 255);}
+        .zA73{padding-left:3px;}
+        .zy{padding-left:4px;}
+        .zz{color:rgb(0, 128, 0);}
+        .z10{color:rgb(0, 0, 0);}
+        .z11{padding-left:1px;}
+        .zA81{padding-left:2px;}
+        .zA82{color:rgb(0, 0, 255);}
+        .zA83{padding-left:3px;}
+        .z12{padding-left:5px;}
+        .z13{color:rgb(0, 128, 0);}
+        .z14{color:rgb(0, 0, 0);}
+        .z15{padding-left:1px;}
+        .zA91{padding-left:2px;}
+        .zA92{color:rgb(0, 0, 255);}
+        .zA93{padding-left:3px;}
+        .z16{padding-left:4px;}
+        .z17{padding-left:5px;}
+        .z18{color:rgb(0, 128, 0);}
+        .z19{border-left:1px solid;}
+        .zAa0{color:rgb(255, 0, 0);}
+        .zAa1{color:rgb(128, 128, 128);}
+        .z1a{border-left:1px solid;}
+        .zAb0{color:rgb(255, 0, 0);}
+        .zAb1{color:rgb(128, 128, 128);}
+        .z1b{color:rgb(0, 128, 0);}
+        .z1c{border-left:1px solid;}
+        .zAc0{color:rgb(255, 0, 0);}
+        .zAc1{color:rgb(128, 128, 128);}
+        .z1d{color:rgb(0, 0, 0);}
+        .z1e{padding-left:1px;}
+        .zAd1{padding-left:2px;}
+        .zAd2{color:rgb(0, 0, 255);}
+        .zAd3{padding-left:3px;}
+        .z1f{border-left:1px solid;}
+        .zAe0{color:rgb(255, 0, 0);}
+        .zAe1{color:rgb(128, 128, 128);}
+        .z1g{color:rgb(0, 128, 0);}
+        .z1h{border-left:1px solid;}
+        .zAf0{color:rgb(255, 0, 0);}
+        .zAf1{color:rgb(128, 128, 128);}
+        .z1i{border-left:1px solid;}
+        .zAg0{color:rgb(255, 0, 0);}
+        .zAg1{color:rgb(128, 128, 128);}
+        .z1j{color:rgb(0, 128, 0);}"
+      `)
+
+      const rendered = await Wrappers.render({
+        css: output.css,
+        entry: 'App.tsx',
+        modules: { 'App.tsx': output.code },
+      })
+
+      // An omitted value takes the default, `null` selects nothing, and later arguments win.
+      expect(rendered.elements).toMatchInlineSnapshot(`
+        [
+          {
+            "borderLeftWidth": "0px",
+            "className": "zh zi",
+            "color": "rgb(0, 0, 0)",
+            "paddingLeft": "1px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "1px",
+            "className": "z19 zAa1",
+            "color": "rgb(128, 128, 128)",
+            "paddingLeft": "0px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "1px",
+            "className": "z1c z1d z1e zAc0 zAd3",
+            "color": "rgb(0, 0, 0)",
+            "paddingLeft": "3px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "1px",
+            "className": "z1f z1g zAe1",
+            "color": "rgb(0, 128, 0)",
+            "paddingLeft": "0px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "1px",
+            "className": "z1h",
+            "color": "rgb(0, 0, 0)",
+            "paddingLeft": "0px",
             "tag": "span",
           },
         ]

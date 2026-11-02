@@ -482,6 +482,194 @@ describe('zyzz', () => {
     }
   }, 120_000)
 
+  test('selects recipe and conditional style compositions from class tables so no thread loads the composition runtime', async () => {
+    const root = await fixture()
+    try {
+      await Fs.writeFile(
+        Path.join(root, 'src/App.tsx'),
+        `import { cx, style, variants } from 'zyzz'
+
+type Day = { segment: 'none' | 'start' | 'middle' | 'end'; today: boolean }
+
+export function App(props: { days?: readonly Day[] }) {
+  return (
+    <view>
+      {(props.days ?? []).map((day, index) => {
+        const middle = day.segment === 'middle'
+        return (
+          <view
+            key={index}
+            {...cx(
+              styles.calendarCell({ segment: day.segment }),
+              middle && index === 0 && styles.weekStart(),
+              middle && index === 6 && styles.weekEnd(),
+              day.today && styles.today(),
+            )}
+          />
+        )
+      })}
+    </view>
+  )
+}
+
+namespace styles {
+  export const calendarCell = variants({
+    base: { padding: '4px' },
+    variants: {
+      segment: {
+        end: { paddingLeft: '8px' },
+        middle: {},
+        none: { paddingRight: '8px' },
+        start: { paddingRight: '8px' },
+      },
+    },
+  })
+
+  export const weekStart = style({ marginLeft: '2px' })
+
+  export const weekEnd = style({ marginRight: '2px' })
+
+  export const today = style({ color: 'rgb(0, 170, 0)' })
+}
+`,
+      )
+
+      const result = await (await create(root)).build()
+      await result.close()
+
+      // Each presence alternative copies the recipe's rules under its own prefix, and the
+      // recipe itself emits none, since every application selects from the table.
+      const { css, mainThread } = await template(root)
+      expect(css).toMatchInlineSnapshot(`
+        [
+          ".z9 { padding: 4px }",
+          ".zA10 { padding-left: 8px }",
+          ".zA12,.zA13 { padding-right: 8px }",
+          ".za { padding: 4px }",
+          ".zA20 { padding-left: 8px }",
+          ".zA22,.zA23 { padding-right: 8px }",
+          ".zb { margin-left: 2px }",
+          ".zc { padding: 4px }",
+          ".zA30 { padding-left: 8px }",
+          ".zA32,.zA33 { padding-right: 8px }",
+          ".zd { margin-right: 2px }",
+          ".ze { padding: 4px }",
+          ".zA40 { padding-left: 8px }",
+          ".zA42,.zA43 { padding-right: 8px }",
+          ".zf { margin-left: 2px }",
+          ".zg { margin-right: 2px }",
+          ".zh { padding: 4px }",
+          ".zA50 { padding-left: 8px }",
+          ".zA52,.zA53 { padding-right: 8px }",
+          ".zi { color: #0a0 }",
+          ".zj { padding: 4px }",
+          ".zA60 { padding-left: 8px }",
+          ".zA62,.zA63 { padding-right: 8px }",
+          ".zk { margin-left: 2px }",
+          ".zl { color: #0a0 }",
+          ".zm { padding: 4px }",
+          ".zA70 { padding-left: 8px }",
+          ".zA72,.zA73 { padding-right: 8px }",
+          ".zn { margin-right: 2px }",
+          ".zo { color: #0a0 }",
+          ".zp { padding: 4px }",
+          ".zA80 { padding-left: 8px }",
+          ".zA82,.zA83 { padding-right: 8px }",
+          ".zq { margin-left: 2px }",
+          ".zr { margin-right: 2px }",
+          ".zs { color: #0a0 }",
+        ]
+      `)
+
+      // Every class the table lists selects a rule of the template. Each entry with a choice
+      // class holds at least two classes, so a two-token match skips other quoted words.
+      const selectors = new Set(
+        css.flatMap((rule) => rule.match(/\.z[0-9A-Za-z]+/g) ?? []),
+      )
+      const token = /(?:z[0-9a-z]+|zA[0-9a-z]{2})/
+      const lists = mainThread.match(
+        new RegExp(`"${token.source}(?: ${token.source})+"`, 'g'),
+      )
+      const classes = [
+        ...new Set(
+          lists?.flatMap((list) => list.replaceAll('"', '').trim().split(' ')),
+        ),
+      ].sort()
+
+      expect(classes).toMatchInlineSnapshot(`
+        [
+          "z9",
+          "zA10",
+          "zA12",
+          "zA13",
+          "zA20",
+          "zA22",
+          "zA23",
+          "zA30",
+          "zA32",
+          "zA33",
+          "zA40",
+          "zA42",
+          "zA43",
+          "zA50",
+          "zA52",
+          "zA53",
+          "zA60",
+          "zA62",
+          "zA63",
+          "zA70",
+          "zA72",
+          "zA73",
+          "zA80",
+          "zA82",
+          "zA83",
+          "za",
+          "zb",
+          "zc",
+          "zd",
+          "ze",
+          "zf",
+          "zg",
+          "zh",
+          "zi",
+          "zj",
+          "zk",
+          "zl",
+          "zm",
+          "zn",
+          "zo",
+          "zp",
+          "zq",
+          "zr",
+          "zs",
+        ]
+      `)
+      expect(classes.filter((name) => !selectors.has(`.${name}`))).toEqual([])
+
+      // The composition runtime marks its module with this protocol key.
+      const chunks = (await files(Path.join(root, 'dist'))).filter((file) =>
+        file.endsWith('.js'),
+      )
+      const composed: string[] = []
+
+      for (const chunk of chunks) {
+        const source = await Fs.readFile(Path.join(root, 'dist', chunk), 'utf8')
+
+        if (source.includes('zyzz.composition.input.v1')) composed.push(chunk)
+      }
+
+      expect(chunks).toMatchInlineSnapshot(`
+        [
+          ".lynx/main/background.js",
+          ".lynx/main/main-thread.js",
+        ]
+      `)
+      expect(composed).toMatchInlineSnapshot(`[]`)
+    } finally {
+      await Fs.rm(root, { force: true, recursive: true })
+    }
+  }, 60_000)
+
   test('compiles sources before pre-enforced loaders', async () => {
     const root = await fixture()
     try {

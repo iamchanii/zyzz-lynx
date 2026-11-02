@@ -26,9 +26,12 @@ use crate::compiler::internal::composition_bindings::{self, Bindings};
 use crate::compiler::internal::expression::unwrap;
 use crate::compiler::internal::recipes;
 use crate::compiler::internal::scope::{self, Kind, Mode};
+use crate::compiler::internal::selections;
 use crate::compiler::internal::statics::key_literal;
 use crate::compiler::internal::themes::{Fold, Link, Output, ScopeApplication};
-use crate::compiler::source::{Call, ImportedApplication, KnownInput, Rename, RuntimeInput};
+use crate::compiler::source::{
+    Call, ComposedRecipe, ComposedValue, ImportedApplication, KnownInput, Rename, RuntimeInput,
+};
 use crate::error::{Error, Result};
 use crate::internal::identity;
 use crate::internal::token::{Composition, CssOutput};
@@ -744,8 +747,8 @@ impl<'a> Synthesizer<'_, 'a> {
 /// Starts of the applications whose class lists their outermost composition replaces, so the
 /// rewritten module never reads them. A compile-time composition replaces every input, whose
 /// guard reads only truthiness, and a runtime composition replaces its known inputs, which its
-/// helper receives as `true`. Contained compositions are skipped, since the outer one decides
-/// their reads.
+/// helper receives as `true`, and the recipe applications its table selects. Contained
+/// compositions are skipped, since the outer one decides their reads.
 pub fn replaced(calls: &[Call<'_>]) -> FxHashSet<u32> {
     let mut outer: Vec<&Call<'_>> = calls
         .iter()
@@ -772,7 +775,9 @@ pub fn replaced(calls: &[Call<'_>]) -> FxHashSet<u32> {
             call.runtime_composition
                 .iter()
                 .flatten()
-                .filter(|input| input.known.is_some())
+                .filter(|input| {
+                    input.known.is_some() || (call.composition_table && input.recipe.is_some())
+                })
                 .filter_map(|input| input.application_start),
         );
     }
@@ -948,6 +953,7 @@ fn compose<'o, 'a>(
     let mut contained: Vec<u32> = Vec::new();
     let mut acyclic: Vec<(u32, Arc<str>)> = Vec::new();
     let mut scopes: Vec<Fold> = Vec::new();
+    let mut combinations: Vec<usize> = Vec::new();
 
     let mut input = |inputs: &mut Vec<RuntimeInput>,
                      call: &Call<'a>,
@@ -979,6 +985,7 @@ fn compose<'o, 'a>(
             known: None,
             name: Arc::clone(&call.name),
             owners: owned,
+            recipe: None,
             start: span.start,
         });
 
@@ -991,6 +998,7 @@ fn compose<'o, 'a>(
         known: None,
         name: Arc::from(""),
         owners: Vec::new(),
+        recipe: None,
         start: span.start,
     };
 
@@ -1246,6 +1254,46 @@ fn compose<'o, 'a>(
                 });
             }
 
+            // A local class-selection recipe applied to literal values of distinct axes, without
+            // compounds, conditions, or payloads, can select from a composition table.
+            let values = match value.arguments.as_slice() {
+                [] => Some(None),
+                [Argument::ObjectExpression(values)] => Some(Some(&**values)),
+                _ => None,
+            };
+
+            if !aliased
+                && !conditional
+                && call.ownership.is_none()
+                && call.slots.is_none()
+                && let Some(recipe) = &call.recipe
+                && recipe.conditions.as_ref().is_none_or(Vec::is_empty)
+                && recipe.payloads.as_ref().is_none_or(Vec::is_empty)
+                && let Some(values) = values
+                && let Some(fields) = selections::fields(values, recipe)
+                && let Some(input) = inputs.last_mut()
+            {
+                combinations.push(selections::combinations(recipe));
+                input.recipe = Some(ComposedRecipe {
+                    known: KnownInput {
+                        acyclic: application.acyclic,
+                        callee: Arc::clone(&guard),
+                        condition: None,
+                        import: None,
+                        imported: false,
+                        initialized: application.initialized,
+                    },
+                    values: fields
+                        .iter()
+                        .map(|(axis, value)| ComposedValue {
+                            axis: Arc::from(*axis),
+                            literal: selections::literal(value),
+                            span: value.span(),
+                        })
+                        .collect(),
+                });
+            }
+
             // A local application that follows initialization can never throw from its read.
             if call.ownership.is_none() && application.initialized {
                 settled.push(application.start);
@@ -1353,6 +1401,33 @@ fn compose<'o, 'a>(
         call.portable = Some(portable);
         call.portable_inputs = Some(inputs);
     }
+
+    // Known local styles and class-selection recipes of distinct definitions select from one
+    // table while its class lists stay within the cap. A repeated recipe would replace its earlier
+    // choices at runtime, and an imported style may not know its class list in this module.
+    let recipes: Vec<&Arc<str>> = inputs
+        .iter()
+        .filter(|input| input.recipe.is_some())
+        .map(|input| &input.name)
+        .collect();
+    let size = combinations
+        .iter()
+        .try_fold(1_usize << conditions, |size, count| {
+            size.checked_mul(*count)
+        });
+
+    call.composition_table = runtime
+        && !html
+        && scopes.is_empty()
+        && !recipes.is_empty()
+        && recipes
+            .iter()
+            .enumerate()
+            .all(|(index, name)| !recipes[..index].contains(name))
+        && size.is_some_and(|size| size <= selections::COMPOSITION_TABLE)
+        && inputs.iter().all(|input| {
+            input.recipe.is_some() || input.known.as_ref().is_some_and(|known| !known.imported)
+        });
 
     if runtime {
         call.runtime_composition = Some(inputs.clone());

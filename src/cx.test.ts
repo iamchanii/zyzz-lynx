@@ -1806,5 +1806,86 @@ import {cx,style} from 'zyzz'; const a=style((values:{padding:string})=>({paddin
         `[Source.ExtractError: bad.ts:173: Recipe attribute data-tone has conflicting owners.]`,
       )
     })
+
+    test('selects recipe and conditional style compositions from class tables', async () => {
+      const source = `import {cx,style,variants} from 'zyzz';
+      namespace styles {
+        export const cell=variants({base:{color:'rgb(0, 0, 0)',padding:'1px'},selection:'class',variants:{segment:{none:{},start:{padding:'2px'},end:{padding:'3px'}}}});
+        export const badge=variants({base:{color:'rgb(128, 128, 128)'},defaultVariants:{tone:'quiet'},selection:'class',variants:{tone:{loud:{color:'rgb(255, 0, 0)'},quiet:{color:'rgb(0, 0, 255)'}}}});
+        export const edge=style({padding:'4px'});
+        export const today=style({color:'rgb(0, 128, 0)'});
+      }
+      export const cell=(segment:unknown,edge:boolean,today:boolean)=>cx(styles.cell({segment}),edge && styles.edge(),today && styles.today());
+      export const pair=(segment:unknown,tone:unknown)=>cx(styles.cell({segment}),styles.badge({tone}));`
+      const output = Transform.compile({ moduleId: 'tables.ts', source })
+
+      expect(output.code.includes('zyzz/runtime')).toMatchInlineSnapshot(
+        `false`,
+      )
+
+      const bundled = await Esbuild.build({
+        stdin: {
+          contents: output.code,
+          loader: 'ts',
+          resolveDir: process.cwd(),
+        },
+        bundle: true,
+        format: 'iife',
+        globalName: 'App',
+        write: false,
+      })
+      const browser = await chromium.launch({
+        headless: true,
+        args: ['--no-sandbox'],
+      })
+      try {
+        const page = await browser.newPage()
+        await page.setContent(
+          `<style>button{padding:0}${output.css}</style><button>Button</button>`,
+        )
+        await page.addScriptTag({ content: bundled.outputFiles![0]!.text })
+        await page.evaluate(`window.read=(props)=>{
+        const element=document.querySelector('button');
+        element.className=props.className;
+        const style=getComputedStyle(element);
+        return style.color+' '+style.padding;
+      }`)
+
+        // Later arguments win, a presence bit adds its style, and the choice class keeps its rule.
+        expect(
+          await page.evaluate("read(App.cell('start',false,false))"),
+        ).toMatchInlineSnapshot(`"rgb(0, 0, 0) 2px"`)
+        expect(
+          await page.evaluate("read(App.cell('start',true,false))"),
+        ).toMatchInlineSnapshot(`"rgb(0, 0, 0) 4px"`)
+        expect(
+          await page.evaluate("read(App.cell('end',false,true))"),
+        ).toMatchInlineSnapshot(`"rgb(0, 128, 0) 3px"`)
+        expect(
+          await page.evaluate('read(App.cell(null,true,true))'),
+        ).toMatchInlineSnapshot(`"rgb(0, 128, 0) 4px"`)
+        expect(
+          await page.evaluate('read(App.cell(undefined,false,false))'),
+        ).toMatchInlineSnapshot(`"rgb(0, 0, 0) 1px"`)
+
+        // An omitted value takes the default, and `null` selects nothing.
+        expect(
+          await page.evaluate("read(App.pair('start','loud'))"),
+        ).toMatchInlineSnapshot(`"rgb(255, 0, 0) 2px"`)
+        expect(
+          await page.evaluate("read(App.pair('start',undefined))"),
+        ).toMatchInlineSnapshot(`"rgb(0, 0, 255) 2px"`)
+        expect(
+          await page.evaluate("read(App.pair('end',null))"),
+        ).toMatchInlineSnapshot(`"rgb(128, 128, 128) 3px"`)
+        expect(
+          await page.evaluate(
+            "App.pair('end',null)===App.pair('end',null)&&Object.isFrozen(App.pair('end',null))",
+          ),
+        ).toMatchInlineSnapshot(`true`)
+      } finally {
+        await browser.close()
+      }
+    })
   })
 })

@@ -32,6 +32,7 @@ use crate::compiler::internal::dynamic::{self, Slots};
 use crate::compiler::internal::expression::{self, Template, unwrap};
 use crate::compiler::internal::lightning::Options as Transform;
 use crate::compiler::internal::scope::{self, Declaration, Mode};
+use crate::compiler::internal::selections::Literal;
 use crate::compiler::internal::statics::{self, Static};
 use crate::compiler::internal::syntax::{self, Parsed};
 use crate::compiler::internal::themes::{
@@ -74,6 +75,28 @@ pub struct NativeContext {
     pub vars: Record<Arc<Definition>>,
 }
 
+/// A class-selection recipe application whose choices a composition table indexes, as
+/// `Call.composition_table` describes.
+#[derive(Clone, Debug)]
+pub struct ComposedRecipe {
+    /// The reads the application keeps once the table replaces it: its callee, read for
+    /// truthiness before initialization, as a known input keeps them.
+    pub known: KnownInput,
+    /// Authored values in authored order.
+    pub values: Vec<ComposedValue>,
+}
+
+/// One authored value of a composed recipe application.
+#[derive(Clone, Debug)]
+pub struct ComposedValue {
+    /// The axis the value selects.
+    pub axis: Arc<str>,
+    /// The literal value, or `None` for an expression the selector receives as a parameter.
+    pub literal: Option<Literal>,
+    /// Span of the authored value.
+    pub span: Span,
+}
+
 /// One input of a runtime composition.
 #[derive(Clone, Debug)]
 pub struct RuntimeInput {
@@ -89,6 +112,9 @@ pub struct RuntimeInput {
     pub name: Arc<str>,
     /// Attribute and private variable ownership.
     pub owners: Vec<Owner>,
+    /// The class-selection recipe application a composition table can select, with its authored
+    /// values.
+    pub recipe: Option<ComposedRecipe>,
     /// Inclusive offset of the application argument.
     pub start: u32,
 }
@@ -159,6 +185,10 @@ pub struct Call<'a> {
     /// Starts of a compile-time composition's input applications that keep no guard, since
     /// they always follow their definition's initialization.
     pub composition_settled: Vec<u32>,
+    /// Whether a runtime composition of known styles and class-selection recipe applications
+    /// selects its class list from a compile-time table indexed by the recipes' choices and the
+    /// presence bits of its conditional arguments, replacing every input.
+    pub composition_table: bool,
     /// Readable authored binding for contextual CSS names.
     pub css_name: Option<Arc<str>>,
     /// Configuration namespace for emitted CSS.

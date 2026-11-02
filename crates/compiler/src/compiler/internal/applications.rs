@@ -1379,8 +1379,9 @@ impl<'c, 'a> Applications<'c, 'a> {
     }
 
     /// Applications of each dynamic or recipe definition that bind an object literal on a DOM
-    /// element alone, by definition name, in candidate order.
-    pub fn bound(&self) -> Bounds<'a> {
+    /// element alone, by definition name, in candidate order. `excluded` holds the starts of
+    /// applications a composition table replaces, which count as neither bound nor partial.
+    pub fn bound(&self, excluded: &FxHashSet<u32>) -> Bounds<'a> {
         let mut output = Bounds::default();
 
         if self.evaluation {
@@ -1460,6 +1461,13 @@ impl<'c, 'a> Applications<'c, 'a> {
 
                     (candidate, call, span, reference.grandparent)
                 };
+
+                if call_of(application, callee)
+                    .is_some_and(|node| excluded.contains(&node.span.start))
+                {
+                    continue;
+                }
+
                 let span = reference
                     .bound
                     .filter(|_| {

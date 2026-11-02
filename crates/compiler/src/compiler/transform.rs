@@ -966,54 +966,16 @@ fn write_choice_test(output: &mut String, value: &str, name: &str) {
 }
 
 /// Authored axes and values of a class-selection recipe application.
-type ClassFields<'a> = SmallVec<[(&'a str, &'a Expression<'a>); 4]>;
+type ClassFields<'a> = selections::Fields<'a>;
 
 /// The axes a class-selection recipe application selects, with each value, in authored
-/// order, or `None` when its values object is not a plain literal of distinct axes. Choice names a
-/// non-string selection could stringify to also keep the call.
+/// order, or `None` when its values object is not a plain literal of distinct axes, as
+/// `selections::fields` reads them.
 fn recipe_classes<'a>(
     application: &Bound<'a>,
     recipe: &runtime::Definition,
 ) -> Option<ClassFields<'a>> {
-    recipe.prefix.as_ref()?;
-
-    // A class list is no props object to spread, and compound classes need the selector.
-    if recipe.class_list || recipe.compounds.is_some() {
-        return None;
-    }
-
-    let mut fields: ClassFields<'a> = SmallVec::new();
-
-    for property in &application.values.properties {
-        let ObjectPropertyKind::ObjectProperty(property) = property else {
-            return None;
-        };
-
-        if property.computed || property.method || property.kind != PropertyKind::Init {
-            return None;
-        }
-
-        let key = match &property.key {
-            PropertyKey::StaticIdentifier(identifier) => identifier.name.as_str(),
-            PropertyKey::StringLiteral(literal) => literal.value.as_str(),
-            _ => return None,
-        };
-
-        if !recipe.axes.contains_key(key) || fields.iter().any(|(seen, _)| *seen == key) {
-            return None;
-        }
-
-        fields.push((key, &property.value));
-    }
-
-    // A number or other value would stringify to a numeric choice name.
-    let numeric = recipe
-        .axes
-        .values()
-        .flatten()
-        .any(|name| name.parse::<f64>().is_ok() || name.trim() != &**name);
-
-    (!numeric).then_some(fields)
+    selections::fields(Some(application.values), recipe)
 }
 
 /// Folds a class-selection recipe application spread alone onto a DOM element into a constant
@@ -1569,9 +1531,29 @@ pub fn compile<'a>(
         .collect();
     let folded_starts: FxHashSet<u32> =
         folded.iter().map(|application| application.start).collect();
+    // Recipe applications that composition tables select, by start, and whether every table
+    // application of each recipe follows its initialization, so the recipe needs no callable.
+    let mut tables: FxHashSet<u32> = FxHashSet::default();
+    let mut composed_recipes: FxHashMap<&str, bool> = FxHashMap::default();
+
+    for call in extracted.calls.iter().filter(|call| call.composition_table) {
+        for input in call.runtime_composition.iter().flatten() {
+            let Some(recipe) = &input.recipe else {
+                continue;
+            };
+            let initialized = recipe.known.initialized || (options.acyclic && recipe.known.acyclic);
+
+            tables.extend(input.application_start);
+            composed_recipes
+                .entry(&input.name)
+                .and_modify(|all| *all &= initialized)
+                .or_insert(initialized);
+        }
+    }
+
     let bound = local_applications
         .as_ref()
-        .map(applications::Applications::bound)
+        .map(|applications| applications.bound(&tables))
         .unwrap_or_default();
     let mut plans: Vec<(&Call<'_>, Vec<(&Bound<'_>, BoundFields)>)> = Vec::new();
     let mut selections: Vec<(&Call<'_>, Vec<(&Bound<'_>, String)>)> = Vec::new();
@@ -1585,7 +1567,7 @@ pub fn compile<'a>(
         .symbol_names()
         .any(|name| name == "Object" || name == "String");
 
-    if !bound.applications.is_empty() {
+    if !bound.applications.is_empty() || !composed_recipes.is_empty() {
         let named: FxHashMap<&str, &NamedStyle> = extracted
             .styles
             .styles
@@ -1631,10 +1613,20 @@ pub fn compile<'a>(
 
         // Folded selections call `String`, as the specialized selector does.
         for call in extracted.calls.iter().filter(|_| !shadowed) {
-            let (Some(recipe), Some(applied)) = (&call.recipe, bound.applications.get(&call.name))
-            else {
+            let Some(recipe) = &call.recipe else {
                 continue;
             };
+            // A recipe applied only inside composition tables has no bound application, and its
+            // callable goes once every table application follows initialization.
+            let composed = composed_recipes.get(&*call.name).copied();
+            let applied = bound
+                .applications
+                .get(&call.name)
+                .map_or(&[][..], Vec::as_slice);
+
+            if applied.is_empty() && composed.is_none() {
+                continue;
+            }
 
             if outputs.get(&*call.name).copied().unwrap_or_default()
                 || recipe
@@ -1664,7 +1656,10 @@ pub fn compile<'a>(
                     })
                     .collect();
 
-                if folds.len() == applied.len() && !bound.partial.contains(&call.name) {
+                if folds.len() == applied.len()
+                    && composed.is_none_or(|initialized| initialized)
+                    && !bound.partial.contains(&call.name)
+                {
                     inlined.insert(Arc::clone(&call.name));
                 }
 
@@ -1756,6 +1751,15 @@ pub fn compile<'a>(
             }
         }
 
+        // A recipe applied only inside composition tables renders none of its own classes, since
+        // each table entry copies its choice classes under the alternative's prefix.
+        let tabled = |name: &str| {
+            composed_recipes.contains_key(name)
+                && !bound.partial.contains(name)
+                && bound.applications.get(name).is_none_or(Vec::is_empty)
+        };
+
+        composed.extend(composed_recipes.keys().copied().filter(|name| tabled(name)));
         dead.extend(
             local
                 .iter()
@@ -1763,7 +1767,7 @@ pub fn compile<'a>(
                 .filter(|name| {
                     composed.contains(&***name)
                         && !applied.contains(&***name)
-                        && !inlined.contains(&**name)
+                        && (!inlined.contains(&**name) || tabled(name))
                 })
                 .cloned(),
         );
@@ -1938,8 +1942,19 @@ pub fn compile<'a>(
         typed,
         unapplied: options.unapplied,
     };
-    let mut state =
-        generator.rewrite(&mut module, &walker, local.as_ref(), &found, &folded_starts)?;
+    let runtime = unique(&walker.identifiers, "__zyzzProps");
+    let taken = |name: &str| walker.identifiers.contains_key(name);
+    // Composition tables, folded selection use sites, and recipe applications share one set of
+    // selectors and tables.
+    let mut helpers = selections::Helpers::new(&runtime, &taken, typed);
+    let mut state = generator.rewrite(
+        &mut module,
+        &walker,
+        local.as_ref(),
+        &found,
+        &folded_starts,
+        &mut helpers,
+    )?;
     // Imported applications fold like local ones once the graph knows their class lists. A settled
     // import reads nothing, and a guard keeps failures before initialization otherwise.
     let imported: Vec<(&ImportedApplication, &str, bool)> = if portable || options.development {
@@ -1956,10 +1971,6 @@ pub fn compile<'a>(
             })
             .collect()
     };
-    let runtime = state.runtime.clone();
-    let taken = |name: &str| walker.identifiers.contains_key(name);
-    // Folded selection use sites and recipe applications share one set of selectors and tables.
-    let mut helpers = selections::Helpers::new(&runtime, &taken, typed);
     // Development keeps every component, so tools and updates still see each one.
     let wrappers = if portable || options.development {
         wrappers::Wrappers::default()
@@ -3124,6 +3135,187 @@ impl<'a> Generator<'_, 'a> {
         }
     }
 
+    /// Selects the class list of a composition of known styles and class-selection recipe
+    /// applications from a compile-time table, as `selections::composition` plans it. The recipe
+    /// values stay in place as selector arguments, in authored order, so rewrites inside them
+    /// still apply and each evaluates once. A run of conditional arguments passes its presence
+    /// bits as one argument, and an application before initialization reads its callee first, as
+    /// a known input does. Returns whether the composition folded.
+    fn composition_table(
+        &self,
+        module: &mut Edits<'a>,
+        state: &mut State,
+        call: &Call<'a>,
+        inputs: &[RuntimeInput],
+        known: &[Option<&KnownInput>],
+        helpers: &mut selections::Helpers<'_>,
+    ) -> Result<bool> {
+        /// What a selector argument writes at the use site.
+        enum Written {
+            /// Presence bits, or a callee read, as text.
+            Text(String),
+            /// An authored value that stays in place.
+            Value(Span),
+        }
+
+        if known
+            .iter()
+            .zip(inputs)
+            .any(|(known, input)| known.is_none() && input.recipe.is_none())
+        {
+            return Ok(false);
+        }
+
+        let names: Vec<&str> = match &call.composition_cases {
+            Some(cases) => cases.iter().map(|name| &**name).collect(),
+            None => vec![&*call.name],
+        };
+        let cases: Vec<&str> = names
+            .iter()
+            .map(|name| self.classes.get(*name).map_or("", String::as_str))
+            .collect();
+        // Each presence alternative copies a recipe's class rules under its own prefix.
+        let alternatives: Vec<&Call<'a>> = match &call.composition_cases {
+            Some(cases) => cases
+                .iter()
+                .filter_map(|name| self.extracted.calls.iter().find(|call| call.name == *name))
+                .collect(),
+            None => vec![call],
+        };
+        let prefixes: Vec<Vec<Option<Arc<str>>>> = (0..inputs.len())
+            .map(|index| {
+                alternatives
+                    .iter()
+                    .map(|alternative| {
+                        alternative
+                            .composition_renames
+                            .iter()
+                            .flatten()
+                            .find(|(position, ..)| *position == index)
+                            .map(|(_, _, to)| Arc::clone(to))
+                    })
+                    .collect()
+            })
+            .collect();
+        let values: Vec<Vec<(&str, Option<selections::Literal>)>> = inputs
+            .iter()
+            .map(|input| {
+                input
+                    .recipe
+                    .iter()
+                    .flat_map(|recipe| recipe.values.iter())
+                    .map(|value| (&*value.axis, value.literal.clone()))
+                    .collect()
+            })
+            .collect();
+        let mut arguments: Vec<selections::Argument<'_>> = Vec::new();
+        let mut written: Vec<Written> = Vec::new();
+        let mut terms: Vec<String> = Vec::new();
+
+        for (index, (input, known)) in inputs.iter().zip(known).enumerate() {
+            if let Some(recipe) = &input.recipe {
+                let definition = self
+                    .extracted
+                    .calls
+                    .iter()
+                    .find(|call| call.name == input.name)
+                    .and_then(|call| call.recipe.as_ref());
+                let Some(definition) = definition else {
+                    return Ok(false);
+                };
+
+                // The callee read precedes the values, as the call evaluated it.
+                if !self.initialized(&recipe.known) {
+                    terms.push(self.known_argument(module, &recipe.known, "0", true));
+                }
+
+                if !terms.is_empty() {
+                    arguments.push(selections::Argument::Mask);
+                    written.push(Written::Text(std::mem::take(&mut terms).join("|")));
+                }
+
+                written.extend(
+                    recipe
+                        .values
+                        .iter()
+                        .filter(|value| value.literal.is_none())
+                        .map(|value| Written::Value(value.span)),
+                );
+                arguments.push(selections::Argument::Recipe {
+                    definition,
+                    prefixes: prefixes.get(index).map_or(&[], Vec::as_slice),
+                    values: values.get(index).map_or(&[], Vec::as_slice),
+                });
+                continue;
+            }
+
+            let Some(known) = known else {
+                return Ok(false);
+            };
+
+            // An unconditional input that reads nothing adds no presence bit.
+            if self.initialized(known) && input.condition.is_none() {
+                continue;
+            }
+
+            let value = input.condition.map_or_else(
+                || "0".to_owned(),
+                |condition| (1_u32 << condition).to_string(),
+            );
+
+            terms.push(self.known_argument(module, known, &value, true));
+        }
+
+        if !terms.is_empty() {
+            arguments.push(selections::Argument::Mask);
+            written.push(Written::Text(terms.join("|")));
+        }
+
+        let composed = selections::composition(&cases, &arguments, call.spread.is_none(), helpers);
+        let (start, mut text) = match call.spread {
+            Some(spread) => (spread.start, String::from("className={")),
+            None => (call.start, String::new()),
+        };
+
+        match composed {
+            selections::Composed::Classes(classes) => {
+                state
+                    .constants
+                    .insert(call.start, (call.end, classes.clone()));
+                js::write_string(&mut text, &classes);
+                module.overwrite(start, call.end, text)?;
+            }
+            selections::Composed::Entry(entry) => {
+                text.push_str(&entry);
+                module.overwrite(start, call.end, text)?;
+            }
+            selections::Composed::Select(name) => {
+                let mut previous = start;
+
+                let _ = write!(text, "{name}(");
+
+                for (position, argument) in written.iter().enumerate() {
+                    if position > 0 {
+                        text.push(',');
+                    }
+
+                    match argument {
+                        Written::Text(term) => text.push_str(term),
+                        Written::Value(span) => {
+                            module.overwrite(previous, span.start, std::mem::take(&mut text))?;
+                            previous = span.end;
+                        }
+                    }
+                }
+
+                text.push(')');
+                module.overwrite(previous, call.end, text)?;
+            }
+        }
+
+        Ok(true)
+    }
+
     /// Selects one of the precompiled presence alternatives, indexed by the presence mask of the
     /// conditional arguments. A composition spread alone onto a DOM element becomes its
     /// `className` attribute, a class list chosen by a conditional or from a hoisted string
@@ -3429,6 +3621,7 @@ impl<'a> Generator<'_, 'a> {
         local: Option<&applications::Definitions>,
         found: &[&Application],
         folded: &FxHashSet<u32>,
+        helpers: &mut selections::Helpers<'_>,
     ) -> Result<State> {
         let extracted = self.extracted;
         let identifiers = self.identifiers;
@@ -3706,6 +3899,15 @@ impl<'a> Generator<'_, 'a> {
 
                         state.consumed.push((start, end));
                     }
+                }
+
+                // A table of class lists replaces the whole call, including its recipe
+                // applications, so nothing remains to overwrite.
+                if call.composition_table
+                    && !html
+                    && self.composition_table(module, &mut state, call, inputs, &known, helpers)?
+                {
+                    continue;
                 }
 
                 if !html && known.iter().all(Option::is_some) {
