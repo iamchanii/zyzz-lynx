@@ -64,7 +64,7 @@ The script exits with status 1 when a state that does not animate differs. [Resu
 
 ## Results
 
-Recorded on 2026-11-02 with `Measure.ts` on an Apple Silicon macOS host: Rspeedy 0.18.2, `@lynx-js/react` 0.128.0, `@vanilla-extract/css` 1.21.2, and the workspace Zyzz build at `904924f`. Sizes are bytes on disk divided by 1024, compressed with `node:zlib` at gzip level 9 and the default Brotli quality (11). [Results.md](Results.md) holds the per-commit ledger, the experiments behind each change, and the analysis of what remains.
+Recorded on 2026-11-02 with `Measure.ts` on an Apple Silicon macOS host: Rspeedy 0.18.2, `@lynx-js/react` 0.128.0, `@vanilla-extract/css` 1.21.2, and the workspace Zyzz build at `5ceb3d0`. Sizes are bytes on disk divided by 1024, compressed with `node:zlib` at gzip level 9 and the default Brotli quality (11). [Results.md](Results.md) holds the per-commit ledger, the experiments behind each change, and the analysis of what remains.
 
 ### Shipped Artifacts
 
@@ -72,21 +72,21 @@ The headline is `jobPost.lynx.bundle` from a plain production build. The thread 
 
 | Artifact         | vanilla-extract raw / gzip / br | Zyzz raw / gzip / br   | Δ raw           | Δ gzip          | Δ br            |
 | ---------------- | ------------------------------- | ---------------------- | --------------- | --------------- | --------------- |
-| `.lynx.bundle`   | 247.3 / 63.3 / 52.4 kB          | 195.2 / 60.9 / 50.8 kB | −52.1 kB (−21%) | −2.4 kB (−3.8%) | −1.6 kB (−3.1%) |
-| `main-thread.js` | 131.4 / 29.0 / 24.5 kB          | 115.4 / 30.1 / 25.8 kB | −16.0 kB (−12%) | +1.1 kB (+3.8%) | +1.3 kB (+5.3%) |
-| `background.js`  | 37.3 / 12.3 / 10.4 kB           | 35.6 / 11.9 / 10.1 kB  | −1.7 kB (−4.6%) | −0.4 kB (−3.3%) | −0.3 kB (−2.9%) |
-| Encoded CSS      | 47.6 / 6.4 / 5.8 kB             | 22.9 / 4.5 / 3.9 kB    | −24.7 kB (−52%) | −1.9 kB (−30%)  | −1.9 kB (−33%)  |
+| `.lynx.bundle`   | 247.3 / 63.3 / 52.4 kB          | 177.6 / 58.7 / 49.4 kB | −69.7 kB (−28%) | −4.6 kB (−7.3%) | −3.0 kB (−5.7%) |
+| `main-thread.js` | 131.4 / 29.0 / 24.5 kB          | 113.8 / 29.7 / 25.6 kB | −17.7 kB (−13%) | +0.7 kB (+2.3%) | +1.1 kB (+4.4%) |
+| `background.js`  | 37.3 / 12.3 / 10.4 kB           | 34.7 / 11.7 / 10.0 kB  | −2.6 kB (−6.9%) | −0.6 kB (−5.0%) | −0.4 kB (−4.0%) |
+| Encoded CSS      | 47.6 / 6.4 / 5.8 kB             | 18.1 / 3.9 / 3.4 kB    | −29.5 kB (−62%) | −2.5 kB (−39%)  | −2.3 kB (−40%)  |
 | External chunks  | 54.8 / 20.6 / 18.7 kB           | 54.8 / 20.6 / 18.7 kB  | 0               | 0               | 0               |
 
 | Stylesheet         | vanilla-extract | Zyzz |
 | ------------------ | --------------- | ---- |
-| Rules              | 503             | 506  |
+| Rules              | 503             | 414  |
 | Declarations       | 1827            | 569  |
-| Classes            | 462             | 509  |
-| `@media` rules     | 3               | 7    |
+| Classes            | 462             | 417  |
+| `@media` rules     | 3               | 3    |
 | `@keyframes` rules | 11              | 11   |
 
-The raw bundle gap closes through the stylesheet and the class-name text, which compress well, so the compressed gap is smaller than the raw one. The Zyzz main thread is 16 kB smaller raw but compresses 1.1 kB larger under gzip, which points at the class lists: several short shared names per element repeat less than vanilla-extract's one hashed class per element. The external chunks are the same ReactLynx runtime in both builds.
+The raw bundle gap closes through the stylesheet and the class-name text, which compress well, so the compressed gap is smaller than the raw one. The Zyzz main thread is 18 kB smaller raw but compresses 0.7 kB larger under gzip, which points at the class lists: several short shared names per element repeat less than vanilla-extract's one hashed class per element. The external chunks are the same ReactLynx runtime in both builds.
 
 ### Progress
 
@@ -107,6 +107,7 @@ Each row is the `zyzz` sample's `.lynx.bundle` after one change on this branch, 
 | Share override copies across a module's compositions                           | `904924f` | 195.2 kB | 60.9 kB | 50.8 kB |
 | Read recipe axes directly and coerce only boolean-like and numeric choices     | `1a457bf` | 194.1 kB | 60.7 kB | 50.8 kB |
 | Name token properties and keyframes densely and omit `var()` fallbacks on Lynx | `778c12d` | 181.6 kB | 59.3 kB | 49.8 kB |
+| Merge units with identical usage sets in production bundles                    | `5ceb3d0` | 177.6 kB | 58.7 kB | 49.4 kB |
 
 ### Rendering
 
