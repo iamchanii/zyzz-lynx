@@ -103,6 +103,22 @@ The `zyzz` sample measured against worktrees of this repository. The fork's base
 
 Folding namespace applications (`8cc2ece`) removed 92 kB, almost a quarter of the bundle, by replacing runtime `style()` calls and their class tables in both threads with constant `className` strings. Leaving out `cx`-only rules (`23fd0f5`) removed 7.6 kB and 87 rules. The unit, numeric-string, and array-index commits widen what compiles without changing this sample's output. Flat nested conditions (`5b317a3`) add 2 kB, since each nested `:active` rule under a `cx` group now prints once per group.
 
+## Branch Checkpoints
+
+The `zyzz` sample measured against a worktree of each `lynx-bundle` compiler commit in turn, prepared and measured the same way as the fork checkpoints above, so every row stands on its own build rather than on the branch head. Each row contains the commits above it.
+
+| Commit    | Change                                                               | `.lynx.bundle` | `main-thread.js` raw / gzip | `background.js` raw / gzip | Encoded CSS raw / gzip | Rules / declarations / classes |
+| --------- | -------------------------------------------------------------------- | -------------- | --------------------------- | -------------------------- | ---------------------- | ------------------------------ |
+| `01a75f6` | Expand `inset` into longhands on Lynx                                | 292.0 kB       | 139.6 / 33.8 kB             | 49.1 / 14.8 kB             | 51.4 / 7.8 kB          | 1177 / 1341 / 1187             |
+| `2829786` | Dense graph-wide class names on Lynx                                 | 260.7 kB       | 121.3 / 32.8 kB             | 41.6 / 14.5 kB             | 43.7 / 7.0 kB          | 1177 / 1333 / 1187             |
+| `6423ed0` | Compose namespace members declared beside `const` records            | 260.7 kB       | 121.3 / 32.8 kB             | 41.6 / 14.5 kB             | 43.7 / 7.0 kB          | 1177 / 1333 / 1187             |
+| `4a13a96` | Fold literal `vars()` selections into constant props                 | 260.0 kB       | 121.1 / 32.9 kB             | 41.4 / 14.4 kB             | 43.6 / 7.0 kB          | 1174 / 1330 / 1184             |
+| `05f0f4c` | Leave out the selector of configurations only folded selections read | 257.3 kB       | 119.9 / 32.5 kB             | 40.2 / 13.9 kB             | 43.6 / 7.0 kB          | 1174 / 1330 / 1184             |
+| `44595ed` | Select recipe and conditional style compositions from class tables   | 259.2 kB       | 121.4 / 32.0 kB             | 41.5 / 13.4 kB             | 43.2 / 6.9 kB          | 1161 / 1310 / 1171             |
+| `ec8a4ee` | Compose definitions independently by default on Lynx                 | 219.0 kB       | 120.6 / 31.0 kB             | 40.9 / 12.5 kB             | 30.8 / 5.2 kB          | 667 / 857 / 675                |
+
+The vanilla-extract sample measures 247.3 kB, 131.4 / 29.0 kB, 37.3 / 12.3 kB, and 47.6 / 6.4 kB with 503 / 1827 / 462 throughout.
+
 ## Porting Findings
 
 Compiler behavior recorded while porting the sample, each a candidate fix or a documentation note:
