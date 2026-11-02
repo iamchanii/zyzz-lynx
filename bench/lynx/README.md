@@ -56,8 +56,9 @@ The fork history is linear, so a worktree at commit N holds the Rspeedy base com
 (cd bench/lynx/ve && pnpm exec rspeedy build -c lynx.web.config.ts)
 (cd bench/lynx/zyzz && pnpm exec rspeedy build -c lynx.web.config.ts)
 
-# Writes screenshots, diff images, and a summary to bench/results/lynx/visual/
+# Writes screenshots, diff images, a summary, and a gallery page to bench/results/lynx/visual/
 node bench/lynx/visual/Compare.ts
+open bench/results/lynx/visual/index.html
 ```
 
 The script exits with status 1 when a state that does not animate differs. [Results.md](Results.md) records the latest comparison and the cause of the remaining difference.

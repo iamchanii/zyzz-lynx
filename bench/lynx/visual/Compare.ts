@@ -371,7 +371,49 @@ function report(results: readonly Result[], out: string, threshold: number) {
     path.join(out, 'results.json'),
     `${JSON.stringify(results, null, 2)}\n`,
   )
+  fs.writeFileSync(path.join(out, 'index.html'), gallery(results))
   process.stdout.write(summary)
+}
+
+/** A local page that shows each state's two screenshots beside the diff image. */
+function gallery(results: readonly Result[]): string {
+  const sections = results.map((result) => {
+    const status =
+      result.mismatch === 0
+        ? 'identical'
+        : `${result.mismatch ?? '-'} pixels differ (${percent(result.ratio)})`
+    const note = result.informational ? ', informational' : ''
+
+    return `<section>
+  <h2><code>${result.name}</code> <small>${status}${note}</small></h2>
+  <div class="row">
+    <figure><img src="./${result.name}.ve.png" alt="${result.name} vanilla-extract" /><figcaption>vanilla-extract</figcaption></figure>
+    <figure><img src="./${result.name}.zyzz.png" alt="${result.name} Zyzz" /><figcaption>Zyzz</figcaption></figure>
+    <figure><img src="./${result.name}.diff.png" alt="${result.name} diff" /><figcaption>diff</figcaption></figure>
+  </div>
+</section>`
+  })
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Lynx visual comparison</title>
+<style>
+  body { font: 14px system-ui, sans-serif; margin: 24px; background: #f6f6f6; color: #222; }
+  h2 small { font-weight: normal; color: #666; margin-left: 8px; }
+  .row { display: flex; gap: 16px; align-items: flex-start; }
+  figure { margin: 0; }
+  img { width: 390px; height: auto; border: 1px solid #ccc; background: #fff; }
+  figcaption { text-align: center; color: #666; margin-top: 4px; }
+</style>
+</head>
+<body>
+<h1>Lynx visual comparison</h1>
+${sections.join('\n')}
+</body>
+</html>
+`
 }
 
 async function main() {
