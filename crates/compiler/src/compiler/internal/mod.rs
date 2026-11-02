@@ -9,6 +9,7 @@ pub mod compositions;
 pub mod configurations;
 pub mod contract;
 pub mod contributions;
+pub mod dense;
 pub mod descriptors;
 pub mod dynamic;
 pub mod dynamics;

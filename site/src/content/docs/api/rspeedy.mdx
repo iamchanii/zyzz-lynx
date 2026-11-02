@@ -41,6 +41,8 @@ root.render(<App />)
 
 Each environment compiles separately, so `lynx` and `web` environments receive their own stylesheet. Watch rebuilds recompile the stylesheet after any source edit.
 
+Generated classes take their names from one table in compilation order, such as `z3` for a declaration and `zA00` for a recipe choice, since no stylesheet outside the bundle reads them. An edit can rename the classes of modules compiled after it, and those modules rebuild with the stylesheet.
+
 With [`options.inject`](#optionsinject), the plugin imports `zyzz.css` ahead of every entry's own modules instead. A manual import then resolves to the same module, which stays in its injected position.
 
 ## Variants

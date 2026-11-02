@@ -27,7 +27,8 @@ use crate::compiler::internal::stylesheets::{self, Rendered, Section};
 use crate::compiler::internal::syntax::{self, Parsed};
 use crate::compiler::internal::themes::{self, Link, LinkKind, Owner, VarsRead};
 use crate::compiler::internal::{
-    compositions, identifiers, literals, native_vars, relative, statics, unapplied, vars, wrappers,
+    compositions, dense, identifiers, literals, native_vars, relative, statics, unapplied, vars,
+    wrappers,
 };
 use crate::compiler::native;
 use crate::compiler::source::{self, Code, Diagnostic, ExtractError, Extracted, Target};
@@ -4066,7 +4067,15 @@ impl Build<'_, '_> {
                 (Arc::clone(key), module)
             })
             .collect();
-        let mut registry = Registry::new();
+        // A Lynx production build that rewrites every module of the application names classes
+        // from one dense table, since nothing outside the bundle reads the names. Development
+        // and partial graphs keep readable names, which stay stable module by module.
+        let dense_names = options.lynx && rewrite && !options.development && options.complete;
+        let mut registry = if dense_names {
+            Registry::dense()
+        } else {
+            Registry::new()
+        };
         let mut closures: FxHashMap<Arc<str>, Arc<FxHashSet<Arc<str>>>> = FxHashMap::default();
         let mut modules: Map<Arc<transform::Output>> = Map::default();
         let mut transformed = previous
@@ -4213,6 +4222,11 @@ impl Build<'_, '_> {
                     .get(compact.len().saturating_sub(6)..)
                     .unwrap_or_default();
                 let mut units = registry.scope(module_id, qualifier, visible);
+
+                if dense_names {
+                    dense::rename(&mut extracted, &mut units);
+                }
+
                 let imported: wrappers::Imports = read
                     .iter()
                     .filter_map(|(specifier, exports)| {

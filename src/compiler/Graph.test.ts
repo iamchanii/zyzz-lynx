@@ -118,6 +118,144 @@ export const badge = variants({
     )
   })
 
+  test('names lynx production classes from one dense table across a complete graph', async () => {
+    const modules = {
+      'index.tsx': `import { style } from 'zyzz'
+import { badge, label, quiet } from './styles.ts'
+const local = style({ color: 'rgb(0, 0, 255)' })
+export const App = () => <main>
+  <b {...label()}>label</b>
+  <u {...quiet()}>quiet</u>
+  <i {...local()}>local</i>
+  <span className={badge({ size: 'large' })}>badge</span>
+</main>`,
+      'styles.ts': `import { style, variants } from 'zyzz'
+export const label = style({ color: 'rgb(0, 0, 255)' })
+export const quiet = style({ color: 'rgb(0, 0, 255)' })
+export const badge = variants({
+  selection: 'className',
+  variants: { size: { large: { paddingLeft: '8px' }, small: { paddingLeft: '4px' } } },
+})`,
+    }
+    const options = {
+      [ClassName.complete]: true,
+      [ClassName.references]: true,
+      modules,
+      target: 'lynx',
+    } as const
+    const compiler = Graph.create()
+    const output = compiler.compile(options)
+
+    // The dependency compiles first: its recipe prefix, then one unit for both equal bodies.
+    // The consumer continues the table with its own rule for the body it also declares.
+    expect(output.modules['styles.ts']!.css).toMatchInlineSnapshot(`
+      ".z1{color:rgb(0, 0, 255);}
+      .zA00{padding-left:8px;}
+      .zA01{padding-left:4px;}"
+    `)
+    expect(output.modules['styles.ts']!.classes).toMatchInlineSnapshot(`
+      {
+        "style-1u33cwi148qjze-116": "z1",
+        "style-1u33cwi148qjze-172": "",
+        "style-1u33cwi148qjze-60": "z1",
+      }
+    `)
+    expect(output.modules['index.tsx']!.css).toMatchInlineSnapshot(
+      `".z2{color:rgb(0, 0, 255);}"`,
+    )
+
+    const rendered = await Wrappers.render({
+      css: Object.values(output.modules)
+        .map((module) => module.css)
+        .join('\n'),
+      entry: 'index.tsx',
+      modules: Object.fromEntries(
+        Object.entries(output.modules).map(([id, module]) => [id, module.code]),
+      ),
+    })
+
+    expect(rendered.elements).toMatchInlineSnapshot(`
+      [
+        {
+          "borderLeftWidth": "0px",
+          "className": "z1",
+          "color": "rgb(0, 0, 255)",
+          "paddingLeft": "0px",
+          "tag": "b",
+        },
+        {
+          "borderLeftWidth": "0px",
+          "className": "z1",
+          "color": "rgb(0, 0, 255)",
+          "paddingLeft": "0px",
+          "tag": "u",
+        },
+        {
+          "borderLeftWidth": "0px",
+          "className": "z2",
+          "color": "rgb(0, 0, 255)",
+          "paddingLeft": "0px",
+          "tag": "i",
+        },
+        {
+          "borderLeftWidth": "0px",
+          "className": "zA00",
+          "color": "rgb(0, 0, 0)",
+          "paddingLeft": "8px",
+          "tag": "span",
+        },
+      ]
+    `)
+
+    // Web builds, development builds, and graphs without every module keep readable names.
+    const readable = (css: string | undefined) => css?.split('\n')[0]
+
+    expect(
+      readable(
+        Graph.compile({ ...options, target: 'web' }).modules['styles.ts']!.css,
+      ),
+    ).toMatchInlineSnapshot(`".z_b8Bx0E0{color:rgb(0, 0, 255);}"`)
+    expect(
+      readable(
+        Graph.compile({ ...options, development: true }).modules['styles.ts']!
+          .css,
+      ),
+    ).toMatchInlineSnapshot(`".z-b8Bx0E-label-text-0{color:rgb(0, 0, 255);}"`)
+    expect(
+      readable(
+        Graph.compile({ modules, target: 'lynx' }).modules['styles.ts']!.css,
+      ),
+    ).toMatchInlineSnapshot(`".z_b8Bx0E0{color:rgb(0, 0, 255);}"`)
+
+    // A definition applied in the earlier module shifts the table, so the cached consumer,
+    // whose source is unchanged, recompiles to the names a fresh compilation chooses instead
+    // of keeping names the dependency now holds.
+    const edited = {
+      ...options,
+      modules: {
+        ...modules,
+        'styles.ts': modules['styles.ts'].replace(
+          'export const label',
+          "export const extra = style({ margin: '1px' })\nexport const spacer = extra()\nexport const label",
+        ),
+      },
+    }
+    const recompiled = compiler.compile(edited)
+    const fresh = Graph.compile(edited)
+
+    expect(recompiled.modules['styles.ts']!.css).toMatchInlineSnapshot(`
+      ".z1{margin:1px;}
+      .z2{color:rgb(0, 0, 255);}
+      .zA00{padding-left:8px;}
+      .zA01{padding-left:4px;}"
+    `)
+    expect(recompiled.modules['index.tsx']!.css).toMatchInlineSnapshot(
+      `".z3{color:rgb(0, 0, 255);}"`,
+    )
+    expect(recompiled.modules['index.tsx']).toEqual(fresh.modules['index.tsx'])
+    expect(recompiled.modules['styles.ts']).toEqual(fresh.modules['styles.ts'])
+  })
+
   test('publishes lynx flat class rules in version 37 contracts', () => {
     const publisher = Graph.compile({
       modules: {

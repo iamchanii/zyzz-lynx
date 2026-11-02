@@ -171,9 +171,13 @@ pub fn attribute(axis: &str, condition: usize) -> String {
     format!("data-zyzz-condition-{condition}-{axis}")
 }
 
+/// The length of a hashed class prefix: `zv` and eight hash characters.
+pub const PREFIX_LENGTH: usize = 10;
+
 /// The class prefix of a class-selection recipe, as `Identity.recipe` derives it from the
 /// definition identity. Generated names use `zv` nowhere else, and the fixed-length hash keeps
-/// one recipe's prefix from starting another's.
+/// one recipe's prefix from starting another's. A dense graph renames the prefix before the
+/// module is transformed, as `dense::rename` describes.
 pub fn prefix(identity: &str) -> String {
     let hash = identity::compact(identity);
 

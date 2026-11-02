@@ -3,6 +3,11 @@
 //! The unit registry shares declaration-unit names across the compilations of one graph. It is a
 //! plain value owned by the graph: each compilation borrows it through a [`Units`] scope, and a
 //! cached compilation registers its recorded decisions with [`Registry::restore`].
+//!
+//! A registry spells new names by its [`Scheme`]. Readable names qualify each module's units
+//! with its identity, so a module keeps its names in any graph. Dense names come from one table
+//! in allocation order, so they stay short and a module's names depend on every module before
+//! it.
 
 use std::borrow::Cow;
 use std::fmt::Write as _;
@@ -265,16 +270,61 @@ struct Entry {
     owner: Box<str>,
 }
 
+/// How a registry spells the names it introduces.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum Scheme {
+    /// One graph-wide table in allocation order. A unit is `z` and its base-36 index, such as
+    /// `z0` and `zab`. A recipe prefix is `z`, a capital letter counting the base-36 digits of
+    /// its index (`A` one digit, `B` two), and those digits, such as `zA3` and `zB10`. The letter
+    /// keeps a prefix from starting another prefix of a different length, and keeps every choice
+    /// class, which appends a lowercase index, apart from unit names. Lynx production builds of
+    /// a complete graph use it, since no stylesheet outside the bundle reads the names.
+    Dense,
+    /// Unit names qualified by their module, as `z_` + qualifier + index, and recipe prefixes
+    /// hashed from their definition identity, which stay the same in every graph.
+    #[default]
+    Readable,
+}
+
+/// The base-36 digits of a name index, as `Number.prototype.toString(36)` writes them.
+fn digits(index: usize) -> String {
+    js::radix(index as u64, 36)
+}
+
+/// A dense unit name: `z` and the base-36 index.
+fn dense_unit(index: usize) -> String {
+    format!("z{}", digits(index))
+}
+
+/// A dense recipe prefix: `z`, a capital letter counting the base-36 digits, and the digits.
+fn dense_prefix(index: usize) -> String {
+    let digits = digits(index);
+    let letter = char::from(b'A' + u8::try_from(digits.len() - 1).unwrap_or(25).min(25));
+
+    format!("z{letter}{digits}")
+}
+
 /// Shares unit names across the compilations of one graph.
 #[derive(Clone, Debug, Default)]
 pub struct Registry {
     names: FxHashMap<Box<str>, Entry>,
+    /// The index of the next dense name.
+    next: usize,
+    scheme: Scheme,
 }
 
 impl Registry {
-    /// Creates an empty name table.
+    /// Creates an empty name table of readable names.
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Creates an empty name table of dense names.
+    pub fn dense() -> Self {
+        Self {
+            scheme: Scheme::Dense,
+            ..Self::default()
+        }
     }
 
     /// Registers a name as introduced by an owner, as an earlier compilation in this table would.
@@ -296,6 +346,8 @@ impl Registry {
     /// Registers a cached compilation's names. Returns false, registering nothing, when compiling
     /// it now would choose different names.
     pub fn restore(&mut self, owner: &str, used: &Used, visible: &Visibility) -> bool {
+        let mut next = self.next;
+
         for (key, decision) in used {
             let name = self.borrow(key, visible);
 
@@ -306,12 +358,25 @@ impl Registry {
             if name.is_some_and(|name| name != decision.name) {
                 return false;
             }
+
+            // A dense table allocates in order, so each own name of the cached compilation must
+            // be the next name of its kind, as compiling the module now would choose it. An
+            // earlier module that gained or lost a name shifts the table, and the module then
+            // recompiles instead of keeping names another module may now hold.
+            if self.scheme == Scheme::Dense && !decision.borrowed {
+                if decision.name != dense_unit(next) && decision.name != dense_prefix(next) {
+                    return false;
+                }
+
+                next += 1;
+            }
         }
 
         for (key, decision) in used {
             self.insert(key, &decision.name, owner);
         }
 
+        self.next = next;
         true
     }
 
@@ -341,7 +406,43 @@ impl Units<'_> {
     /// Names a declaration unit, reusing a visible earlier name for an equal body. The key is
     /// the namespace and the body joined by a line break.
     pub fn name(&mut self, key: &str, namespace: Option<&str>) -> String {
-        // A repeated body keeps its name. Its first naming registered it, so a visible registry
+        self.decide(key, |units, index| match units.registry.scheme {
+            Scheme::Dense => dense_unit(index),
+            Scheme::Readable => {
+                // The underscore keeps unit names apart from readable names and anonymous
+                // scopes.
+                let mut name = String::with_capacity(16);
+
+                name.push_str("z_");
+
+                if let Some(namespace) = namespace.filter(|namespace| !namespace.is_empty()) {
+                    name.push_str(namespace);
+                    name.push('-');
+                }
+
+                name.push_str(&units.qualifier);
+                name.push_str(&digits(index));
+                name
+            }
+        })
+    }
+
+    /// Names the choice-class prefix of a recipe from its hashed prefix. A readable table keeps
+    /// the hash. A dense table allocates the next prefix, keyed by the hash so a cached
+    /// compilation replays the decision.
+    pub fn prefix(&mut self, hashed: &str) -> String {
+        if self.registry.scheme == Scheme::Readable {
+            return hashed.to_owned();
+        }
+
+        self.decide(&format!("prefix\n{hashed}"), |_, index| dense_prefix(index))
+    }
+
+    /// Records one naming decision, reusing a visible earlier name for an equal key. `fresh`
+    /// spells a new name from its index: the dense table's next index, or the count of this
+    /// compilation's distinct keys, so own readable names never depend on reuse.
+    fn decide(&mut self, key: &str, fresh: impl FnOnce(&Self, usize) -> String) -> String {
+        // A repeated key keeps its name. Its first naming registered it, so a visible registry
         // now reports the name as borrowed, as a fresh lookup would.
         if let Some(decision) = self.used.get_mut(key) {
             decision.borrowed = self.registry.borrow(key, &self.visible).is_some();
@@ -349,25 +450,20 @@ impl Units<'_> {
             return decision.name.clone();
         }
 
-        // Every distinct body consumes a slot, so own names never depend on reuse.
-        let index = self.used.len();
         let borrowed = self.registry.borrow(key, &self.visible).map(str::to_owned);
         let is_borrowed = borrowed.is_some();
-        // The underscore keeps unit names apart from readable names and anonymous scopes.
-        let name = borrowed.unwrap_or_else(|| {
-            let mut name = String::with_capacity(16);
+        let name = match borrowed {
+            Some(name) => name,
+            None => match self.registry.scheme {
+                Scheme::Dense => {
+                    let name = fresh(self, self.registry.next);
 
-            name.push_str("z_");
-
-            if let Some(namespace) = namespace.filter(|namespace| !namespace.is_empty()) {
-                name.push_str(namespace);
-                name.push('-');
-            }
-
-            name.push_str(&self.qualifier);
-            name.push_str(&js::radix(index as u64, 36));
-            name
-        });
+                    self.registry.next += 1;
+                    name
+                }
+                Scheme::Readable => fresh(self, self.used.len()),
+            },
+        };
 
         self.registry.insert(key, &name, &self.owner);
         self.used.insert(

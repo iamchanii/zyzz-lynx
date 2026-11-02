@@ -4815,67 +4815,67 @@ namespace styles {
 
       // Every rule is one class deep, in recipe order, with at-rules outside the class.
       expect(output.css).toMatchInlineSnapshot(`
-        ".z_l0kPgl0{color:rgb(0, 0, 0);}
-        .zv4meQUdh61{padding-left:2px;}
-        .zv4meQUdh62{padding-left:8px;}
-        .zv4meQUdh63{padding-left:4px;}
-        .zv4meQUdh64{color:rgb(0, 0, 255);}
-        .zv4meQUdh65{color:rgb(255, 0, 0);}
-        .zv4meQUdh66{border-left:4px solid;}
-        .z_l0kPgl1{padding-left:1px;}
-        .zv9WvyhNQ-0{padding-left:8px;}
-        @media (width >= 1px){.zv9WvyhNQ-0{border-left:2px solid;}}
-        .zv9WvyhNQ-1{padding-left:4px;}
-        .zv9WvyhNQ-2{color:rgb(0, 0, 255);}
-        .zv9WvyhNQ-4{color:rgb(0, 128, 0);}
-        .z_l0kPgl2{color:rgb(0, 0, 0);}
-        .zvbsqHUbNY1{padding-left:2px;}
-        .zvbsqHUbNY2{padding-left:8px;}
-        .zvbsqHUbNY3{padding-left:4px;}
-        .zvbsqHUbNY4{color:rgb(0, 0, 255);}
-        .zvbsqHUbNY5{color:rgb(255, 0, 0);}
-        .zvbsqHUbNY6{border-left:4px solid;}
-        .z_l0kPgl3{border-left:1px solid;}
-        .z_l0kPgl4{border-left:1px solid;}
-        .z_l0kPgl5{color:rgb(0, 0, 0);}
-        .zv14w9Ddz71{padding-left:2px;}
-        .zv14w9Ddz72{padding-left:8px;}
-        .zv14w9Ddz73{padding-left:4px;}
-        .zv14w9Ddz74{color:rgb(0, 0, 255);}
-        .zv14w9Ddz75{color:rgb(255, 0, 0);}
-        .zv14w9Ddz76{border-left:4px solid;}
-        .z_l0kPgl6{color:rgb(0, 0, 0);}
-        .zv6pa7USHW1{padding-left:2px;}
-        .zv6pa7USHW2{padding-left:8px;}
-        .zv6pa7USHW3{padding-left:4px;}
-        .zv6pa7USHW4{color:rgb(0, 0, 255);}
-        .zv6pa7USHW5{color:rgb(255, 0, 0);}
-        .zv6pa7USHW6{border-left:4px solid;}
-        .z_l0kPgl7{color:rgb(0, 0, 0);}
-        .zv5ZO1lHfQ1{padding-left:2px;}
-        .zv5ZO1lHfQ2{padding-left:8px;}
-        .zv5ZO1lHfQ3{padding-left:4px;}
-        .zv5ZO1lHfQ4{color:rgb(0, 0, 255);}
-        .zv5ZO1lHfQ5{color:rgb(255, 0, 0);}
-        .zv5ZO1lHfQ6{border-left:4px solid;}
-        .z_l0kPgl8{border-left:1px solid;}"
+        ".z6{color:rgb(0, 0, 0);}
+        .zA01{padding-left:2px;}
+        .zA02{padding-left:8px;}
+        .zA03{padding-left:4px;}
+        .zA04{color:rgb(0, 0, 255);}
+        .zA05{color:rgb(255, 0, 0);}
+        .zA06{border-left:4px solid;}
+        .z7{padding-left:1px;}
+        .zA10{padding-left:8px;}
+        @media (width >= 1px){.zA10{border-left:2px solid;}}
+        .zA11{padding-left:4px;}
+        .zA12{color:rgb(0, 0, 255);}
+        .zA14{color:rgb(0, 128, 0);}
+        .z8{color:rgb(0, 0, 0);}
+        .zA21{padding-left:2px;}
+        .zA22{padding-left:8px;}
+        .zA23{padding-left:4px;}
+        .zA24{color:rgb(0, 0, 255);}
+        .zA25{color:rgb(255, 0, 0);}
+        .zA26{border-left:4px solid;}
+        .z9{border-left:1px solid;}
+        .za{border-left:1px solid;}
+        .zb{color:rgb(0, 0, 0);}
+        .zA31{padding-left:2px;}
+        .zA32{padding-left:8px;}
+        .zA33{padding-left:4px;}
+        .zA34{color:rgb(0, 0, 255);}
+        .zA35{color:rgb(255, 0, 0);}
+        .zA36{border-left:4px solid;}
+        .zc{color:rgb(0, 0, 0);}
+        .zA41{padding-left:2px;}
+        .zA42{padding-left:8px;}
+        .zA43{padding-left:4px;}
+        .zA44{color:rgb(0, 0, 255);}
+        .zA45{color:rgb(255, 0, 0);}
+        .zA46{border-left:4px solid;}
+        .zd{color:rgb(0, 0, 0);}
+        .zA51{padding-left:2px;}
+        .zA52{padding-left:8px;}
+        .zA53{padding-left:4px;}
+        .zA54{color:rgb(0, 0, 255);}
+        .zA55{color:rgb(255, 0, 0);}
+        .zA56{border-left:4px solid;}
+        .ze{border-left:1px solid;}"
       `)
       expect(output.classes).toMatchInlineSnapshot(`
         {
-          "composition-1k0bfdx1r9hbnf-641": "z_l0kPgl2 z_l0kPgl3",
-          "composition-1k0bfdx1r9hbnf-731": "z_l0kPgl4 z_l0kPgl5",
-          "composition-1k0bfdx1r9hbnf-821": "z_l0kPgl7 z_l0kPgl8",
-          "composition-1k0bfdx1r9hbnf-821-0": "z_l0kPgl6",
-          "style-1k0bfdx1r9hbnf-1036": "z_l0kPgl0",
-          "style-1k0bfdx1r9hbnf-1490": "z_l0kPgl1",
+          "composition-1k0bfdx1r9hbnf-641": "z8 z9",
+          "composition-1k0bfdx1r9hbnf-731": "za zb",
+          "composition-1k0bfdx1r9hbnf-821": "zd ze",
+          "composition-1k0bfdx1r9hbnf-821-0": "zc",
+          "style-1k0bfdx1r9hbnf-1036": "z6",
+          "style-1k0bfdx1r9hbnf-1490": "z7",
           "style-1k0bfdx1r9hbnf-1924": "",
         }
       `)
       expect(output.code).toMatchInlineSnapshot(`
         "
-        const __zyzzComposition641=/*#__PURE__*/__zyzzComposition.create({"className":"z_l0kPgl2 z_l0kPgl3","inputs":[{"className":"z_l0kPgl0","renames":[[["zv4meQUdh6","zvbsqHUbNY"]]],"prefixes":["zv4meQUdh6"]},{}]});
-        const __zyzzComposition731=/*#__PURE__*/__zyzzComposition.create({"className":"z_l0kPgl4 z_l0kPgl5","inputs":[{},{"className":"z_l0kPgl0","renames":[[["zv4meQUdh6","zv14w9Ddz7"]]],"prefixes":["zv4meQUdh6"]}]});
-        const __zyzzComposition821=/*#__PURE__*/__zyzzComposition.create({"cases":["z_l0kPgl6","z_l0kPgl7 z_l0kPgl8"],"inputs":[{"className":"z_l0kPgl0","renames":[[["zv4meQUdh6","zv6pa7USHW"]],[["zv4meQUdh6","zv5ZO1lHfQ"]]],"prefixes":["zv4meQUdh6"]},{"condition":0}]});
+        const __zyzzComposition641=/*#__PURE__*/__zyzzComposition.create({"className":"z8 z9","inputs":[{"className":"z6","renames":[[["zA0","zA2"]]],"prefixes":["zA0"]},{}]});
+        const __zyzzComposition731=/*#__PURE__*/__zyzzComposition.create({"className":"za zb","inputs":[{},{"className":"z6","renames":[[["zA0","zA3"]]],"prefixes":["zA0"]}]});
+        const __zyzzComposition821=/*#__PURE__*/__zyzzComposition.create({"cases":["zc","zd ze"],"inputs":[{"className":"z6","renames":[[["zA0","zA4"]],[["zA0","zA5"]]],"prefixes":["zA0"]},{"condition":0}]});
 
         import { Composition as __zyzzComposition, Props as __zyzzProps } from 'zyzz/runtime';
 
@@ -4895,9 +4895,9 @@ namespace styles {
         </>
         const flag = Math.random() >= 0
         namespace styles {
-          export const chip = (((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className,style=input.style,vars=input.vars,inline=vars?{...vars,...style}:style;let value,className="z_l0kPgl0",s0,s1,s2;value=Object.prototype.hasOwnProperty.call(input,"on")?input["on"]:void 0;if(value!==null&&value!==void 0){value=String(value);s0=value;className+=value==="true"?" zv4meQUdh61":""}value=Object.prototype.hasOwnProperty.call(input,"size")?input["size"]:void 0;if(value!==null&&value!==void 0){value=String(value);s1=value;className+=value==="large"?" zv4meQUdh62":value==="small"?" zv4meQUdh63":""}value=Object.prototype.hasOwnProperty.call(input,"tone")?input["tone"]:void 0;if(value===void 0)value="red";if(value!==null&&value!==void 0){value=String(value);s2=value;className+=value==="blue"?" zv4meQUdh64":value==="red"?" zv4meQUdh65":""}if(s0==="true"&&s2==="blue")className+=" zv4meQUdh66";if(external)className+=" "+external;return inline?{className,style:inline}:{className}}) as unknown as import('zyzz').variants.ReturnType<{selection:'class';variants:{"on":{"false":{};"true":{}};"size":{"large":{};"small":{}};"tone":{"blue":{};"red":{}}}}>)
+          export const chip = (((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className,style=input.style,vars=input.vars,inline=vars?{...vars,...style}:style;let value,className="z6",s0,s1,s2;value=Object.prototype.hasOwnProperty.call(input,"on")?input["on"]:void 0;if(value!==null&&value!==void 0){value=String(value);s0=value;className+=value==="true"?" zA01":""}value=Object.prototype.hasOwnProperty.call(input,"size")?input["size"]:void 0;if(value!==null&&value!==void 0){value=String(value);s1=value;className+=value==="large"?" zA02":value==="small"?" zA03":""}value=Object.prototype.hasOwnProperty.call(input,"tone")?input["tone"]:void 0;if(value===void 0)value="red";if(value!==null&&value!==void 0){value=String(value);s2=value;className+=value==="blue"?" zA04":value==="red"?" zA05":""}if(s0==="true"&&s2==="blue")className+=" zA06";if(external)className+=" "+external;return inline?{className,style:inline}:{className}}) as unknown as import('zyzz').variants.ReturnType<{selection:'class';variants:{"on":{"false":{};"true":{}};"size":{"large":{};"small":{}};"tone":{"blue":{};"red":{}}}}>)
 
-          export const badge = (((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className;let value,className="z_l0kPgl1",s0,s1;value=Object.prototype.hasOwnProperty.call(input,"size")?input["size"]:void 0;if(value!==null&&value!==void 0){value=String(value);s0=value;className+=value==="large"?" zv9WvyhNQ-0":value==="small"?" zv9WvyhNQ-1":""}value=Object.prototype.hasOwnProperty.call(input,"tone")?input["tone"]:void 0;if(value!==null&&value!==void 0){value=String(value);s1=value;className+=value==="blue"?" zv9WvyhNQ-2":""}if((s0==="large"||s0==="small")&&s1==="blue")className+=" zv9WvyhNQ-4";if(external)className+=" "+external;return className}) as unknown as import('zyzz').variants.ReturnType<{selection:'className';variants:{"size":{"large":{};"small":{}};"tone":{"blue":{};"red":{}}}}>)
+          export const badge = (((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className;let value,className="z7",s0,s1;value=Object.prototype.hasOwnProperty.call(input,"size")?input["size"]:void 0;if(value!==null&&value!==void 0){value=String(value);s0=value;className+=value==="large"?" zA10":value==="small"?" zA11":""}value=Object.prototype.hasOwnProperty.call(input,"tone")?input["tone"]:void 0;if(value!==null&&value!==void 0){value=String(value);s1=value;className+=value==="blue"?" zA12":""}if((s0==="large"||s0==="small")&&s1==="blue")className+=" zA14";if(external)className+=" "+external;return className}) as unknown as import('zyzz').variants.ReturnType<{selection:'className';variants:{"size":{"large":{};"small":{}};"tone":{"blue":{};"red":{}}}}>)
 
           export const override = /*#__PURE__*/__zyzzProps.create({className:""})
         }"
@@ -4914,56 +4914,56 @@ namespace styles {
         [
           {
             "borderLeftWidth": "0px",
-            "className": "z_l0kPgl0 zv4meQUdh65",
+            "className": "z6 zA05",
             "color": "rgb(255, 0, 0)",
             "paddingLeft": "0px",
             "tag": "span",
           },
           {
             "borderLeftWidth": "4px",
-            "className": "z_l0kPgl0 zv4meQUdh61 zv4meQUdh64 zv4meQUdh66",
+            "className": "z6 zA01 zA04 zA06",
             "color": "rgb(0, 0, 255)",
             "paddingLeft": "2px",
             "tag": "span",
           },
           {
             "borderLeftWidth": "2px",
-            "className": "z_l0kPgl1 zv9WvyhNQ-0 zv9WvyhNQ-2 zv9WvyhNQ-4",
+            "className": "z7 zA10 zA12 zA14",
             "color": "rgb(0, 128, 0)",
             "paddingLeft": "8px",
             "tag": "span",
           },
           {
             "borderLeftWidth": "0px",
-            "className": "z_l0kPgl1 zv9WvyhNQ-1 extra",
+            "className": "z7 zA11 extra",
             "color": "rgb(0, 0, 0)",
             "paddingLeft": "4px",
             "tag": "span",
           },
           {
             "borderLeftWidth": "1px",
-            "className": "z_l0kPgl2 z_l0kPgl3 zvbsqHUbNY1 zvbsqHUbNY4 zvbsqHUbNY6",
+            "className": "z8 z9 zA21 zA24 zA26",
             "color": "rgb(0, 0, 255)",
             "paddingLeft": "2px",
             "tag": "span",
           },
           {
             "borderLeftWidth": "4px",
-            "className": "z_l0kPgl4 z_l0kPgl5 zv14w9Ddz71 zv14w9Ddz74 zv14w9Ddz76",
+            "className": "za zb zA31 zA34 zA36",
             "color": "rgb(0, 0, 255)",
             "paddingLeft": "2px",
             "tag": "span",
           },
           {
             "borderLeftWidth": "1px",
-            "className": "z_l0kPgl7 z_l0kPgl8 zv5ZO1lHfQ1 zv5ZO1lHfQ4 zv5ZO1lHfQ6",
+            "className": "zd ze zA51 zA54 zA56",
             "color": "rgb(0, 0, 255)",
             "paddingLeft": "2px",
             "tag": "span",
           },
           {
             "borderLeftWidth": "0px",
-            "className": "z_l0kPgl0 zv4meQUdh61 zv4meQUdh63 zv4meQUdh65",
+            "className": "z6 zA01 zA03 zA05",
             "color": "rgb(255, 0, 0)",
             "paddingLeft": "4px",
             "tag": "span",
@@ -4981,50 +4981,50 @@ namespace styles {
       })
 
       expect(output.css).toMatchInlineSnapshot(`
-        ".z_l0kPgl0{color:rgb(0, 0, 0);}
-        .zv4meQUdh61{padding-left:2px;}
-        .zv4meQUdh62{padding-left:8px;}
-        .zv4meQUdh63{padding-left:4px;}
-        .zv4meQUdh64{color:rgb(0, 0, 255);}
-        .zv4meQUdh65{color:rgb(255, 0, 0);}
-        .zv4meQUdh66{border-left:4px solid;}
-        .z_l0kPgl1{padding-left:1px;}
-        .zv9WvyhNQ-0{padding-left:8px;}
-        @media (width >= 1px){.zv9WvyhNQ-0{border-left:2px solid;}}
-        .zv9WvyhNQ-1{padding-left:4px;}
-        .zv9WvyhNQ-2{color:rgb(0, 0, 255);}
-        .zv9WvyhNQ-4{color:rgb(0, 128, 0);}
-        .z_l0kPgl2{color:rgb(0, 0, 0);}
-        .zvbsqHUbNY1{padding-left:2px;}
-        .zvbsqHUbNY2{padding-left:8px;}
-        .zvbsqHUbNY3{padding-left:4px;}
-        .zvbsqHUbNY4{color:rgb(0, 0, 255);}
-        .zvbsqHUbNY5{color:rgb(255, 0, 0);}
-        .zvbsqHUbNY6{border-left:4px solid;}
-        .z_l0kPgl3{border-left:1px solid;}
-        .z_l0kPgl4{border-left:1px solid;}
-        .z_l0kPgl5{color:rgb(0, 0, 0);}
-        .zv14w9Ddz71{padding-left:2px;}
-        .zv14w9Ddz72{padding-left:8px;}
-        .zv14w9Ddz73{padding-left:4px;}
-        .zv14w9Ddz74{color:rgb(0, 0, 255);}
-        .zv14w9Ddz75{color:rgb(255, 0, 0);}
-        .zv14w9Ddz76{border-left:4px solid;}
-        .z_l0kPgl6{color:rgb(0, 0, 0);}
-        .zv6pa7USHW1{padding-left:2px;}
-        .zv6pa7USHW2{padding-left:8px;}
-        .zv6pa7USHW3{padding-left:4px;}
-        .zv6pa7USHW4{color:rgb(0, 0, 255);}
-        .zv6pa7USHW5{color:rgb(255, 0, 0);}
-        .zv6pa7USHW6{border-left:4px solid;}
-        .z_l0kPgl7{color:rgb(0, 0, 0);}
-        .zv5ZO1lHfQ1{padding-left:2px;}
-        .zv5ZO1lHfQ2{padding-left:8px;}
-        .zv5ZO1lHfQ3{padding-left:4px;}
-        .zv5ZO1lHfQ4{color:rgb(0, 0, 255);}
-        .zv5ZO1lHfQ5{color:rgb(255, 0, 0);}
-        .zv5ZO1lHfQ6{border-left:4px solid;}
-        .z_l0kPgl8{border-left:1px solid;}"
+        ".z6{color:rgb(0, 0, 0);}
+        .zA01{padding-left:2px;}
+        .zA02{padding-left:8px;}
+        .zA03{padding-left:4px;}
+        .zA04{color:rgb(0, 0, 255);}
+        .zA05{color:rgb(255, 0, 0);}
+        .zA06{border-left:4px solid;}
+        .z7{padding-left:1px;}
+        .zA10{padding-left:8px;}
+        @media (width >= 1px){.zA10{border-left:2px solid;}}
+        .zA11{padding-left:4px;}
+        .zA12{color:rgb(0, 0, 255);}
+        .zA14{color:rgb(0, 128, 0);}
+        .z8{color:rgb(0, 0, 0);}
+        .zA21{padding-left:2px;}
+        .zA22{padding-left:8px;}
+        .zA23{padding-left:4px;}
+        .zA24{color:rgb(0, 0, 255);}
+        .zA25{color:rgb(255, 0, 0);}
+        .zA26{border-left:4px solid;}
+        .z9{border-left:1px solid;}
+        .za{border-left:1px solid;}
+        .zb{color:rgb(0, 0, 0);}
+        .zA31{padding-left:2px;}
+        .zA32{padding-left:8px;}
+        .zA33{padding-left:4px;}
+        .zA34{color:rgb(0, 0, 255);}
+        .zA35{color:rgb(255, 0, 0);}
+        .zA36{border-left:4px solid;}
+        .zc{color:rgb(0, 0, 0);}
+        .zA41{padding-left:2px;}
+        .zA42{padding-left:8px;}
+        .zA43{padding-left:4px;}
+        .zA44{color:rgb(0, 0, 255);}
+        .zA45{color:rgb(255, 0, 0);}
+        .zA46{border-left:4px solid;}
+        .zd{color:rgb(0, 0, 0);}
+        .zA51{padding-left:2px;}
+        .zA52{padding-left:8px;}
+        .zA53{padding-left:4px;}
+        .zA54{color:rgb(0, 0, 255);}
+        .zA55{color:rgb(255, 0, 0);}
+        .zA56{border-left:4px solid;}
+        .ze{border-left:1px solid;}"
       `)
     })
 
@@ -5146,7 +5146,7 @@ namespace styles {
         [
           {
             "borderLeftWidth": "0px",
-            "className": "zv9WvyhNQ-0 zv9WvyhNQ-1",
+            "className": "zA00 zA01",
             "color": "rgb(0, 0, 255)",
             "paddingLeft": "2px",
             "tag": "span",
@@ -5162,9 +5162,9 @@ export const props = style({ marginTop: '-6.4sp', paddingLeft: 'calc(10rpx + 1px
       expect(
         Transform.compile({ moduleId: 'App.tsx', source, target: 'lynx' }).css,
       ).toMatchInlineSnapshot(`
-        ".z_l0kPgl0{margin-top:-6.4sp;}
-        .z_l0kPgl1{padding-left:calc(10rpx + 1px);}
-        @media (width >= 1px){.z_l0kPgl2{font-size:14sp;}}"
+        ".z0{margin-top:-6.4sp;}
+        .z1{padding-left:calc(10rpx + 1px);}
+        @media (width >= 1px){.z2{font-size:14sp;}}"
       `)
 
       expect(() => Transform.compile({ moduleId: 'App.tsx', source }))
@@ -5224,13 +5224,13 @@ namespace styles {
           Transform.compile({ moduleId: 'App.tsx', source, target: 'lynx' })
             .css,
         ).toMatchInlineSnapshot(`
-          ".z_l0kPgl0{opacity:1;}
-          .z_l0kPgl1:active{opacity:0.4;}
-          @media (width >= 1px){.z_l0kPgl2{color:blue;}}
-          @media (width >= 1px){.z_l0kPgl3:focus,.z_l0kPgl3:hover{color:green;}}
-          .list > .z_l0kPgl4{margin-top:1px;}
-          .z_l0kPgl5{padding-left:2px;}
-          .zv24sXp5PK0:active{color:gray;}"
+          ".z1{opacity:1;}
+          .z2:active{opacity:0.4;}
+          @media (width >= 1px){.z3{color:blue;}}
+          @media (width >= 1px){.z4:focus,.z4:hover{color:green;}}
+          .list > .z5{margin-top:1px;}
+          .z6{padding-left:2px;}
+          .zA00:active{color:gray;}"
         `)
       })
 
@@ -5243,8 +5243,8 @@ namespace styles {
             target: 'lynx',
           }).css,
         ).toMatchInlineSnapshot(`
-          ".z_l0kPgl0{opacity:1;}.z_l0kPgl0:active{opacity:0.4;}@media (width >= 1px){.z_l0kPgl0{color:blue;}}@media (width >= 1px){.z_l0kPgl0:focus,.z_l0kPgl0:hover{color:green;}}.list > .z_l0kPgl0{margin-top:1px;}.z_l0kPgl0{padding-left:2px;}
-          .zv24sXp5PK0:active{color:gray;}"
+          ".z1{opacity:1;}.z1:active{opacity:0.4;}@media (width >= 1px){.z1{color:blue;}}@media (width >= 1px){.z1:focus,.z1:hover{color:green;}}.list > .z1{margin-top:1px;}.z1{padding-left:2px;}
+          .zA00:active{color:gray;}"
         `)
       })
 

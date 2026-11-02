@@ -24,13 +24,15 @@ use serde_json::Value;
 use crate::compiler::graph::{self, Compiled, Graph, Map, NativeOptions, Output, Resource};
 use crate::compiler::internal::edits::Edit;
 use crate::compiler::internal::stylesheets::Rendered;
-use crate::compiler::internal::{syntax, themes};
+use crate::compiler::internal::{dense, syntax, themes};
 use crate::compiler::{native, source, transform};
 use crate::data::Data;
 use crate::error::{Error, Result};
+use crate::internal::identity;
 use crate::internal::theme::Definition;
 use crate::internal::token::{Composition, CssOutput};
 use crate::js::{self, Record};
+use crate::web::internal::class_name::{Registry, Visibility};
 use crate::web::internal::themes::Shared;
 
 /// The sources of the last decoded snapshot, which a later snapshot names as `0`.
@@ -943,7 +945,7 @@ pub fn transform(input: &Value, separate: Option<&str>) -> Result<String> {
     let options = options(input)?;
     let allocator = oxc_allocator::Allocator::default();
     let parsed = crate::compiler::internal::syntax::parse(&allocator, source, module_id);
-    let extracted = crate::compiler::source::extract(
+    let mut extracted = crate::compiler::source::extract(
         &allocator,
         &crate::compiler::source::Options {
             compiler,
@@ -958,6 +960,24 @@ pub fn transform(input: &Value, separate: Option<&str>) -> Result<String> {
             },
         },
     )?;
+    // A single module is a complete graph of one module, so a Lynx production transform names
+    // its classes densely, as `Graph.compile` does for the whole application.
+    let dense_names = extracted.lynx && compiler != Some(false) && !options.development;
+    let mut registry = if dense_names {
+        Registry::dense()
+    } else {
+        Registry::new()
+    };
+    let qualifier = identity::compact(module_id);
+    let qualifier = qualifier
+        .get(qualifier.len().saturating_sub(6)..)
+        .unwrap_or_default();
+    let mut units = registry.scope(module_id, qualifier, Visibility::All);
+
+    if dense_names {
+        dense::rename(&mut extracted, &mut units);
+    }
+
     let output = transform::compile(
         &transform::Options {
             acyclic: false,
@@ -981,7 +1001,7 @@ pub fn transform(input: &Value, separate: Option<&str>) -> Result<String> {
         },
         &extracted,
         &parsed,
-        None,
+        Some(&mut units),
     )?;
     // The writer reserves the whole result at once.
     let mut written = String::new();

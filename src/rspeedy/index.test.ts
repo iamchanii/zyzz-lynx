@@ -102,16 +102,17 @@ describe('zyzz', () => {
       const { css, mainThread } = await template(root)
       expect(css).toMatchInlineSnapshot(`
         [
-          ".z_i6Fywm0 { background-color: #06c }",
-          ".z_i6Fywm1 { padding: 8px }",
-          ".z_i6Fywm2 { color: #fff }",
-          ".z_i6Fywm3 { font-size: 20px }",
+          ".z0 { background-color: #06c }",
+          ".z1 { padding: 8px }",
+          ".z2 { color: #fff }",
+          ".z3 { font-size: 20px }",
         ]
       `)
-      expect(mainThread.match(/"z_[\w-]+ z_[\w-]+"/g)).toMatchInlineSnapshot(`
+      // The main thread adds the dense names the template's rules carry.
+      expect(mainThread.match(/"z\w+ z\w+"/g)).toMatchInlineSnapshot(`
         [
-          ""z_i6Fywm0 z_i6Fywm1"",
-          ""z_i6Fywm2 z_i6Fywm3"",
+          ""z0 z1"",
+          ""z2 z3"",
         ]
       `)
       expect(mainThread.includes('style({')).toMatchInlineSnapshot(`false`)
@@ -177,19 +178,19 @@ describe('zyzz', () => {
       // The injected stylesheet precedes the entry's own imports once.
       expect((await template(root)).css).toMatchInlineSnapshot(`
         [
-          ".z_i6Fywm0 { background-color: #06c }",
-          ".z_i6Fywm1 { padding: 8px }",
-          ".z_i6Fywm2 { color: #fff }",
-          ".z_i6Fywm3 { font-size: 20px }",
+          ".z0 { background-color: #06c }",
+          ".z1 { padding: 8px }",
+          ".z2 { color: #fff }",
+          ".z3 { font-size: 20px }",
           ".app { margin: 4px }",
         ]
       `)
       expect((await template(root, 'other')).css).toMatchInlineSnapshot(`
         [
-          ".z_i6Fywm0 { background-color: #06c }",
-          ".z_i6Fywm1 { padding: 8px }",
-          ".z_i6Fywm2 { color: #fff }",
-          ".z_i6Fywm3 { font-size: 20px }",
+          ".z0 { background-color: #06c }",
+          ".z1 { padding: 8px }",
+          ".z2 { color: #fff }",
+          ".z3 { font-size: 20px }",
         ]
       `)
     } finally {
@@ -215,10 +216,10 @@ describe('zyzz', () => {
       ).toMatchInlineSnapshot(`[]`)
       expect((await template(root)).css).toMatchInlineSnapshot(`
         [
-          ".z_i6Fywm0 { background-color: #06c }",
-          ".z_i6Fywm1 { padding: 8px }",
-          ".z_i6Fywm2 { color: #fff }",
-          ".z_i6Fywm3 { font-size: 20px }",
+          ".z0 { background-color: #06c }",
+          ".z1 { padding: 8px }",
+          ".z2 { color: #fff }",
+          ".z3 { font-size: 20px }",
         ]
       `)
     } finally {
@@ -295,8 +296,8 @@ describe('zyzz', () => {
 
       expect((await template(root)).css).toMatchInlineSnapshot(`
         [
-          ".z_i6Fywm0 { background-color: {{--seed-color-bg-layer-default}} }",
-          ".z_i6Fywm1 { border-color: {{--seed-color-bg-layer-floating}} }",
+          ".z0 { background-color: {{--seed-color-bg-layer-default}} }",
+          ".z1 { border-color: {{--seed-color-bg-layer-floating}} }",
         ]
       `)
     } finally {
@@ -404,10 +405,10 @@ describe('zyzz', () => {
       const { css, mainThread } = await template(root)
       expect(css).toMatchInlineSnapshot(`
         [
-          ".z_i6Fywm0 { background-color: #06c }",
-          ".z_i6Fywm1 { padding: 8px }",
-          ".z_i6Fywm2 { color: #fff }",
-          ".z_i6Fywm3 { font-size: 20px }",
+          ".z0 { background-color: #06c }",
+          ".z1 { padding: 8px }",
+          ".z2 { color: #fff }",
+          ".z3 { font-size: 20px }",
         ]
       `)
       expect(mainThread.includes('globalThis.preLoaded')).toMatchInlineSnapshot(
@@ -427,12 +428,14 @@ describe('zyzz', () => {
       await Fs.writeFile(
         Path.join(root, 'src/App.tsx'),
         `import { cx, style, variants } from 'zyzz'
+import { Note } from './Note'
 
 export function App(props: { tone?: 'neutral' | 'success' }) {
   return (
     <view {...styles.card({ size: 'large', tone: props.tone })}>
       <text className={styles.badge({ tone: props.tone, className: 'extra' })}>Hello</text>
       <text {...cx(styles.card({ size: 'small', tone: 'success' }), styles.quiet())}>Quiet</text>
+      <Note />
     </view>
   )
 }
@@ -459,6 +462,20 @@ namespace styles {
 }
 `,
       )
+      // A second module declares a body the first also declares, and keeps its own rule.
+      await Fs.writeFile(
+        Path.join(root, 'src/Note.tsx'),
+        `import { style } from 'zyzz'
+
+export function Note() {
+  return <text {...styles.note()}>Note</text>
+}
+
+namespace styles {
+  export const note = style({ opacity: 1 })
+}
+`,
+      )
 
       // The composition reads the runtime helper, which the fixture resolves from the repository.
       const result = await (
@@ -476,27 +493,29 @@ namespace styles {
 
       // Every rule reaches the template with its declarations: one class per choice and
       // compound, at-rules outside the class, and composition copies under their own prefix.
+      // Production names come from one dense table across both modules.
       const { css, mainThread } = await template(root)
       expect(css).toMatchInlineSnapshot(`
         [
-          ".z_i6Fywm0 { padding: 2px }",
-          ".zvet-RFk250 { height: 40px }",
-          "@media (width>=1px) { .zvet-RFk250 { width: 40px } }",
-          ".zvet-RFk251 { height: 20px }",
-          ".zvet-RFk252 { color: #000 }",
-          ".zvet-RFk253 { color: #0a0 }",
-          ".zvet-RFk254 { opacity: .5 }",
-          ".z_i6Fywm1 { font-size: 12px }",
-          ".zv7eXG394G1 { color: #0a0 }",
-          ".zv7eXG394G2 { font-weight: 700 }",
-          ".z_i6Fywm2 { padding: 2px }",
-          ".zv27DIkWrC0 { height: 40px }",
-          "@media (width>=1px) { .zv27DIkWrC0 { width: 40px } }",
-          ".zv27DIkWrC1 { height: 20px }",
-          ".zv27DIkWrC2 { color: #000 }",
-          ".zv27DIkWrC3 { color: #0a0 }",
-          ".zv27DIkWrC4 { opacity: .5 }",
-          ".z_i6Fywm3 { opacity: 1 }",
+          ".z0 { opacity: 1 }",
+          ".z4 { padding: 2px }",
+          ".zA10 { height: 40px }",
+          "@media (width>=1px) { .zA10 { width: 40px } }",
+          ".zA11 { height: 20px }",
+          ".zA12 { color: #000 }",
+          ".zA13 { color: #0a0 }",
+          ".zA14 { opacity: .5 }",
+          ".z5 { font-size: 12px }",
+          ".zA21 { color: #0a0 }",
+          ".zA22 { font-weight: 700 }",
+          ".z6 { padding: 2px }",
+          ".zA30 { height: 40px }",
+          "@media (width>=1px) { .zA30 { width: 40px } }",
+          ".zA31 { height: 20px }",
+          ".zA32 { color: #000 }",
+          ".zA33 { color: #0a0 }",
+          ".zA34 { opacity: .5 }",
+          ".z7 { opacity: 1 }",
         ]
       `)
       // The composition renames the recipe's choice classes to its own copies.
@@ -506,20 +525,40 @@ namespace styles {
           .match(/"renames":\[\[\["[\w-]+","[\w-]+"\]\]\]/g),
       ).toMatchInlineSnapshot(`
         [
-          ""renames":[[["zvet-RFk25","zv27DIkWrC"]]]",
+          ""renames":[[["zA1","zA3"]]]",
         ]
       `)
-      expect(mainThread.match(/" zv[\w-]+"/g)).toMatchInlineSnapshot(`
+      // Every generated class the main thread adds, a unit or a choice class under a recipe
+      // prefix, selects a rule of the template.
+      const selectors = new Set(
+        css.flatMap((rule) => rule.match(/\.z[0-9A-Za-z]+/g) ?? []),
+      )
+      const token = /z[0-9a-z]+|zA[0-9a-z]{2}/
+      const lists = mainThread.match(
+        new RegExp(`" ?${token.source}(?: ${token.source})*"`, 'g'),
+      )
+      const classes = [
+        ...new Set(
+          lists?.flatMap((list) => list.replaceAll('"', '').trim().split(' ')),
+        ),
+      ].sort()
+
+      expect(classes).toMatchInlineSnapshot(`
         [
-          "" zvet-RFk250"",
-          "" zvet-RFk251"",
-          "" zvet-RFk252"",
-          "" zvet-RFk253"",
-          "" zvet-RFk254"",
-          "" zv7eXG394G1"",
-          "" zv7eXG394G2"",
+          "z0",
+          "z4",
+          "z5",
+          "z6",
+          "zA10",
+          "zA11",
+          "zA12",
+          "zA13",
+          "zA14",
+          "zA21",
+          "zA22",
         ]
       `)
+      expect(classes.filter((name) => !selectors.has(`.${name}`))).toEqual([])
     } finally {
       await Fs.rm(root, { force: true, recursive: true })
     }
@@ -554,10 +593,10 @@ namespace styles {
       const { css } = await template(root)
       expect(css).toMatchInlineSnapshot(`
         [
-          ".z_i6Fywm0 { opacity: 1 }",
-          ".z_i6Fywm1:active { opacity: .4 }",
-          "@media (width>=1px) { .z_i6Fywm2:focus { opacity: .6 } }",
-          ".list>.z_i6Fywm3 { margin-top: 1px }",
+          ".z0 { opacity: 1 }",
+          ".z1:active { opacity: .4 }",
+          "@media (width>=1px) { .z2:focus { opacity: .6 } }",
+          ".list>.z3 { margin-top: 1px }",
         ]
       `)
     } finally {
@@ -647,10 +686,10 @@ namespace styles {
 
       expect((await template(root)).css).toMatchInlineSnapshot(`
         [
-          ".z_i6Fywm0 { background-color: red }",
-          ".z_i6Fywm1 { padding: 8px }",
-          ".z_i6Fywm2 { color: #fff }",
-          ".z_i6Fywm3 { font-size: 20px }",
+          ".z0 { background-color: red }",
+          ".z1 { padding: 8px }",
+          ".z2 { color: #fff }",
+          ".z3 { font-size: 20px }",
         ]
       `)
     } finally {
@@ -701,10 +740,10 @@ namespace styles {
       expect(await rebuilt).toMatchInlineSnapshot(`[]`)
       expect((await template(root)).css).toMatchInlineSnapshot(`
         [
-          ".z_i6Fywm0 { background-color: #06c }",
-          ".z_i6Fywm1 { padding: 8px }",
-          ".z_i6Fywm2 { color: #fff }",
-          ".z_i6Fywm3 { font-size: 20px }",
+          ".z0 { background-color: #06c }",
+          ".z1 { padding: 8px }",
+          ".z2 { color: #fff }",
+          ".z3 { font-size: 20px }",
         ]
       `)
     } finally {

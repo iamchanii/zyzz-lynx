@@ -495,7 +495,7 @@ fn rules(
             let class = rule.class.as_deref().map(|class| {
                 // A choice class is its recipe prefix, `zv` and an 8-character hash, then the
                 // choice position.
-                let split = class.len().min(10);
+                let split = class.len().min(recipes::PREFIX_LENGTH);
                 let (from, rest) = class.split_at(split);
                 let to = if let Some((_, _, to)) = renames
                     .iter()
