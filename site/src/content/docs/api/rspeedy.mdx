@@ -245,6 +245,32 @@ import { zyzz } from 'zyzz/rspeedy'
 const plugin = zyzz({ root: 'src' })
 ```
 
+### options.units
+
+- **Type:** `'atomic' | 'merged'{:ts}`
+- **Default:** `'merged'{:ts}`
+
+How a production build prints the units of independent composition. The default joins units that every class list of the bundle applies together into one rule under the first unit's name, in stylesheet order, and drops the other names from the class lists of both threads. `'atomic'` keeps one rule per unit. Development builds and `'ordered'` composition keep every rule.
+
+```ts title="lynx.config.ts"
+import { zyzz } from 'zyzz/rspeedy'
+
+// [!code hl:2]
+// Keeps one rule per declaration in production
+const plugin = zyzz({ units: 'atomic' })
+```
+
+A unit merges only when it is the sole selector of a top-level rule, so pseudo-classes, media queries, recipe choices, and composition copies stay in place, and a group whose members a conflicting rule separates keeps its rules apart, so the cascade of every element is unchanged.
+
+```css title="zyzz.css"
+/* Three units that only the card applies print as one rule */
+.z3 {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+```
+
 ## Returns
 
 ### plugin

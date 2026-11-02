@@ -5,6 +5,8 @@ import type { Config } from '@lynx-js/rspeedy'
 import type { RsbuildPlugin, Rspack } from '@rsbuild/core'
 import * as Fs from 'node:fs/promises'
 import * as Path from 'node:path'
+import { chromium } from 'playwright'
+import type { Page } from 'playwright'
 import { describe, expect, test } from 'vite-plus/test'
 import { zyzz } from 'zyzz/rspeedy'
 
@@ -28,6 +30,7 @@ type Template = {
     readonly cssMap: Readonly<Record<string, readonly Rule[]>>
   }
   readonly lepusCode: { readonly root: string }
+  readonly manifest: Readonly<Record<string, string>>
 }
 
 async function fixture() {
@@ -87,9 +90,69 @@ async function template(root: string, entry = 'main') {
       : `${rule.selectorText.value} { ${rule.style.map((declaration) => `${declaration.name}: ${declaration.value}`).join('; ')} }`
 
   return {
+    background: Object.values(template.manifest).join('\n'),
     css: Object.values(template.css.cssMap).flat().map(print),
     mainThread: template.lepusCode.root,
   }
+}
+
+/**
+ * Builds in production mode and reads the encoded template. The template plugin writes
+ * `tasm.json` and the thread scripts beside the bundle when DEBUG names rspeedy.
+ */
+async function production(
+  root: string,
+  options: zyzz.Options = {},
+  config: Config = {},
+) {
+  const debug = process.env.DEBUG
+  process.env.DEBUG = 'rspeedy'
+  try {
+    const result = await (
+      await create(root, { mode: 'production', ...config }, options)
+    ).build()
+    await result.close()
+  } finally {
+    if (debug === undefined) delete process.env.DEBUG
+    else process.env.DEBUG = debug
+  }
+  return template(root)
+}
+
+/** The generated class lists a thread script names, with the leading space of a conditional piece. */
+function lists(source: string): readonly string[] {
+  return (source.match(/"( ?z[0-9a-zA-Z]+)+"/g) ?? []).map((list) =>
+    list.slice(1, -1),
+  )
+}
+
+/**
+ * Computed styles in Chromium of one element per class list of the main thread and per full
+ * list extended with each conditional piece, under the template's rules.
+ */
+async function computed(
+  page: Page,
+  template: { readonly css: readonly string[]; readonly mainThread: string },
+  properties: readonly string[],
+) {
+  const classLists = lists(template.mainThread)
+  const full = classLists.filter((list) => !list.startsWith(' '))
+  const pieces = classLists.filter((list) => list.startsWith(' '))
+  const cases = [
+    ...classLists,
+    ...full.flatMap((list) => pieces.map((piece) => list + piece)),
+  ]
+
+  await page.setContent(
+    `<style>${template.css.join('\n')}</style>${cases.map((list) => `<div class="${list.trim()}"></div>`).join('')}`,
+  )
+  return page.evaluate(
+    (names) =>
+      [...document.querySelectorAll('div')].map((element) =>
+        names.map((name) => getComputedStyle(element).getPropertyValue(name)),
+      ),
+    [...properties],
+  )
 }
 
 /**
@@ -1162,6 +1225,233 @@ namespace styles {
       await Fs.rm(root, { force: true, recursive: true })
     }
   }, 60_000)
+
+  test('merges the units that every class list applies together in production builds', async () => {
+    const root = await fixture()
+    try {
+      // Two components whose rows share three units in the same combination, a conditional
+      // style whose two units always appear together, two text styles that repeat one pair,
+      // and a spacer with one unit of its own.
+      await Fs.writeFile(
+        Path.join(root, 'src/App.tsx'),
+        `import { cx, style } from 'zyzz'
+import { Card } from './Card'
+
+export function App(props: { active: boolean }) {
+  return (
+    <view {...cx(styles.row(), props.active && styles.active())}>
+      <text {...styles.label()}>Hello</text>
+      <Card />
+      <view {...styles.spacer()} />
+    </view>
+  )
+}
+
+namespace styles {
+  export const row = style({ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '4px' })
+
+  export const active = style({ backgroundColor: 'rgb(0, 102, 204)', borderRadius: '8px' })
+
+  export const label = style({ color: 'rgb(26, 26, 26)', fontSize: '14px' })
+
+  export const spacer = style({ height: '8px' })
+}
+`,
+      )
+      await Fs.writeFile(
+        Path.join(root, 'src/Card.tsx'),
+        `import { style } from 'zyzz'
+
+export function Card() {
+  return <view {...styles.card()}><text {...styles.title()}>Card</text></view>
+}
+
+namespace styles {
+  export const card = style({ display: 'flex', flexDirection: 'row', alignItems: 'center', padding: '8px' })
+
+  export const title = style({ color: 'rgb(26, 26, 26)', fontSize: '14px' })
+}
+`,
+      )
+
+      // The CSS minimizer would order each rule's declarations by name.
+      const unminified = { output: { minify: { css: false } } }
+      const merged = await production(root, {}, unminified)
+
+      // The three row units, the two conditional units, and the two text units each print as
+      // one rule under the first unit's name with the declarations in stylesheet order. The
+      // gap, padding, and height units keep their own rules.
+      expect(merged.css).toMatchInlineSnapshot(`
+        [
+          ".z0 { display: flex; flex-direction: row; align-items: center }",
+          ".z3 { padding: 8px }",
+          ".z4 { color: #1a1a1a; font-size: 14px }",
+          ".z6 { gap: 4px }",
+          ".z7 { background-color: #06c; border-radius: 8px }",
+          ".z9 { height: 8px }",
+        ]
+      `)
+      // Both threads name the merged unit once where the lists named every member.
+      expect(lists(merged.mainThread)).toMatchInlineSnapshot(`
+        [
+          "z0 z3",
+          "z4",
+          "z4",
+          "z9",
+          "z0 z6",
+          " z7",
+        ]
+      `)
+      expect(lists(merged.background)).toMatchInlineSnapshot(`
+        [
+          "z0 z6",
+          " z7",
+        ]
+      `)
+
+      // The option keeps one rule per unit.
+      const atomic = await production(root, { units: 'atomic' }, unminified)
+      expect(atomic.css).toMatchInlineSnapshot(`
+        [
+          ".z0 { display: flex }",
+          ".z1 { flex-direction: row }",
+          ".z2 { align-items: center }",
+          ".z3 { padding: 8px }",
+          ".z4 { color: #1a1a1a }",
+          ".z5 { font-size: 14px }",
+          ".z6 { gap: 4px }",
+          ".z7 { background-color: #06c }",
+          ".z8 { border-radius: 8px }",
+          ".z9 { height: 8px }",
+        ]
+      `)
+      expect(lists(atomic.mainThread)).toMatchInlineSnapshot(`
+        [
+          "z0 z1 z2 z3",
+          "z4 z5",
+          "z4 z5",
+          "z9",
+          "z0 z1 z2 z6",
+          " z7 z8",
+        ]
+      `)
+      expect(merged.css.length).toBe(atomic.css.length - 4)
+
+      // Every class list, alone and with each conditional piece, computes the same styles
+      // under the merged rules as under the atomic rules.
+      const properties = [
+        'align-items',
+        'background-color',
+        'border-radius',
+        'color',
+        'display',
+        'flex-direction',
+        'font-size',
+        'gap',
+        'height',
+        'padding',
+      ]
+      const browser = await chromium.launch()
+      try {
+        const page = await browser.newPage()
+        const styles = await computed(page, merged, properties)
+        expect(styles).toEqual(await computed(page, atomic, properties))
+        // Six lists, and five full lists extended with the one conditional piece.
+        expect(styles.length).toBe(11)
+        expect(styles[0]).toMatchInlineSnapshot(`
+          [
+            "center",
+            "rgba(0, 0, 0, 0)",
+            "0px",
+            "rgb(0, 0, 0)",
+            "flex",
+            "row",
+            "16px",
+            "normal",
+            "0px",
+            "8px",
+          ]
+        `)
+        expect(styles[10]).toMatchInlineSnapshot(`
+          [
+            "center",
+            "rgb(0, 102, 204)",
+            "8px",
+            "rgb(0, 0, 0)",
+            "flex",
+            "row",
+            "16px",
+            "4px",
+            "0px",
+            "0px",
+          ]
+        `)
+      } finally {
+        await browser.close()
+      }
+    } finally {
+      await Fs.rm(root, { force: true, recursive: true })
+    }
+  }, 180_000)
+
+  test('keeps co-used units apart when a rule between them declares a moved property', async () => {
+    const root = await fixture()
+    try {
+      // A style's nested rule prints between its own units in authored order. The heading's
+      // text rule declares opacity, the property of the unit that would move up past it, and
+      // the note's text rule declares nothing of its padding unit.
+      await Fs.writeFile(
+        Path.join(root, 'src/App.tsx'),
+        `import { style } from 'zyzz'
+
+export function App() {
+  return (
+    <view>
+      <view {...styles.heading()}><text>Heading</text></view>
+      <view {...styles.note()}><text>Note</text></view>
+    </view>
+  )
+}
+
+namespace styles {
+  export const heading = style({
+    color: 'rgb(26, 26, 26)',
+    selectors: { '& text': { color: 'rgb(0, 0, 0)', opacity: 1 } },
+    opacity: 0.5,
+  })
+
+  export const note = style({
+    color: 'rgb(0, 102, 204)',
+    selectors: { '& text': { color: 'rgb(0, 0, 0)' } },
+    padding: '4px',
+  })
+}
+`,
+      )
+
+      const merged = await production(root)
+
+      // The heading keeps three rules, and the note's color and padding share one.
+      expect(merged.css).toMatchInlineSnapshot(`
+        [
+          ".z0 { color: #1a1a1a }",
+          ".z1 text { color: #000 }",
+          ".z2 text { opacity: 1 }",
+          ".z3 { opacity: .5 }",
+          ".z4 { color: #06c; padding: 4px }",
+          ".z5 text { color: #000 }",
+        ]
+      `)
+      expect(lists(merged.mainThread)).toMatchInlineSnapshot(`
+        [
+          "z0 z1 z2 z3",
+          "z4 z5",
+        ]
+      `)
+    } finally {
+      await Fs.rm(root, { force: true, recursive: true })
+    }
+  }, 120_000)
 
   test('rebuilds the zyzz.css module after a style edit in watch mode', async () => {
     const root = await fixture()
