@@ -38,19 +38,33 @@ Grouped output makes both thread scripts smaller than the vanilla-extract build,
 
 ## Encoder Cost Model
 
-A probe application with a generated plain stylesheet and no styled markup shows what the template encoder charges for, measured as `.lynx.bundle` growth over an empty stylesheet (89.6 kB):
+A probe application with a generated plain stylesheet and no styled markup shows what the template encoder charges for, measured as `.lynx.bundle` growth over an empty stylesheet (89.6 kB). Every rule in a probe has a distinct declaration block, since Lightning CSS otherwise merges identical rules into one selector list before encoding.
 
-| Stylesheet                                              | Bundle growth | Per rule |
-| ------------------------------------------------------- | ------------- | -------- |
-| 1000 rules, one repeated declaration, 4 to 5 char class | 23.4 kB       | 24 B     |
-| 1000 rules, one repeated declaration, 9 char class      | 29.3 kB       | 30 B     |
-| 250 rules, four repeated declarations                   | 5.9 kB        | 24 B     |
-| 1000 rules, four repeated declarations                  | 23.5 kB       | 24 B     |
-| 1000 rules, one `var()` declaration                     | 23.4 kB       | 24 B     |
-| 1000 rules, one declaration with a unique value         | 57.4 kB       | 59 B     |
-| 1000 `:active` rules, one repeated declaration          | 48.8 kB       | 50 B     |
+| Stylesheet                                                   | Bundle growth | Per rule |
+| ------------------------------------------------------------ | ------------- | -------- |
+| 1000 rules, one declaration with a unique value              | 58.8 kB       | 59 B     |
+| 1000 rules, three declarations with values from pools of ten | 108.6 kB      | 109 B    |
+| 1000 rules, three declarations with unique values            | 106.8 kB      | 107 B    |
+| 500 rules, two declarations with unique values               | 41.3 kB       | 83 B     |
+| 1000 rules, one unique declaration, 9 character class        | 64.9 kB       | 65 B     |
+| 1000 `:active` rules, one unique declaration                 | 84.8 kB       | 85 B     |
+| 1000 rules, one `var()` declaration                          | 82.7 kB       | 83 B     |
 
-The encoder interns repeated declarations, so a declaration that already appears in another rule costs nothing, while every rule costs about 24 bytes plus 1.5 bytes per selector character, a unique value about 35 bytes, and a pseudo-class about 26 bytes. Rule count and class-name length therefore decide the stylesheet's share of the bundle, and grouped output's repeated declarations are nearly free. ReactLynx's `extractStr` option, which interns repeated JavaScript strings, changed neither bundle by a byte here.
+The encoder charges about 35 bytes per rule, 24 bytes per declaration whether or not its value repeats elsewhere, 1.5 bytes per selector character, 26 bytes per pseudo-class, and 24 bytes more for a `var()` reference. Applied to the samples, the vanilla-extract stylesheet (503 rules, 1827 declarations) costs about 61 kB and the atomic zyzz stylesheet (1177 rules, 1341 declarations) about 73 kB before class-name text, so rule count rather than declaration count separates them. ReactLynx's `extractStr` option, which interns repeated JavaScript strings, changed neither bundle by a byte.
+
+## Independent Composition Experiment
+
+`composition: 'independent'` lets atomic rules share one name across styles whenever their declaration repeats, and keeps conflict order only inside `cx` calls and each style. The sample combines styles only through `cx`, which is the documented condition for the mode.
+
+| Metric                             | ordered (default), atomic | independent, atomic | independent, grouped |
+| ---------------------------------- | ------------------------- | ------------------- | -------------------- |
+| `.lynx.bundle`                     | 291.9 kB                  | 245.3 kB            | 287.9 kB             |
+| `main-thread.js` (raw / gzip)      | 139.6 / 33.8 kB           | 137.8 / 32.8 kB     | 118.1 / 30.4 kB      |
+| `background.js` (raw / gzip)       | 49.1 / 14.8 kB            | 47.5 / 14.1 kB      | 39.4 / 13.1 kB       |
+| Encoded CSS (raw / gzip)           | 51.4 / 7.8 kB             | 35.6 / 5.8 kB       | 69.4 / 7.9 kB        |
+| CSS rules / declarations / classes | 1177 / 1338 / 1187        | 674 / 873 / 682     | 679 / 2332 / 631     |
+
+Independent atomic output halves the rule count and lands 2 kB below the vanilla-extract bundle before any compiler change, with 12 kB less encoded CSS. The mode drops one guarantee: a class passed in through `className` from another module no longer wins over the component's own declarations by definition order.
 
 ## Commit Checkpoints
 
