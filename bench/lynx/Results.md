@@ -4,7 +4,7 @@ Measurements of the two samples in this directory with `Measure.ts`, recorded on
 
 ## Current Comparison
 
-Workspace zyzz build at `980230d` (the fork's `main`), before the changes on the `lynx-bundle` branch. The Progress Ledger below records each later change, and its final row is the current default: 195.2 kB against 247.3 kB, with 22.9 kB of encoded CSS against 47.6 kB.
+Workspace zyzz build at `980230d` (the fork's `main`), before the changes on the `lynx-bundle` branch. The Progress Ledger below records each later change, and its final row is the current default: 194.1 kB against 247.3 kB, with 22.9 kB of encoded CSS against 47.6 kB.
 
 | Metric                             | vanilla-extract        | zyzz                   |
 | ---------------------------------- | ---------------------- | ---------------------- |
@@ -40,6 +40,7 @@ Each row measures the `zyzz` sample after one change on the `lynx-bundle` branch
 | Share recipe base declarations as units under independent composition                 | `8f14e0d` | 211.4 kB       | −7.6 kB  | 118.6 kB         | 38.8 kB         | 29.7 kB     | 613 / 818 / 621                |
 | Concatenate flat Lynx compositions with override copies                               | `2f027bd` | 195.4 kB       | −16.0 kB | 115.4 kB         | 35.6 kB         | 23.0 kB     | 507 / 570 / 512                |
 | Share override copies across a module's compositions and copy only selectable choices | `904924f` | 195.2 kB       | −0.2 kB  | 115.4 kB         | 35.6 kB         | 22.9 kB     | 506 / 569 / 509                |
+| Read recipe axes directly and coerce only boolean-like and numeric choices            | `1a457bf` | 194.1 kB       | −1.1 kB  | 114.7 kB         | 35.0 kB         | 22.9 kB     | 506 / 569 / 509                |
 
 With dense names the main thread is already smaller than the vanilla-extract build (121.4 against 131.4 kB) while the background thread stays 4 kB larger, and the remaining 11.9 kB bundle gap is the rule count (1161 against 503). The scope fold, the selector pruning, and the composition tables together remove every `zyzz/runtime` module from both threads. The tables cost 1.9 kB raw in this sample, since six class tables (the calendar's 32 entries alone hold 4.4 kB of class lists) replace a 2 kB minified runtime per thread, while gzip shrinks by 0.5 kB per thread. Independent composition closes the gap and lands 28.3 kB (11%) under the vanilla-extract bundle, so the `zyzz/rspeedy` plugin now composes independently unless a config or `options.composition` says otherwise. This default was chosen in the optimization loop on the grounds that Lynx elements combine styles only through `cx`, which keeps its argument order; the one guarantee it gives up is that a class passed in through `className` from another module wins by definition order, and `options.composition: 'ordered'` restores it. With that default the zyzz sample ships a 219.0 kB bundle against 247.3 kB and 30.8 kB of encoded CSS against 47.6 kB, with 667 rules against 503 and 857 declarations against 1827.
 
@@ -135,6 +136,7 @@ The `zyzz` sample measured against a worktree of each `lynx-bundle` compiler com
 | `8f14e0d` | Share recipe base declarations as units under independent composition                 | 211.4 kB       | 118.6 / 30.7 kB             | 38.8 / 12.4 kB             | 29.7 / 4.9 kB          | 613 / 818 / 621                |
 | `2f027bd` | Concatenate flat Lynx compositions with override copies                               | 195.4 kB       | 115.4 / 30.1 kB             | 35.6 / 11.9 kB             | 23.0 / 4.5 kB          | 507 / 570 / 512                |
 | `904924f` | Share override copies across a module's compositions and copy only selectable choices | 195.2 kB       | 115.4 / 30.1 kB             | 35.6 / 11.9 kB             | 22.9 / 4.5 kB          | 506 / 569 / 509                |
+| `1a457bf` | Read recipe axes directly and coerce only boolean-like and numeric choices            | 194.1 kB       | 114.7 / 30.0 kB             | 35.0 / 11.8 kB             | 22.9 / 4.5 kB          | 506 / 569 / 509                |
 
 The vanilla-extract sample measures 247.3 kB, 131.4 / 29.0 kB, 37.3 / 12.3 kB, and 47.6 / 6.4 kB with 503 / 1827 / 462 throughout.
 
@@ -153,18 +155,18 @@ The main thread ships as QuickJS bytecode, which compresses about 12 kB worse th
 
 Measured levers, each by re-encoding the sample with the change applied by hand:
 
-| Lever                                                                                                                                                      | Δ gzip / br             | Status                                                               |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- | -------------------------------------------------------------------- |
-| Merge units whose usage sets are identical across the graph (212 classes → 77)                                                                             | −0.89 / −0.44 kB        | Planned last, needs a graph-wide pass                                |
-| Dense token custom property names on Lynx                                                                                                                  | −0.83 / −0.61 kB        | Planned                                                              |
-| Omit `var()` fallbacks on Lynx                                                                                                                             | −0.55 / −0.51 kB        | Planned                                                              |
-| Simplify recipe callable guards                                                                                                                            | −0.12 / −0.11 kB        | Planned                                                              |
-| Dense keyframe names on Lynx                                                                                                                               | −0.11 / −0.07 kB        | Planned                                                              |
-| All five together (measured)                                                                                                                               | −2.40 / −1.63 kB        |                                                                      |
-| Also drop the encoder's `defaultValueMap` keys                                                                                                             | −0.49 / −0.29 kB        | Deferred: needs a template plugin hook, native semantics unverified  |
-| `chunkSplit: 'all-in-one'`                                                                                                                                 | −6.8 / −5.9 kB transfer | App configuration, same for both samples, loses shared chunk caching |
-| One class per element (grouped output)                                                                                                                     | −2.2 kB gzip in JS      | Rejected: the stylesheet grows by 1100 declarations                  |
-| Dropping the `z` prefix, name reordering, in-list sorting, constant hoisting, selector-list merging, `extractStr`, `compress.passes`, CSS selector toggles | ≤ 0.3 kB or worse       | Rejected                                                             |
+| Lever                                                                                                                                                      | Δ gzip / br             | Status                                                                 |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- | ---------------------------------------------------------------------- |
+| Merge units whose usage sets are identical across the graph (212 classes → 77)                                                                             | −0.89 / −0.44 kB        | Planned last, needs a graph-wide pass                                  |
+| Dense token custom property names on Lynx                                                                                                                  | −0.83 / −0.61 kB        | Planned                                                                |
+| Omit `var()` fallbacks on Lynx                                                                                                                             | −0.55 / −0.51 kB        | Planned                                                                |
+| Simplify recipe callable guards                                                                                                                            | −0.12 / −0.11 kB        | Landed as `1a457bf`: bundle gzip 60.9 → 60.7 kB, brotli 50.8 → 50.8 kB |
+| Dense keyframe names on Lynx                                                                                                                               | −0.11 / −0.07 kB        | Planned                                                                |
+| All five together (measured)                                                                                                                               | −2.40 / −1.63 kB        |                                                                        |
+| Also drop the encoder's `defaultValueMap` keys                                                                                                             | −0.49 / −0.29 kB        | Deferred: needs a template plugin hook, native semantics unverified    |
+| `chunkSplit: 'all-in-one'`                                                                                                                                 | −6.8 / −5.9 kB transfer | App configuration, same for both samples, loses shared chunk caching   |
+| One class per element (grouped output)                                                                                                                     | −2.2 kB gzip in JS      | Rejected: the stylesheet grows by 1100 declarations                    |
+| Dropping the `z` prefix, name reordering, in-list sorting, constant hoisting, selector-list merging, `extractStr`, `compress.passes`, CSS selector toggles | ≤ 0.3 kB or worse       | Rejected                                                               |
 
 ## Visual Comparison
 

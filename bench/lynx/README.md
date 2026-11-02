@@ -92,19 +92,20 @@ The raw bundle gap closes through the stylesheet and the class-name text, which 
 
 Each row is the `zyzz` sample's `.lynx.bundle` after one change on this branch, measured against a worktree of that commit. The vanilla-extract sample stays at 247.3 / 63.3 / 52.4 kB.
 
-| Change                                                               | Commit    | raw      | gzip    | br      |
-| -------------------------------------------------------------------- | --------- | -------- | ------- | ------- |
-| Baseline, fork `main`                                                | `980230d` | 291.9 kB | 72.6 kB | 58.3 kB |
-| Expand `inset` into longhands on Lynx                                | `01a75f6` | 292.0 kB | 72.6 kB | 58.3 kB |
-| Dense graph-wide class names on Lynx                                 | `2829786` | 260.7 kB | 70.4 kB | 56.7 kB |
-| Compose namespace members declared beside `const` records            | `6423ed0` | 260.7 kB | 70.4 kB | 56.7 kB |
-| Fold literal `vars()` selections into constant props                 | `4a13a96` | 260.0 kB | 70.3 kB | 56.7 kB |
-| Leave out the selector of configurations only folded selections read | `05f0f4c` | 257.3 kB | 69.0 kB | 55.5 kB |
-| Select recipe and conditional style compositions from class tables   | `44595ed` | 259.2 kB | 67.9 kB | 54.2 kB |
-| Compose definitions independently by default on Lynx                 | `ec8a4ee` | 219.0 kB | 63.6 kB | 52.3 kB |
-| Share recipe base declarations as units                              | `8f14e0d` | 211.4 kB | 62.8 kB | 51.8 kB |
-| Concatenate flat Lynx compositions with override copies              | `2f027bd` | 195.4 kB | 60.9 kB | 50.8 kB |
-| Share override copies across a module's compositions                 | `904924f` | 195.2 kB | 60.9 kB | 50.8 kB |
+| Change                                                                     | Commit    | raw      | gzip    | br      |
+| -------------------------------------------------------------------------- | --------- | -------- | ------- | ------- |
+| Baseline, fork `main`                                                      | `980230d` | 291.9 kB | 72.6 kB | 58.3 kB |
+| Expand `inset` into longhands on Lynx                                      | `01a75f6` | 292.0 kB | 72.6 kB | 58.3 kB |
+| Dense graph-wide class names on Lynx                                       | `2829786` | 260.7 kB | 70.4 kB | 56.7 kB |
+| Compose namespace members declared beside `const` records                  | `6423ed0` | 260.7 kB | 70.4 kB | 56.7 kB |
+| Fold literal `vars()` selections into constant props                       | `4a13a96` | 260.0 kB | 70.3 kB | 56.7 kB |
+| Leave out the selector of configurations only folded selections read       | `05f0f4c` | 257.3 kB | 69.0 kB | 55.5 kB |
+| Select recipe and conditional style compositions from class tables         | `44595ed` | 259.2 kB | 67.9 kB | 54.2 kB |
+| Compose definitions independently by default on Lynx                       | `ec8a4ee` | 219.0 kB | 63.6 kB | 52.3 kB |
+| Share recipe base declarations as units                                    | `8f14e0d` | 211.4 kB | 62.8 kB | 51.8 kB |
+| Concatenate flat Lynx compositions with override copies                    | `2f027bd` | 195.4 kB | 60.9 kB | 50.8 kB |
+| Share override copies across a module's compositions                       | `904924f` | 195.2 kB | 60.9 kB | 50.8 kB |
+| Read recipe axes directly and coerce only boolean-like and numeric choices | `1a457bf` | 194.1 kB | 60.7 kB | 50.8 kB |
 
 ### Rendering
 
