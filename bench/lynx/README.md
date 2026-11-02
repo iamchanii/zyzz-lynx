@@ -65,7 +65,7 @@ The script exits with status 1 when a state that does not animate differs. [Resu
 
 ## Results
 
-Recorded on 2026-11-02 with `Measure.ts` on an Apple Silicon macOS host: Rspeedy 0.18.2, `@lynx-js/react` 0.128.0, `@vanilla-extract/css` 1.21.2, and the workspace Zyzz build at `5ceb3d0`. Sizes are bytes on disk divided by 1024, compressed with `node:zlib` at gzip level 9 and the default Brotli quality (11). [Results.md](Results.md) holds the per-commit ledger, the experiments behind each change, and the analysis of what remains.
+Recorded on 2026-11-02 with `Measure.ts` on an Apple Silicon macOS host: Rspeedy 0.18.2, `@lynx-js/react` 0.128.0, `@vanilla-extract/css` 1.21.2, and the workspace Zyzz build at `b61bff5`. Sizes are bytes on disk divided by 1024, compressed with `node:zlib` at gzip level 9 and the default Brotli quality (11). [Results.md](Results.md) holds the per-commit ledger, the experiments behind each change, and the analysis of what remains.
 
 ### Shipped Artifacts
 
@@ -95,20 +95,20 @@ Each row is the `zyzz` sample's `.lynx.bundle` after one change on this branch, 
 
 | Change                                                                         | Commit    | raw      | gzip    | br      |
 | ------------------------------------------------------------------------------ | --------- | -------- | ------- | ------- |
-| Baseline, fork `main`                                                          | `980230d` | 291.9 kB | 72.6 kB | 58.3 kB |
-| Expand `inset` into longhands on Lynx                                          | `01a75f6` | 292.0 kB | 72.6 kB | 58.3 kB |
-| Dense graph-wide class names on Lynx                                           | `2829786` | 260.7 kB | 70.4 kB | 56.7 kB |
-| Compose namespace members declared beside `const` records                      | `6423ed0` | 260.7 kB | 70.4 kB | 56.7 kB |
-| Fold literal `vars()` selections into constant props                           | `4a13a96` | 260.0 kB | 70.3 kB | 56.7 kB |
-| Leave out the selector of configurations only folded selections read           | `05f0f4c` | 257.3 kB | 69.0 kB | 55.5 kB |
-| Select recipe and conditional style compositions from class tables             | `44595ed` | 259.2 kB | 67.9 kB | 54.2 kB |
-| Compose definitions independently by default on Lynx                           | `ec8a4ee` | 219.0 kB | 63.6 kB | 52.3 kB |
-| Share recipe base declarations as units                                        | `8f14e0d` | 211.4 kB | 62.8 kB | 51.8 kB |
-| Concatenate flat Lynx compositions with override copies                        | `2f027bd` | 195.4 kB | 60.9 kB | 50.8 kB |
-| Share override copies across a module's compositions                           | `904924f` | 195.2 kB | 60.9 kB | 50.8 kB |
-| Read recipe axes directly and coerce only boolean-like and numeric choices     | `1a457bf` | 194.1 kB | 60.7 kB | 50.8 kB |
-| Name token properties and keyframes densely and omit `var()` fallbacks on Lynx | `778c12d` | 181.6 kB | 59.3 kB | 49.8 kB |
-| Merge units with identical usage sets in production bundles                    | `5ceb3d0` | 177.6 kB | 58.7 kB | 49.4 kB |
+| Baseline, fork `main`                                                          | `5864eff` | 291.9 kB | 72.6 kB | 58.3 kB |
+| Expand `inset` into longhands on Lynx                                          | `66a5632` | 292.0 kB | 72.6 kB | 58.3 kB |
+| Dense graph-wide class names on Lynx                                           | `697fc72` | 260.7 kB | 70.4 kB | 56.7 kB |
+| Compose namespace members declared beside `const` records                      | `3d7794c` | 260.7 kB | 70.4 kB | 56.7 kB |
+| Fold literal `vars()` selections into constant props                           | `1420190` | 260.0 kB | 70.3 kB | 56.7 kB |
+| Leave out the selector of configurations only folded selections read           | `8f72bd4` | 257.3 kB | 69.0 kB | 55.5 kB |
+| Select recipe and conditional style compositions from class tables             | `875e20b` | 259.2 kB | 67.9 kB | 54.2 kB |
+| Compose definitions independently by default on Lynx                           | `f046cef` | 219.0 kB | 63.6 kB | 52.3 kB |
+| Share recipe base declarations as units                                        | `e9302e9` | 211.4 kB | 62.8 kB | 51.8 kB |
+| Concatenate flat Lynx compositions with override copies                        | `d1deb14` | 195.4 kB | 60.9 kB | 50.8 kB |
+| Share override copies across a module's compositions                           | `cd7533b` | 195.2 kB | 60.9 kB | 50.8 kB |
+| Read recipe axes directly and coerce only boolean-like and numeric choices     | `921bb9e` | 194.1 kB | 60.7 kB | 50.8 kB |
+| Name token properties and keyframes densely and omit `var()` fallbacks on Lynx | `0e937c6` | 181.6 kB | 59.3 kB | 49.8 kB |
+| Merge units with identical usage sets in production bundles                    | `b61bff5` | 177.6 kB | 58.7 kB | 49.4 kB |
 
 ### Rendering
 
