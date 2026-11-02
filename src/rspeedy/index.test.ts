@@ -565,6 +565,53 @@ namespace styles {
     }
   }, 60_000)
 
+  test('keeps line longhands apart from the inset shorthand', async () => {
+    const root = await fixture()
+    try {
+      await Fs.writeFile(
+        Path.join(root, 'src/App.tsx'),
+        `import { style } from 'zyzz'
+
+export function App() {
+  return <view {...styles.backdrop()}><view {...styles.edge()} /></view>
+}
+
+namespace styles {
+  export const backdrop = style({
+    bottom: 0,
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+  })
+
+  export const edge = style({
+    bottom: 'auto',
+    left: 'calc(100% - 8px)',
+    right: '4px !important',
+    top: 0,
+  })
+}
+`,
+      )
+
+      const result = await (await create(root)).build()
+      await result.close()
+
+      // Lightning CSS merges four equal-importance sides into \`inset\`, which Lynx drops,
+      // so the host restores the longhands in the encoded stylesheet.
+      expect((await template(root)).css).toMatchInlineSnapshot(`
+        [
+          ".z_i6Fywm0 { top: 0; right: 0; bottom: 0; left: 0 }",
+          ".z_i6Fywm1 { position: absolute }",
+          ".z_i6Fywm2 { top: 0; bottom: auto; left: calc(100% - 8px); right: 4px !important }",
+        ]
+      `)
+    } finally {
+      await Fs.rm(root, { force: true, recursive: true })
+    }
+  }, 60_000)
+
   test('rebuilds the zyzz.css module after a style edit in watch mode', async () => {
     const root = await fixture()
     const rspeedy = await create(root)

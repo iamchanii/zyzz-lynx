@@ -8,6 +8,7 @@ import * as Snapshot from '../node/internal/Snapshot.js'
 import { createUnplugin } from 'unplugin'
 import type { UnpluginBuildContext } from 'unplugin'
 import * as Graph from '../compiler/Graph.js'
+import * as Inset from './internal/Inset.js'
 import * as AtRules from '../compiler/internal/AtRules.js'
 import * as Catalogs from '../compiler/internal/Catalogs.js'
 import * as ClassName from '../web/internal/ClassName.js'
@@ -425,7 +426,7 @@ const portable = createUnplugin<Options | undefined, false>(
                   (target ?? url).slice(raw.length),
               )
             }
-            return AtRules.transform({
+            const processed = AtRules.transform({
               code: Buffer.from(source),
               filename: file,
               ...(map === undefined
@@ -455,6 +456,15 @@ const portable = createUnplugin<Options | undefined, false>(
                 },
               },
             })
+            if (options.target !== 'lynx') return processed
+
+            // Lightning CSS merges four line longhands into `inset`, which the Lynx encoder drops.
+            return {
+              ...processed,
+              code: Buffer.from(
+                Inset.expand(Buffer.from(processed.code).toString()),
+              ),
+            }
           }
 
           const shared = await stylesheet(
