@@ -140,6 +140,7 @@ The `zyzz/rspeedy` plugin compiles every environment for the `lynx` target, beca
 - Nested conditions flatten: `&` becomes the style's class, and a query wraps the class rule.
 - Lengths accept the Lynx `rpx` and `sp` units.
 - Lynx encodes `var(--x)` references as `{{--x}}` and keeps custom property declarations in a rule's `variables` map rather than its `style` list. Both are visible in a development build's `dist/.lynx/<entry>/tasm.json`.
+- The `zyzz/rspeedy` plugin composes definitions independently by default: a declaration repeated across styles shares one rule, and conflict order holds inside `cx` calls and each style. `options.composition: 'ordered'` or a config's `composition` restores per-module rule positions.
 - The default output is atomic, one rule per declaration, so an element's class list grows with its declaration count. `defineConfig({ output: 'grouped' })` emits one rule per definition instead. The [CSS Output](https://zyzz.style/docs/guides/css-output) guide covers the trade-off.
 
 ## Porting from vanilla-extract

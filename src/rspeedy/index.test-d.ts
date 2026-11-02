@@ -7,10 +7,13 @@ import { zyzz } from 'zyzz/rspeedy'
 describe('zyzz', () => {
   test('returns an Rsbuild plugin accepted by Rspeedy', () => {
     expectTypeOf(
-      zyzz({ inject: true, reset: true, root: 'src' }),
+      zyzz({ composition: 'ordered', inject: true, reset: true, root: 'src' }),
     ).toEqualTypeOf<RsbuildPlugin>()
 
     defineConfig({ plugins: [zyzz()] })
+
+    // @ts-expect-error Composition is independent or ordered.
+    zyzz({ composition: 'atomic' })
 
     // @ts-expect-error Portable adapters compile web output.
     zyzz({ native: { platform: 'ios', colorScheme: 'dark' } })

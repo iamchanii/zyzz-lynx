@@ -545,39 +545,23 @@ namespace styles {
           ".z9 { padding: 4px }",
           ".zA10 { padding-left: 8px }",
           ".zA12,.zA13 { padding-right: 8px }",
-          ".za { padding: 4px }",
           ".zA20 { padding-left: 8px }",
           ".zA22,.zA23 { padding-right: 8px }",
-          ".zb { margin-left: 2px }",
-          ".zc { padding: 4px }",
+          ".za { margin-left: 2px }",
           ".zA30 { padding-left: 8px }",
           ".zA32,.zA33 { padding-right: 8px }",
-          ".zd { margin-right: 2px }",
-          ".ze { padding: 4px }",
+          ".zb { margin-right: 2px }",
           ".zA40 { padding-left: 8px }",
           ".zA42,.zA43 { padding-right: 8px }",
-          ".zf { margin-left: 2px }",
-          ".zg { margin-right: 2px }",
-          ".zh { padding: 4px }",
           ".zA50 { padding-left: 8px }",
           ".zA52,.zA53 { padding-right: 8px }",
-          ".zi { color: #0a0 }",
-          ".zj { padding: 4px }",
+          ".zc { color: #0a0 }",
           ".zA60 { padding-left: 8px }",
           ".zA62,.zA63 { padding-right: 8px }",
-          ".zk { margin-left: 2px }",
-          ".zl { color: #0a0 }",
-          ".zm { padding: 4px }",
           ".zA70 { padding-left: 8px }",
           ".zA72,.zA73 { padding-right: 8px }",
-          ".zn { margin-right: 2px }",
-          ".zo { color: #0a0 }",
-          ".zp { padding: 4px }",
           ".zA80 { padding-left: 8px }",
           ".zA82,.zA83 { padding-right: 8px }",
-          ".zq { margin-left: 2px }",
-          ".zr { margin-right: 2px }",
-          ".zs { color: #0a0 }",
         ]
       `)
 
@@ -626,22 +610,6 @@ namespace styles {
           "za",
           "zb",
           "zc",
-          "zd",
-          "ze",
-          "zf",
-          "zg",
-          "zh",
-          "zi",
-          "zj",
-          "zk",
-          "zl",
-          "zm",
-          "zn",
-          "zo",
-          "zp",
-          "zq",
-          "zr",
-          "zs",
         ]
       `)
       expect(classes.filter((name) => !selectors.has(`.${name}`))).toEqual([])
@@ -846,14 +814,13 @@ namespace styles {
           ".z5 { font-size: 12px }",
           ".zA21 { color: #0a0 }",
           ".zA22 { font-weight: 700 }",
-          ".z6 { padding: 2px }",
           ".zA30 { height: 40px }",
           "@media (width>=1px) { .zA30 { width: 40px } }",
           ".zA31 { height: 20px }",
           ".zA32 { color: #000 }",
           ".zA33 { color: #0a0 }",
           ".zA34 { opacity: .5 }",
-          ".z7 { opacity: 1 }",
+          ".z6 { opacity: 1 }",
         ]
       `)
       // The composition renames the recipe's choice classes to its own copies.
@@ -886,7 +853,6 @@ namespace styles {
           "z0",
           "z4",
           "z5",
-          "z6",
           "zA10",
           "zA11",
           "zA12",
@@ -941,6 +907,77 @@ namespace styles {
       await Fs.rm(root, { force: true, recursive: true })
     }
   }, 60_000)
+
+  test('composes independently by default so repeated declarations share rules', async () => {
+    const root = await fixture()
+    try {
+      await Fs.writeFile(
+        Path.join(root, 'src/App.tsx'),
+        `import { cx, style } from 'zyzz'
+import { Note } from './Note'
+
+export function App(props: { tight: boolean }) {
+  return <view {...cx(styles.card(), props.tight && styles.tight())}><Note muted /></view>
+}
+
+namespace styles {
+  export const card = style({ display: 'flex', padding: '8px' })
+
+  export const tight = style({ padding: '4px' })
+}
+`,
+      )
+      await Fs.writeFile(
+        Path.join(root, 'src/Note.tsx'),
+        `import { cx, style } from 'zyzz'
+
+export function Note(props: { muted: boolean }) {
+  return <text {...cx(styles.note(), props.muted && styles.muted())} />
+}
+
+namespace styles {
+  export const note = style({ color: '#333', display: 'flex' })
+
+  export const muted = style({ color: '#999' })
+}
+`,
+      )
+
+      const result = await (await create(root)).build()
+      await result.close()
+
+      // Both compositions read one \`display: flex\` rule.
+      expect((await template(root)).css).toMatchInlineSnapshot(`
+        [
+          ".z0 { color: #333 }",
+          ".z1 { display: flex }",
+          ".z2 { color: #999 }",
+          ".z3 { padding: 8px }",
+          ".z4 { padding: 4px }",
+        ]
+      `)
+
+      // Ordered composition keeps each composition's rules at its own position.
+      const ordered = await (
+        await create(root, {}, { composition: 'ordered' })
+      ).build()
+      await ordered.close()
+
+      expect((await template(root)).css).toMatchInlineSnapshot(`
+        [
+          ".z0 { color: #333 }",
+          ".z1 { display: flex }",
+          ".z2 { color: #333 }",
+          ".z3 { color: #999 }",
+          ".z4 { display: flex }",
+          ".z5,.z6 { padding: 8px }",
+          ".z7 { padding: 4px }",
+        ]
+      `)
+    } finally {
+      await Fs.rm(root, { force: true, recursive: true })
+    }
+  }, 120_000)
 
   test('keeps line longhands apart from the inset shorthand', async () => {
     const root = await fixture()

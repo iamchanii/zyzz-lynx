@@ -7,7 +7,7 @@ Two ReactLynx sample applications with the same component tree, fixture data, an
 | `ve/`     | `@vanilla-extract/css` modules (`style`, `styleVariants`, `keyframes`, `globalStyle`)  | `@vanilla-extract/webpack-plugin` with the Rspeedy child-compiler compat shim in `lynx.config.ts` |
 | `zyzz/`   | `zyzz` (`style`, `variants`, `cx`, `keyframes`, `global`) in `namespace styles` blocks | `zyzz/rspeedy`                                                                                    |
 
-Both configurations enable `enableCSSSelector` and `enableCSSInvalidation`, split dependencies by module, and build one `jobPost` entry. The `ve` sample keeps the reference application's class application form, template literals that join conditional class names. The `zyzz` sample follows the conventions in [Styling.md](Styling.md): definitions in a `namespace styles` at the bottom of each component file, tokens from `zyzz.config.ts`, spreads and `cx` for application, and `variants` recipes for enumerated choices.
+Both configurations enable `enableCSSSelector` and `enableCSSInvalidation`, split dependencies by module, and build one `jobPost` entry. The `zyzz` sample uses the plugin defaults, including independent composition on Lynx. The `ve` sample keeps the reference application's class application form, template literals that join conditional class names. The `zyzz` sample follows the conventions in [Styling.md](Styling.md): definitions in a `namespace styles` at the bottom of each component file, tokens from `zyzz.config.ts`, spreads and `cx` for application, and `variants` recipes for enumerated choices.
 
 ## Measuring
 

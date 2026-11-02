@@ -172,6 +172,23 @@ import { zyzz } from 'zyzz/rspeedy'
 const plugin = zyzz({ compiler: false })
 ```
 
+### options.composition
+
+- **Type:** `'independent' | 'ordered'{:ts}`
+- **Default:** `'independent'{:ts}`
+
+Composition mode for definitions whose config sets none. Lynx elements combine styles only through `cx`, so the default shares one rule for a declaration across every style that repeats it and keeps conflict order inside `cx` calls and each style. `'ordered'` keeps each module's rules at their own cascade position, so a class passed in through `className` from another module wins by definition order, at the cost of one rule per declaration per module.
+
+```ts title="lynx.config.ts"
+import { zyzz } from 'zyzz/rspeedy'
+
+// [!code hl:2]
+// Keeps every module's rules in definition order
+const plugin = zyzz({ composition: 'ordered' })
+```
+
+A `composition` option on `defineConfig` applies to that config's definitions regardless of this option.
+
 ### options.inject
 
 - **Type:** `boolean{:ts}`

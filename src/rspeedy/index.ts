@@ -12,7 +12,8 @@ import * as Unplugin from '../unplugin/index.js'
  * A relative `options.root` resolves from the Rspeedy project root, which is also the default.
  * The transform runs before every other loader, including `enforce: 'pre'` loaders.
  * Every environment compiles for the Lynx template encoder, which keeps only flat class rules,
- * so recipes select with classes and emit one rule per choice and compound.
+ * so recipes select with classes and emit one rule per choice and compound. Definitions compose
+ * independently unless a config or `options.composition` says otherwise.
  */
 export function zyzz(options: zyzz.Options = {}): RsbuildPlugin {
   return {
@@ -32,7 +33,13 @@ export function zyzz(options: zyzz.Options = {}): RsbuildPlugin {
 
       api.modifyRspackConfig((config) => {
         // Environments compile concurrently, so each receives its own graph state.
-        const plugin = Unplugin.rspack({ ...rest, root, target: 'lynx' })
+        // Lynx elements combine styles only through `cx`, so repeated declarations share rules.
+        const plugin = Unplugin.rspack({
+          composition: 'independent',
+          ...rest,
+          root,
+          target: 'lynx',
+        })
 
         config.plugins.push({
           apply(compiler: Rspack.Compiler) {
@@ -63,7 +70,15 @@ export function zyzz(options: zyzz.Options = {}): RsbuildPlugin {
 /** Rspeedy plugin contracts. */
 export declare namespace zyzz {
   /** Portable build configuration without the target, which is always Lynx. */
-  type Options = Omit<Unplugin.Options, 'target'> & {
+  type Options = Omit<Unplugin.Options, 'composition' | 'target'> & {
+    /**
+     * Composition mode for definitions whose config sets none. Lynx elements combine styles
+     * only through `cx`, so the default is `'independent'`, which shares one rule for a
+     * declaration across every style that repeats it. `'ordered'` keeps each module's rules
+     * at their own cascade position, so a class passed in through `className` wins by
+     * definition order.
+     */
+    readonly composition?: 'independent' | 'ordered' | undefined
     /**
      * Imports `zyzz.css` before the modules of every entry in every environment, after any
      * configured `source.preEntry` modules. A manual import of `zyzz.css` stays safe and no

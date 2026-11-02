@@ -21,6 +21,12 @@ import * as ThemeRules from '../web/internal/Themes.js'
 export type Options = {
   /** Rewrite authoring calls. Defaults to true. */
   readonly compiler?: boolean | undefined
+  /**
+   * Composition mode for definitions whose config sets none. `'independent'` shares one rule
+   * for a declaration across every style that repeats it and keeps conflict order only inside
+   * `cx` calls and each style. Defaults to the compiler's `'ordered'`.
+   */
+  readonly composition?: 'independent' | 'ordered' | undefined
   /** Include the CSS reset. Defaults to false. */
   readonly reset?: boolean | undefined
   /** Source directory scanned for modules and global contributions. Defaults to the working directory. */
@@ -317,6 +323,7 @@ const portable = createUnplugin<Options | undefined, false>(
             [ClassName.references]: true,
             [ThemeRules.shared]: 'all',
             compiler: options.compiler,
+            composition: options.composition,
             reset: options.reset ? Reset.read() : undefined,
             contracts,
             imports,

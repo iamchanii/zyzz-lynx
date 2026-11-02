@@ -4,7 +4,7 @@ Measurements of the two samples in this directory with `Measure.ts`, recorded on
 
 ## Current Comparison
 
-Workspace zyzz build at `980230d` (the fork's `main`).
+Workspace zyzz build at `980230d` (the fork's `main`), before the changes on the `lynx-bundle` branch. The Progress Ledger below records each later change, and the final row is the current default.
 
 | Metric                             | vanilla-extract        | zyzz                   |
 | ---------------------------------- | ---------------------- | ---------------------- |
@@ -36,8 +36,9 @@ Each row measures the `zyzz` sample after one change on the `lynx-bundle` branch
 | Leave out the selector of configurations that only folded selections read  | `05f0f4c` | 257.3 kB       | −2.7 kB  | 119.9 kB         | 40.2 kB         | 43.6 kB     | 1174 / 1330 / 1184             |
 | Select recipe and conditional style compositions from class tables         | `44595ed` | 259.2 kB       | +1.9 kB  | 121.4 kB         | 41.5 kB         | 43.2 kB     | 1161 / 1310 / 1171             |
 | Same, with `composition: 'independent'` in the sample config (not default) | `44595ed` | 219.0 kB       | −40.2 kB | 120.6 kB         | 40.9 kB         | 30.8 kB     | 667 / 857 / 675                |
+| Compose independently by default in the `zyzz/rspeedy` plugin              | `HEAD`    | 219.0 kB       | −40.2 kB | 120.6 kB         | 40.9 kB         | 30.8 kB     | 667 / 857 / 675                |
 
-With dense names the main thread is already smaller than the vanilla-extract build (121.4 against 131.4 kB) while the background thread stays 4 kB larger, and the remaining 11.9 kB bundle gap is the rule count (1161 against 503). The scope fold, the selector pruning, and the composition tables together remove every `zyzz/runtime` module from both threads. The tables cost 1.9 kB raw in this sample, since six class tables (the calendar's 32 entries alone hold 4.4 kB of class lists) replace a 2 kB minified runtime per thread, while gzip shrinks by 0.5 kB per thread. Independent composition closes the gap and lands 28.3 kB (11%) under the vanilla-extract bundle. A follow-up that would help the default mode is emitting each `cx` argument's rules once in argument order for flat Lynx output instead of one merged copy per combination, which would shrink both the tables and the rule count.
+With dense names the main thread is already smaller than the vanilla-extract build (121.4 against 131.4 kB) while the background thread stays 4 kB larger, and the remaining 11.9 kB bundle gap is the rule count (1161 against 503). The scope fold, the selector pruning, and the composition tables together remove every `zyzz/runtime` module from both threads. The tables cost 1.9 kB raw in this sample, since six class tables (the calendar's 32 entries alone hold 4.4 kB of class lists) replace a 2 kB minified runtime per thread, while gzip shrinks by 0.5 kB per thread. Independent composition closes the gap and lands 28.3 kB (11%) under the vanilla-extract bundle, so the `zyzz/rspeedy` plugin now composes independently unless a config or `options.composition` says otherwise. With that default the zyzz sample ships a 219.0 kB bundle against 247.3 kB and 30.8 kB of encoded CSS against 47.6 kB, with 667 rules against 503 and 857 declarations against 1827. A follow-up that would help the default mode is emitting each `cx` argument's rules once in argument order for flat Lynx output instead of one merged copy per combination, which would shrink both the tables and the rule count.
 
 ## Grouped Output Experiment
 
