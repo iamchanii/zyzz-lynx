@@ -641,9 +641,9 @@ namespace styles {
       // so the host restores the longhands in the encoded stylesheet.
       expect((await template(root)).css).toMatchInlineSnapshot(`
         [
-          ".z_i6Fywm0 { top: 0; right: 0; bottom: 0; left: 0 }",
-          ".z_i6Fywm1 { position: absolute }",
-          ".z_i6Fywm2 { top: 0; bottom: auto; left: calc(100% - 8px); right: 4px !important }",
+          ".z0 { top: 0; right: 0; bottom: 0; left: 0 }",
+          ".z1 { position: absolute }",
+          ".z2 { top: 0; bottom: auto; left: calc(100% - 8px); right: 4px !important }",
         ]
       `)
     } finally {
