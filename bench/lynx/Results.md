@@ -22,6 +22,19 @@ The external chunks are the same ReactLynx runtime in both builds. The zyzz bund
 - **Runtime modules:** `runtime/Composition.js`, `runtime/Selection.js`, `runtime/Props.js`, `runtime/Html.js`, `runtime/index.js`, and `internal/Scheme.js` ship in both thread layers, about 15 kB of source per layer before minification. The vanilla-extract build ships no styling runtime.
 - **Rule count:** 1177 flat rules against 503. Each rule costs selector text and encoder overhead, although the atomic output has fewer declarations in total.
 
+## Progress Ledger
+
+Each row measures the `zyzz` sample after one change on the `lynx-bundle` branch, with the default configuration unless noted. The vanilla-extract sample stays at 247.3 kB.
+
+| Change                                                                     | Commit    | `.lynx.bundle` | Δ        | `main-thread.js` | `background.js` | Encoded CSS | Rules / declarations / classes |
+| -------------------------------------------------------------------------- | --------- | -------------- | -------- | ---------------- | --------------- | ----------- | ------------------------------ |
+| Baseline, fork `main`                                                      | `980230d` | 291.9 kB       |          | 139.6 kB         | 49.1 kB         | 51.4 kB     | 1177 / 1338 / 1187             |
+| Expand `inset` into longhands on Lynx                                      | `01a75f6` | 292.0 kB       | +0.1 kB  | 139.6 kB         | 49.1 kB         | 51.4 kB     | 1177 / 1341 / 1187             |
+| Dense graph-wide class names on Lynx                                       | `2829786` | 260.7 kB       | −31.3 kB | 121.3 kB         | 41.6 kB         | 43.7 kB     | 1177 / 1333 / 1187             |
+| Same, with `composition: 'independent'` in the sample config (not default) | `2829786` | 219.8 kB       | −40.9 kB | 120.5 kB         | 41.0 kB         | 31.2 kB     | 674 / 871 / 682                |
+
+With dense names alone both thread scripts are already smaller than the vanilla-extract build (121.3 against 131.4 kB and 41.6 against 37.3 kB), and the remaining 13.4 kB gap is the rule count. Independent composition closes it and lands 27.5 kB (11%) under the vanilla-extract bundle.
+
 ## Grouped Output Experiment
 
 `defineConfig({ cssOutput: 'grouped', vars: base })` with the same sources:
