@@ -36,6 +36,22 @@ The external chunks are the same ReactLynx runtime in both builds. The zyzz bund
 
 Grouped output makes both thread scripts smaller than the vanilla-extract build, because each element carries one class per definition, but every `cx` combination becomes a merged rule that repeats the declarations of its inputs, so the stylesheet grows by 1100 declarations and the bundle ends where it started.
 
+## Encoder Cost Model
+
+A probe application with a generated plain stylesheet and no styled markup shows what the template encoder charges for, measured as `.lynx.bundle` growth over an empty stylesheet (89.6 kB):
+
+| Stylesheet                                              | Bundle growth | Per rule |
+| ------------------------------------------------------- | ------------- | -------- |
+| 1000 rules, one repeated declaration, 4 to 5 char class | 23.4 kB       | 24 B     |
+| 1000 rules, one repeated declaration, 9 char class      | 29.3 kB       | 30 B     |
+| 250 rules, four repeated declarations                   | 5.9 kB        | 24 B     |
+| 1000 rules, four repeated declarations                  | 23.5 kB       | 24 B     |
+| 1000 rules, one `var()` declaration                     | 23.4 kB       | 24 B     |
+| 1000 rules, one declaration with a unique value         | 57.4 kB       | 59 B     |
+| 1000 `:active` rules, one repeated declaration          | 48.8 kB       | 50 B     |
+
+The encoder interns repeated declarations, so a declaration that already appears in another rule costs nothing, while every rule costs about 24 bytes plus 1.5 bytes per selector character, a unique value about 35 bytes, and a pseudo-class about 26 bytes. Rule count and class-name length therefore decide the stylesheet's share of the bundle, and grouped output's repeated declarations are nearly free. ReactLynx's `extractStr` option, which interns repeated JavaScript strings, changed neither bundle by a byte here.
+
 ## Commit Checkpoints
 
 The `zyzz` sample measured against worktrees of this repository. The fork's base commit is `1fa9ece`, the last Rspeedy plugin commit before the compiler changes. Each later row adds one compiler commit on top of the previous one, and version-bump and documentation commits are left out.
@@ -59,7 +75,7 @@ Folding namespace applications (`8cc2ece`) removed 92 kB, almost a quarter of th
 
 Compiler behavior recorded while porting the sample, each a candidate fix or a documentation note:
 
-- **`inset` folding on Lynx:** four `top`, `right`, `bottom`, `left: 0` longhands fold into one atomic `inset: 0` rule. The Lynx encoder drops `inset` as unsupported, so five elements lose their offsets. The Lynx target should keep the longhands.
+- **`inset` folding on Lynx (fixed in `01a75f6`):** four `top`, `right`, `bottom`, `left: 0` longhands folded into one `inset: 0` rule, because Lightning CSS merges the four sides of a rule unconditionally during the host's final stylesheet pass, and the Lynx encoder dropped `inset` as unsupported, so five elements lost their offsets. The `zyzz/rspeedy` host now expands `inset` back into its longhands for the lynx target, which adds 0.1 kB for the three extra declarations.
 - **Private records inside `namespace styles`:** a non-exported `const row = { ... } as const` inside the namespace makes every `cx` call over that namespace fail with `Composition requires statically known local style applications`. Moving the record to module scope compiles. The error points at the first `cx` argument, not at the record.
 - **Theme data spreads:** `defineVars` rejects spreads in typography presets (`Theme data requires explicit properties without spreads, methods, or computed keys`), so presets repeat their scale values.
 - **Template literal expressions:** `` width: `${100 / 7}%` `` is rejected (`Expected a literal string or number; expressions are not evaluated`) and needs the computed literal.
