@@ -30,11 +30,13 @@ use crate::compiler::internal::selections;
 use crate::compiler::internal::statics::key_literal;
 use crate::compiler::internal::themes::{Fold, Link, Output, ScopeApplication};
 use crate::compiler::source::{
-    Call, ComposedRecipe, ComposedValue, ImportedApplication, KnownInput, Rename, RuntimeInput,
+    Call, ComposedRecipe, ComposedValue, Flat, FlatInput, ImportedApplication, KnownInput, Rename,
+    RuntimeInput,
 };
 use crate::error::{Error, Result};
-use crate::internal::identity;
+use crate::generated::cascade;
 use crate::internal::token::{Composition, CssOutput};
+use crate::internal::{identity, literal};
 use crate::js::{self, Record, Utf16Index};
 use crate::runtime::composition::Owner;
 use crate::style::{Declaration, NamedStyle, Rule};
@@ -51,6 +53,9 @@ pub struct Options<'o, 'a> {
     pub identity: &'o str,
     /// Imported style definitions the source graph supplies, by local name.
     pub links: Option<&'o Record<Link>>,
+    /// Whether the Lynx target extracts the module, whose production compositions concatenate
+    /// their arguments' classes instead of selecting precompiled combinations.
+    pub lynx: bool,
     /// UTF-16 offsets, for names that embed source positions.
     pub offsets: &'o Utf16Index,
     /// The parsed module.
@@ -80,6 +85,9 @@ pub struct Entry<'a> {
     pub call: Call<'a>,
     /// Presence alternatives for conditional arguments, in bitmask order.
     pub cases: Vec<(Call<'a>, Arc<NamedStyle>)>,
+    /// The class rules of a flat composition's override copies, as `Call.composition_flat`
+    /// describes, with the CSS-only call that owns them for declaration maps.
+    pub overrides: Option<(Call<'a>, Arc<NamedStyle>)>,
     /// The composed style.
     pub style: Arc<NamedStyle>,
 }
@@ -628,6 +636,187 @@ fn typography(selected: &[&Call<'_>], queries: bool) -> FxHashMap<u32, u32> {
         .collect()
 }
 
+/// One declaration of a composition argument, with the condition path and the choice class it
+/// prints under.
+struct Item<'s> {
+    class: Option<&'s Arc<str>>,
+    conditions: Vec<&'s Arc<str>>,
+    declaration: &'s Declaration,
+}
+
+/// Lists a style's declarations through its nested rules, in emitted order.
+fn items<'s>(
+    style: &'s NamedStyle,
+    class: Option<&'s Arc<str>>,
+    conditions: &mut Vec<&'s Arc<str>>,
+    output: &mut Vec<Item<'s>>,
+) {
+    for declaration in &style.declarations {
+        output.push(Item {
+            class,
+            conditions: conditions.clone(),
+            declaration,
+        });
+    }
+
+    for rule in style.rules.iter().flatten() {
+        let class = rule.class.as_ref().or(class);
+
+        if let Some(condition) = &rule.condition {
+            conditions.push(condition);
+        }
+
+        items(&rule.style, class, conditions, output);
+
+        if rule.condition.is_some() {
+            conditions.pop();
+        }
+    }
+}
+
+/// The longhands a property sets, through nested shorthands, or the property itself.
+fn longhands(property: &str) -> Vec<&str> {
+    let mut output = Vec::new();
+    let mut pending = vec![literal::alias(property).unwrap_or(property)];
+
+    while let Some(next) = pending.pop() {
+        match cascade::shorthand(next) {
+            Some(children) => pending.extend(children.iter().copied()),
+            None => output.push(next),
+        }
+    }
+
+    output
+}
+
+/// Whether a later declaration must follow an earlier one in the stylesheet: they set a common
+/// longhand and differ, so the one printed later decides the value.
+fn conflicts(earlier: &Declaration, later: &Declaration) -> bool {
+    if earlier == later {
+        return false;
+    }
+
+    let longhands = longhands(&earlier.property);
+
+    self::longhands(&later.property)
+        .iter()
+        .any(|property| longhands.contains(property))
+}
+
+/// A declaration under its condition path, innermost last.
+fn nested(conditions: &[&Arc<str>], declaration: &Declaration) -> NamedStyle {
+    conditions.iter().rev().fold(
+        NamedStyle {
+            declarations: vec![declaration.clone()],
+            ..NamedStyle::default()
+        },
+        |style, condition| NamedStyle {
+            rules: Some(vec![Rule {
+                class: None,
+                condition: Some(Arc::clone(condition)),
+                style: Arc::new(style),
+            }]),
+            ..NamedStyle::default()
+        },
+    )
+}
+
+/// The override copies of a flat composition and the style that prints them. A declaration of an
+/// argument that conflicts with a declaration of an earlier argument under the same conditions,
+/// including any choice of an earlier recipe, is copied once under a class of this call, in
+/// argument order. A recipe argument's copies attach to the choice class that declares them.
+/// Identical copies share one class within an argument only, since a copy shared across
+/// arguments could not follow both arguments' conflicting copies.
+fn overrides(
+    name: &str,
+    selected: &[Call<'_>],
+    styles: &FxHashMap<Arc<str>, Arc<NamedStyle>>,
+) -> (Flat, NamedStyle) {
+    let prefix: Arc<str> = Arc::from(recipes::prefix(&format!("{name}:flat")));
+    let style_name: Arc<str> = Arc::from(format!("{name}-flat"));
+    let mut rules: Vec<Rule> = Vec::new();
+    let mut inputs: Vec<FlatInput> = Vec::with_capacity(selected.len());
+    let mut earlier: Vec<Item<'_>> = Vec::new();
+
+    for call in selected {
+        let mut current: Vec<Item<'_>> = Vec::new();
+
+        if let Some(style) = styles.get(&call.name) {
+            items(style, None, &mut Vec::new(), &mut current);
+        }
+
+        let mut input = FlatInput::default();
+        let mut copies: Vec<(&Item<'_>, Arc<str>)> = Vec::new();
+
+        for item in &current {
+            let conflicting = earlier.iter().any(|previous| {
+                previous.conditions == item.conditions
+                    && conflicts(previous.declaration, item.declaration)
+            });
+
+            if !conflicting {
+                continue;
+            }
+
+            let copied = copies.iter().find(|(copied, _)| {
+                copied.conditions == item.conditions && copied.declaration == item.declaration
+            });
+            let class = if let Some((_, class)) = copied {
+                Arc::clone(class)
+            } else {
+                let class: Arc<str> = Arc::from(recipes::class(&prefix, rules.len(), None));
+
+                rules.push(Rule {
+                    class: Some(Arc::clone(&class)),
+                    condition: None,
+                    style: Arc::new(nested(&item.conditions, item.declaration)),
+                });
+                copies.push((item, Arc::clone(&class)));
+                class
+            };
+            let classes = match item.class {
+                None => &mut input.classes,
+                Some(choice) => {
+                    if !input.choices.iter().any(|(class, _)| class == choice) {
+                        input.choices.push((Arc::clone(choice), Vec::new()));
+                    }
+
+                    let Some((_, classes)) =
+                        input.choices.iter_mut().find(|(class, _)| class == choice)
+                    else {
+                        continue;
+                    };
+
+                    classes
+                }
+            };
+
+            if !classes.contains(&class) {
+                classes.push(class);
+            }
+        }
+
+        inputs.push(input);
+        earlier.extend(current);
+    }
+
+    (
+        Flat {
+            inputs,
+            prefix,
+            style: Arc::clone(&style_name),
+        },
+        NamedStyle {
+            composition: Some(Composition::Independent),
+            css_output: Some(CssOutput::Atomic),
+            declarations: Vec::new(),
+            name: style_name,
+            rules: Some(rules),
+            targets: None,
+        },
+    )
+}
+
 struct Synthesizer<'o, 'a> {
     allocator: &'a Allocator,
     ast: AstBuilder<'a>,
@@ -744,12 +933,19 @@ impl<'a> Synthesizer<'_, 'a> {
     }
 }
 
+/// Whether a composition composes flat, as `Call.composition_flat` describes: the Lynx target
+/// planned it, and the build is a production build composing independently by default.
+pub fn flat(call: &Call<'_>, composition: Option<Composition>, development: bool) -> bool {
+    call.composition_flat.is_some() && !development && composition == Some(Composition::Independent)
+}
+
 /// Starts of the applications whose class lists their outermost composition replaces, so the
 /// rewritten module never reads them. A compile-time composition replaces every input, whose
 /// guard reads only truthiness, and a runtime composition replaces its known inputs, which its
 /// helper receives as `true`, and the recipe applications its table selects. Contained
-/// compositions are skipped, since the outer one decides their reads.
-pub fn replaced(calls: &[Call<'_>]) -> FxHashSet<u32> {
+/// compositions are skipped, since the outer one decides their reads. A flat composition
+/// replaces nothing, since each argument keeps its own rules.
+pub fn replaced(calls: &[Call<'_>], flat: impl Fn(&Call<'_>) -> bool) -> FxHashSet<u32> {
     let mut outer: Vec<&Call<'_>> = calls
         .iter()
         .filter(|call| {
@@ -770,6 +966,11 @@ pub fn replaced(calls: &[Call<'_>]) -> FxHashSet<u32> {
         }
 
         end = call.end;
+
+        if flat(call) {
+            continue;
+        }
+
         output.extend(call.composition_inputs.iter().copied());
         output.extend(
             call.runtime_composition
@@ -954,6 +1155,7 @@ fn compose<'o, 'a>(
     let mut acyclic: Vec<(u32, Arc<str>)> = Vec::new();
     let mut scopes: Vec<Fold> = Vec::new();
     let mut combinations: Vec<usize> = Vec::new();
+    let mut nested_calls = false;
 
     let mut input = |inputs: &mut Vec<RuntimeInput>,
                      call: &Call<'a>,
@@ -1106,6 +1308,8 @@ fn compose<'o, 'a>(
                 ));
             }
 
+            nested_calls = true;
+
             for child in nested.runtime_composition.iter().flatten() {
                 if child.name.is_empty() {
                     inputs.push(child.clone());
@@ -1158,6 +1362,7 @@ fn compose<'o, 'a>(
                 Some(value.span.start),
             )?;
             runtime |= nested.runtime_composition.is_some();
+            nested_calls = true;
             selected.push(nested);
             continue;
         }
@@ -1255,7 +1460,8 @@ fn compose<'o, 'a>(
             }
 
             // A local class-selection recipe applied to literal values of distinct axes, without
-            // compounds, conditions, or payloads, can select from a composition table.
+            // compounds, conditions, or payloads, can select from a composition table, or add
+            // its classes to a flat composition when it is conditional.
             let values = match value.arguments.as_slice() {
                 [] => Some(None),
                 [Argument::ObjectExpression(values)] => Some(Some(&**values)),
@@ -1263,7 +1469,6 @@ fn compose<'o, 'a>(
             };
 
             if !aliased
-                && !conditional
                 && call.ownership.is_none()
                 && call.slots.is_none()
                 && let Some(recipe) = &call.recipe
@@ -1278,7 +1483,12 @@ fn compose<'o, 'a>(
                     known: KnownInput {
                         acyclic: application.acyclic,
                         callee: Arc::clone(&guard),
-                        condition: None,
+                        condition: match resolved {
+                            Expression::LogicalExpression(logical) if conditional => {
+                                Some(logical.left.span())
+                            }
+                            _ => None,
+                        },
                         import: None,
                         imported: false,
                         initialized: application.initialized,
@@ -1416,18 +1626,47 @@ fn compose<'o, 'a>(
             size.checked_mul(*count)
         });
 
+    let distinct = recipes
+        .iter()
+        .enumerate()
+        .all(|(index, name)| !recipes[..index].contains(name));
+    let local = inputs.iter().all(|input| {
+        input.recipe.is_some() || input.known.as_ref().is_some_and(|known| !known.imported)
+    });
+
     call.composition_table = runtime
         && !html
         && scopes.is_empty()
         && !recipes.is_empty()
-        && recipes
-            .iter()
-            .enumerate()
-            .all(|(index, name)| !recipes[..index].contains(name))
+        && distinct
         && size.is_some_and(|size| size <= selections::COMPOSITION_TABLE)
-        && inputs.iter().all(|input| {
-            input.recipe.is_some() || input.known.as_ref().is_some_and(|known| !known.imported)
-        });
+        && local
+        && inputs
+            .iter()
+            .all(|input| input.recipe.is_none() || input.condition.is_none());
+
+    // A Lynx production build composing independently concatenates the arguments' own classes,
+    // so the plan needs no combination cap. Styles configured to compose ordered keep the
+    // runtime paths, as do nested compositions, whose spans the outer call rewrites.
+    let overrides = (options.lynx
+        && runtime
+        && !html
+        && scopes.is_empty()
+        && !nested_calls
+        && distinct
+        && local
+        && selected.iter().all(|call| {
+            styles.get(&call.name).is_some_and(|style| {
+                style
+                    .composition
+                    .is_none_or(|composition| composition == Composition::Independent)
+            })
+        }))
+    .then(|| self::overrides(&name, &selected, styles));
+
+    if let Some((flat, _)) = &overrides {
+        call.composition_flat = Some(flat.clone());
+    }
 
     if runtime {
         call.runtime_composition = Some(inputs.clone());
@@ -1514,5 +1753,27 @@ fn compose<'o, 'a>(
         calls.insert(node.span.start, call.clone());
     }
 
-    Ok(Entry { call, cases, style })
+    // The copies map to the authored declarations they repeat, through the composed body.
+    let overrides = overrides.map(|(_, overrides)| {
+        let owner = Call {
+            body: call.body,
+            composition_case: true,
+            end: call.end,
+            identity: call.identity.clone(),
+            name: Arc::clone(&overrides.name),
+            start: call.start,
+            typography: call.typography.clone(),
+            typography_queries: call.typography_queries.clone(),
+            ..Call::default()
+        };
+
+        (owner, Arc::new(overrides))
+    });
+
+    Ok(Entry {
+        call,
+        cases,
+        overrides,
+        style,
+    })
 }

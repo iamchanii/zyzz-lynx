@@ -1278,15 +1278,46 @@ pub enum Applied {
 /// Plans a class-selection recipe application spread onto a host element, with its authored
 /// values in authored order as each axis name and, for a literal value, the literal. Literal
 /// values fold into the class list, and each other value becomes a selector argument, so it
-/// evaluates once, in authored order. Few class combinations read a constant table. Returns
+/// evaluates once, in authored order. Few class combinations read a constant table. `copies`
+/// lists the classes a flat composition adds beside a choice class, by choice class. Returns
 /// `None` when a base list that starts with whitespace would join differently.
 pub fn application(
     classes: &str,
     definition: &runtime::Definition,
     values: &[(&str, Option<Literal>)],
+    copies: &[(Arc<str>, Vec<Arc<str>>)],
     helpers: &mut Helpers<'_>,
 ) -> Option<Applied> {
-    let axes: Vec<Axis> = axes(definition).collect();
+    let axes: Vec<Axis> = axes(definition)
+        .map(|axis| {
+            if copies.is_empty() {
+                return axis;
+            }
+
+            let choices = axis
+                .choices
+                .iter()
+                .map(|(choice, class)| {
+                    // A choice class is a space and the class.
+                    let added = copies
+                        .iter()
+                        .find(|(copied, _)| class.get(1..) == Some(&**copied))
+                        .map(|(_, classes)| classes.as_slice())
+                        .unwrap_or_default();
+                    let mut class = class.to_string();
+
+                    for added in added {
+                        class.push(' ');
+                        class.push_str(added);
+                    }
+
+                    (Arc::clone(choice), Arc::from(class))
+                })
+                .collect();
+
+            Axis { choices, ..axis }
+        })
+        .collect();
     let mut count = 0;
     let mut params: FxHashMap<&str, Binding> = FxHashMap::default();
 

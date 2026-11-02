@@ -482,30 +482,45 @@ describe('zyzz', () => {
     }
   }, 120_000)
 
-  test('selects recipe and conditional style compositions from class tables so no thread loads the composition runtime', async () => {
+  test('concatenates recipe and conditional style compositions so no thread holds class tables or the composition runtime', async () => {
     const root = await fixture()
     try {
+      // The calendar of a job post: a recipe cell with conditional edge and selection styles,
+      // and a day number with conditional colors.
       await Fs.writeFile(
         Path.join(root, 'src/App.tsx'),
         `import { cx, style, variants } from 'zyzz'
 
-type Day = { segment: 'none' | 'start' | 'middle' | 'end'; today: boolean }
+type Day = { day: number; holiday: boolean; past: boolean; segment: 'none' | 'start' | 'middle' | 'end' | 'single'; selected: boolean }
 
-export function App(props: { days?: readonly Day[] }) {
+export function App(props: { week?: readonly Day[] }) {
   return (
     <view>
-      {(props.days ?? []).map((day, index) => {
+      {(props.week ?? []).map((day, dayIndex) => {
         const middle = day.segment === 'middle'
         return (
-          <view
-            key={index}
-            {...cx(
-              styles.calendarCell({ segment: day.segment }),
-              middle && index === 0 && styles.weekStart(),
-              middle && index === 6 && styles.weekEnd(),
-              day.today && styles.today(),
-            )}
-          />
+          <view key={day.day} {...styles.day()}>
+            <view
+              {...cx(
+                styles.calendarCell({ segment: day.segment }),
+                middle && dayIndex === 0 && styles.weekStart(),
+                middle && dayIndex === 6 && styles.weekEnd(),
+                day.selected && day.past && styles.pastSelectedDay(),
+                day.selected && !day.past && styles.selectedDay(),
+              )}
+            >
+              <text
+                {...cx(
+                  styles.dayNumber(),
+                  day.selected && styles.selectedDayNumber(),
+                  !day.selected && day.past && styles.pastDayNumber(),
+                  !day.selected && !day.past && day.holiday && styles.holidayNumber(),
+                )}
+              >
+                {String(day.day)}
+              </text>
+            </view>
+          </view>
         )
       })}
     </view>
@@ -514,22 +529,35 @@ export function App(props: { days?: readonly Day[] }) {
 
 namespace styles {
   export const calendarCell = variants({
-    base: { padding: '4px' },
+    base: { alignItems: 'center', bottom: '4px', display: 'flex', flexDirection: 'row', justifyContent: 'center', left: 0, position: 'absolute', right: 0, top: '4px' },
     variants: {
       segment: {
-        end: { paddingLeft: '8px' },
+        end: { borderBottomRightRadius: '999px', borderTopRightRadius: '999px', paddingLeft: '4px', right: '4px' },
         middle: {},
-        none: { paddingRight: '8px' },
-        start: { paddingRight: '8px' },
+        none: { left: '4px', right: '4px' },
+        single: { borderRadius: '50%', left: '4px', right: '4px' },
+        start: { borderBottomLeftRadius: '999px', borderTopLeftRadius: '999px', left: '4px', paddingRight: '4px' },
       },
     },
   })
 
-  export const weekStart = style({ marginLeft: '2px' })
+  export const day = style({ aspectRatio: '1', position: 'relative', width: '14.285714285714286%' })
 
-  export const weekEnd = style({ marginRight: '2px' })
+  export const dayNumber = style({ color: 'rgb(26, 26, 26)', fontSize: '14px', whiteSpace: 'nowrap' })
 
-  export const today = style({ color: 'rgb(0, 170, 0)' })
+  export const holidayNumber = style({ color: 'rgb(255, 111, 15)' })
+
+  export const pastDayNumber = style({ color: 'rgb(134, 142, 150)' })
+
+  export const pastSelectedDay = style({ backgroundColor: 'rgb(233, 236, 239)' })
+
+  export const selectedDay = style({ backgroundColor: 'rgb(33, 37, 41)' })
+
+  export const selectedDayNumber = style({ color: 'rgb(255, 255, 255)' })
+
+  export const weekEnd = style({ left: 0, right: '4px' })
+
+  export const weekStart = style({ left: '4px', right: 0 })
 }
 `,
       )
@@ -537,43 +565,71 @@ namespace styles {
       const result = await (await create(root)).build()
       await result.close()
 
-      // Each presence alternative copies the recipe's rules under its own prefix, and the
-      // recipe itself emits none, since every application selects from the table.
+      // Each argument prints its rules once. A declaration that conflicts with an earlier
+      // argument's, such as the edges' offsets against the cell and its choices, or the day
+      // number's colors, gets one copy after every shared unit, so later arguments win.
       const { css, mainThread } = await template(root)
       expect(css).toMatchInlineSnapshot(`
         [
-          ".z9 { padding: 4px }",
-          ".zA10 { padding-left: 8px }",
-          ".zA12,.zA13 { padding-right: 8px }",
-          ".za { margin-left: 2px }",
-          ".zA20 { padding-left: 8px }",
-          ".zA22,.zA23 { padding-right: 8px }",
-          ".zb { margin-right: 2px }",
-          ".zA30 { padding-left: 8px }",
-          ".zA32,.zA33 { padding-right: 8px }",
-          ".zc { margin-left: 2px; margin-right: 2px }",
-          ".zA40 { padding-left: 8px }",
-          ".zA42,.zA43 { padding-right: 8px }",
-          ".zd { color: #0a0 }",
-          ".zA50 { padding-left: 8px }",
-          ".zA52,.zA53 { padding-right: 8px }",
-          ".zA60 { padding-left: 8px }",
-          ".zA62,.zA63 { padding-right: 8px }",
-          ".zA70 { padding-left: 8px }",
-          ".zA72,.zA73 { padding-right: 8px }",
-          ".zA80 { padding-left: 8px }",
-          ".zA82,.zA83 { padding-right: 8px }",
+          ".z3 { align-items: center }",
+          ".z4 { top: 4px; right: 0; bottom: 4px; left: 0 }",
+          ".z5 { display: flex }",
+          ".z6 { flex-direction: row }",
+          ".z7 { justify-content: center }",
+          ".z8 { position: absolute }",
+          ".zA00 { border-top-right-radius: 999px; border-bottom-right-radius: 999px; padding-left: 4px; right: 4px }",
+          ".zA02 { left: 4px; right: 4px }",
+          ".zA03 { border-radius: 50%; left: 4px; right: 4px }",
+          ".zA04 { border-top-left-radius: 999px; border-bottom-left-radius: 999px; padding-right: 4px; left: 4px }",
+          ".z9 { aspect-ratio: 1 }",
+          ".za { position: relative }",
+          ".zb { width: 14.2857% }",
+          ".zc { color: #1a1a1a }",
+          ".zd { font-size: 14px }",
+          ".ze { white-space: nowrap }",
+          ".zf { color: #ff6f0f }",
+          ".zg { color: #868e96 }",
+          ".zh { background-color: #e9ecef }",
+          ".zi { background-color: #212529 }",
+          ".zj { color: #fff }",
+          ".zk { left: 0; right: 4px }",
+          ".zl { left: 4px; right: 0 }",
+          ".zA10 { left: 4px }",
+          ".zA11 { right: 0 }",
+          ".zA12 { left: 0 }",
+          ".zA13 { right: 4px }",
+          ".zA14 { background-color: #212529 }",
+          ".zA20 { color: #fff }",
+          ".zA21 { color: #868e96 }",
+          ".zA22 { color: #ff6f0f }",
         ]
       `)
 
-      // Every class the table lists selects a rule of the template. Each entry with a choice
-      // class holds at least two classes, so a two-token match skips other quoted words.
+      // Only the override copies repeat a declaration body.
+      const bodies = css.map((rule) => rule.slice(rule.indexOf('{')))
+      const repeated = css
+        .filter((_, index) => bodies.indexOf(bodies[index]!) !== index)
+        .map((rule) => rule.slice(0, rule.indexOf(' {')))
+      expect(repeated).toMatchInlineSnapshot(`
+        [
+          ".zA14",
+          ".zA20",
+          ".zA21",
+          ".zA22",
+        ]
+      `)
+
+      // Every class the main thread concatenates selects a rule of the template. A constant
+      // list holds two or more classes, and a conditional list starts with a space.
       const selectors = new Set(
         css.flatMap((rule) => rule.match(/\.z[0-9A-Za-z]+/g) ?? []),
       )
       const token = /(?:z[0-9a-z]+|zA[0-9a-z]{2})/
       const lists = mainThread.match(
-        new RegExp(`"${token.source}(?: ${token.source})+"`, 'g'),
+        new RegExp(
+          `"(?:${token.source}(?: ${token.source})+|(?: ${token.source})+)"`,
+          'g',
+        ),
       )
       const classes = [
         ...new Set(
@@ -583,38 +639,50 @@ namespace styles {
 
       expect(classes).toMatchInlineSnapshot(`
         [
+          "z3",
+          "z4",
+          "z5",
+          "z6",
+          "z7",
+          "z8",
           "z9",
+          "zA00",
+          "zA02",
+          "zA03",
+          "zA04",
           "zA10",
+          "zA11",
           "zA12",
           "zA13",
+          "zA14",
           "zA20",
+          "zA21",
           "zA22",
-          "zA23",
-          "zA30",
-          "zA32",
-          "zA33",
-          "zA40",
-          "zA42",
-          "zA43",
-          "zA50",
-          "zA52",
-          "zA53",
-          "zA60",
-          "zA62",
-          "zA63",
-          "zA70",
-          "zA72",
-          "zA73",
-          "zA80",
-          "zA82",
-          "zA83",
           "za",
           "zb",
           "zc",
           "zd",
+          "ze",
+          "zf",
+          "zg",
+          "zh",
+          "zi",
+          "zj",
+          "zk",
+          "zl",
         ]
       `)
       expect(classes.filter((name) => !selectors.has(`.${name}`))).toEqual([])
+
+      // The only class table is the cell recipe's own selector over its four classed choices
+      // and none, not one entry per presence alternative and choice.
+      const tables = mainThread.match(/__zyzzClasses\d+ ?= ?\[[^\]]*\]/g) ?? []
+      expect(tables.map((table) => table.match(/"[^"]*"/g)?.length))
+        .toMatchInlineSnapshot(`
+        [
+          5,
+        ]
+      `)
 
       // The composition runtime marks its module with this protocol key.
       const chunks = (await files(Path.join(root, 'dist'))).filter((file) =>
@@ -947,14 +1015,15 @@ namespace styles {
       const result = await (await create(root)).build()
       await result.close()
 
-      // Both compositions read one \`display: flex\` rule.
+      // Both compositions read one \`display: flex\` rule, and each conditional argument's
+      // conflicting declaration gets one copy after the shared rules.
       expect((await template(root)).css).toMatchInlineSnapshot(`
         [
-          ".z0 { color: #333 }",
-          ".z1 { display: flex }",
-          ".z2 { color: #999 }",
-          ".z3 { padding: 8px }",
-          ".z4 { padding: 4px }",
+          ".z1 { color: #333 }",
+          ".z2 { display: flex }",
+          ".z3,.zA00 { color: #999 }",
+          ".z5 { padding: 8px }",
+          ".z6,.zA40 { padding: 4px }",
         ]
       `)
 

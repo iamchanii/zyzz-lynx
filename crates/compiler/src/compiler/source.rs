@@ -97,6 +97,26 @@ pub struct ComposedValue {
     pub span: Span,
 }
 
+/// The override copies of one flat Lynx composition, as `Call.composition_flat` describes.
+#[derive(Clone, Debug)]
+pub struct Flat {
+    /// The copies each runtime input adds, by input position.
+    pub inputs: Vec<FlatInput>,
+    /// Hashed choice-class prefix of the copy classes, which a dense graph renames.
+    pub prefix: Arc<str>,
+    /// Name of the style whose class rules print the copies after every shared unit.
+    pub style: Arc<str>,
+}
+
+/// The override copies one argument of a flat composition adds to its own classes.
+#[derive(Clone, Debug, Default)]
+pub struct FlatInput {
+    /// Copies of the declarations every selection of the argument applies.
+    pub classes: Vec<Arc<str>>,
+    /// Copies of the declarations a recipe choice applies, by choice class.
+    pub choices: Vec<(Arc<str>, Vec<Arc<str>>)>,
+}
+
 /// One input of a runtime composition.
 #[derive(Clone, Debug)]
 pub struct RuntimeInput {
@@ -170,6 +190,12 @@ pub struct Call<'a> {
     pub composition_case: bool,
     /// Names of precompiled presence alternatives in bitmask order.
     pub composition_cases: Option<Vec<Arc<str>>>,
+    /// A runtime composition of known local styles and class-selection recipe applications on
+    /// the Lynx target, whose class list a production build with independent composition
+    /// concatenates argument by argument. Each argument keeps its own rules, and a declaration
+    /// that conflicts with an earlier argument's gets one copy under a class of this call,
+    /// printed after every shared unit, so later arguments win by stylesheet order.
+    pub composition_flat: Option<Flat>,
     /// Choice-class prefixes this composition renames, as (runtime input, from, to), when it
     /// copies the class rules of a Lynx recipe under classes of its own.
     pub composition_renames: Option<Vec<Rename>>,
@@ -3161,6 +3187,7 @@ pub fn extract<'a>(allocator: &'a Allocator, options: &Options<'_, 'a>) -> Resul
             calls: &calls,
             identity: &namespace,
             links: context.map(|context| &context.links),
+            lynx: options.target == Target::Lynx,
             offsets: &parsed.offsets,
             program,
             scopes: themes.as_ref().map(|themes| &themes.scope_applications),
@@ -3195,6 +3222,12 @@ pub fn extract<'a>(allocator: &'a Allocator, options: &Options<'_, 'a>) -> Resul
                     calls.push(composed);
                     styles.extend(entry.cases.into_iter().map(|(_, style)| style));
                     styles.push(entry.style);
+                    // Copies print after the composed styles, whose rules precede every unit
+                    // they override.
+                    if let Some((owner, overrides)) = entry.overrides {
+                        calls.push(owner);
+                        styles.push(overrides);
+                    }
                 }
             }
             // A failed definition leaves its applications unknown, so composition reports only

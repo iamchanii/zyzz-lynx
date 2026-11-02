@@ -33,7 +33,9 @@ use crate::compiler::internal::themes::{self, Output as ThemeOutput};
 use crate::compiler::internal::unapplied;
 use crate::compiler::internal::wrappers;
 use crate::compiler::internal::{dynamic, dynamics};
-use crate::compiler::source::{Call, Extracted, ImportedApplication, KnownInput, RuntimeInput};
+use crate::compiler::source::{
+    Call, Extracted, Flat, ImportedApplication, KnownInput, RuntimeInput,
+};
 use crate::data::Data;
 use crate::error::{Error, Result};
 use crate::internal::token::{Composition, CssOutput, Reference};
@@ -994,7 +996,7 @@ fn select_classes(
         .iter()
         .map(|(key, value)| (*key, selections::literal(value)))
         .collect();
-    let Some(applied) = selections::application(class_name, recipe, &values, helpers) else {
+    let Some(applied) = selections::application(class_name, recipe, &values, &[], helpers) else {
         return Ok(false);
     };
     let spread = application.spread;
@@ -1415,6 +1417,8 @@ pub fn compile<'a>(
     let module_id = options.module_id;
     let source = options.source;
     let typed = typed(module_id);
+    // Flat compositions keep their arguments' applications and rules, and select no table.
+    let flat = |call: &Call<'_>| compositions::flat(call, options.composition, options.development);
     let mut portable_names: FxHashMap<Arc<str>, Arc<str>> = FxHashMap::default();
 
     if portable {
@@ -1536,7 +1540,11 @@ pub fn compile<'a>(
     let mut tables: FxHashSet<u32> = FxHashSet::default();
     let mut composed_recipes: FxHashMap<&str, bool> = FxHashMap::default();
 
-    for call in extracted.calls.iter().filter(|call| call.composition_table) {
+    for call in extracted
+        .calls
+        .iter()
+        .filter(|call| call.composition_table && !flat(call))
+    {
         for input in call.runtime_composition.iter().flatten() {
             let Some(recipe) = &input.recipe else {
                 continue;
@@ -1729,14 +1737,46 @@ pub fn compile<'a>(
                 .iter()
                 .any(|fold| fold.fold.scheme.is_some()),
     );
+    // A flat composition's arguments print their own rules, so its composed style and presence
+    // alternatives emit none. Outside flat output its copies emit none.
+    let mut flat_dead: FxHashSet<&str> = FxHashSet::default();
+
+    for call in &extracted.calls {
+        let Some(plan) = &call.composition_flat else {
+            continue;
+        };
+
+        if flat(call) {
+            flat_dead.insert(&call.name);
+            flat_dead.extend(call.composition_cases.iter().flatten().map(|name| &**name));
+        } else {
+            flat_dead.insert(&plan.style);
+        }
+    }
+
     let mut styles: Vec<Arc<NamedStyle>> = if portable || options.development {
-        extracted.styles.styles.clone()
+        extracted
+            .styles
+            .styles
+            .iter()
+            .map(|style| {
+                if flat_dead.contains(&*style.name) {
+                    Arc::new(NamedStyle {
+                        css_output: style.css_output,
+                        name: Arc::clone(&style.name),
+                        ..NamedStyle::default()
+                    })
+                } else {
+                    Arc::clone(style)
+                }
+            })
+            .collect()
     } else {
         let mut dead = local_applications
             .as_ref()
             .map(applications::Applications::dead)
             .unwrap_or_default();
-        let replaced = compositions::replaced(&extracted.calls);
+        let replaced = compositions::replaced(&extracted.calls, flat);
         let mut applied: FxHashSet<&str> = FxHashSet::default();
         let mut composed: FxHashSet<&str> = FxHashSet::default();
 
@@ -1778,6 +1818,7 @@ pub fn compile<'a>(
                 .flat_map(|unused| unused.definitions.iter())
                 .cloned(),
         );
+        dead.extend(flat_dead.iter().map(|name| Arc::from(*name)));
 
         if dead.is_empty() && standalone.is_empty() {
             extracted.styles.styles.clone()
@@ -1931,6 +1972,8 @@ pub fn compile<'a>(
         acyclic: options.acyclic,
         chains: &chains,
         classes,
+        composition: options.composition,
+        development: options.development,
         shadowed,
         owners: options.owners,
         settled: options.settled,
@@ -3001,6 +3044,10 @@ struct State {
     variables: String,
 }
 
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "Each flag records one independent property of the module or its options."
+)]
 struct Generator<'g, 'a> {
     /// Whether the module shares no import cycle, which settles the composition inputs that
     /// follow initialization only then.
@@ -3008,6 +3055,10 @@ struct Generator<'g, 'a> {
     /// Merged styles of folded wrapper chains.
     chains: &'g [Chain],
     classes: IndexMap<Arc<str>, String, FxBuildHasher>,
+    /// Composition for styles without their own mode.
+    composition: Option<Composition>,
+    /// Whether live definitions are kept for development updates.
+    development: bool,
     /// Whether a module binding renames `Object` or `String`, which specialized selectors read.
     shadowed: bool,
     owners: Option<&'g Owners>,
@@ -3312,6 +3363,225 @@ impl<'a> Generator<'_, 'a> {
                 module.overwrite(previous, call.end, text)?;
             }
         }
+
+        Ok(true)
+    }
+
+    /// Concatenates the class lists of a flat Lynx composition, as `Call.composition_flat`
+    /// describes: each argument's own classes with its override copies, a conditional
+    /// argument's behind its condition, and a recipe argument's through a selector over its
+    /// choices, whose values stay in place as the selector's arguments. An application before
+    /// initialization reads its callee first, as a known input does. Returns whether the
+    /// composition folded.
+    fn flat_composition(
+        &self,
+        module: &mut Edits<'a>,
+        state: &mut State,
+        call: &Call<'a>,
+        inputs: &[RuntimeInput],
+        plan: &Flat,
+        helpers: &mut selections::Helpers<'_>,
+    ) -> Result<bool> {
+        /// What one term of the concatenation writes at the use site.
+        enum Piece {
+            /// Expression text.
+            Text(String),
+            /// An authored value that stays in place.
+            Value(Span),
+        }
+
+        /// The class list one argument adds.
+        enum Added {
+            /// A list known at compile time, with its leading separator.
+            Constant(String),
+            /// A selector call over the argument's authored values.
+            Pieces(Vec<Piece>),
+        }
+
+        let cast = if self.typed { " as unknown" } else { "" };
+        let join = |classes: &str, copies: &[Arc<str>]| -> String {
+            let mut list = classes.to_owned();
+
+            for copy in copies {
+                if !list.is_empty() {
+                    list.push(' ');
+                }
+
+                list.push_str(copy);
+            }
+
+            list
+        };
+        // Constant text joins one string until a dynamic argument ends it. Terms join with `+`.
+        let mut constant = String::new();
+        let mut terms: Vec<Vec<Piece>> = Vec::new();
+        let mut first = true;
+
+        for (index, input) in inputs.iter().enumerate() {
+            let copies = plan.inputs.get(index);
+            let classes = self.classes.get(&input.name).map_or("", String::as_str);
+            let separator = if first { "" } else { " " };
+            let (known, added) = if let Some(recipe) = &input.recipe {
+                let definition = self
+                    .extracted
+                    .calls
+                    .iter()
+                    .find(|call| call.name == input.name)
+                    .and_then(|call| call.recipe.as_ref());
+                let Some(definition) = definition else {
+                    return Ok(false);
+                };
+                let base = join(
+                    classes,
+                    copies.map_or(&[], |copies| copies.classes.as_slice()),
+                );
+                let values: Vec<(&str, Option<selections::Literal>)> = recipe
+                    .values
+                    .iter()
+                    .map(|value| (&*value.axis, value.literal.clone()))
+                    .collect();
+                let choices: &[(Arc<str>, Vec<Arc<str>>)] =
+                    copies.map_or(&[], |copies| copies.choices.as_slice());
+                let Some(applied) =
+                    selections::application(&base, definition, &values, choices, helpers)
+                else {
+                    return Ok(false);
+                };
+
+                match applied {
+                    selections::Applied::Constant(list) => {
+                        first &= list.is_empty();
+                        (&recipe.known, Added::Constant(format!("{separator}{list}")))
+                    }
+                    selections::Applied::Call(name) => {
+                        let lead = if first { "" } else { "\" \"+" };
+                        let mut pieces = vec![Piece::Text(format!("{lead}{name}("))];
+
+                        for (position, value) in recipe
+                            .values
+                            .iter()
+                            .filter(|value| value.literal.is_none())
+                            .enumerate()
+                        {
+                            if position > 0 {
+                                pieces.push(Piece::Text(",".to_owned()));
+                            }
+
+                            pieces.push(Piece::Value(value.span));
+                        }
+
+                        pieces.push(Piece::Text(")".to_owned()));
+                        first = false;
+                        (&recipe.known, Added::Pieces(pieces))
+                    }
+                }
+            } else if let Some(known) = &input.known {
+                let list = join(
+                    classes,
+                    copies.map_or(&[], |copies| copies.classes.as_slice()),
+                );
+
+                // An argument without classes adds nothing, but keeps its reads.
+                if list.is_empty() && self.initialized(known) && known.condition.is_none() {
+                    continue;
+                }
+
+                first &= list.is_empty();
+                (known, Added::Constant(format!("{separator}{list}")))
+            } else {
+                return Ok(false);
+            };
+
+            if self.initialized(known)
+                && known.condition.is_none()
+                && let Added::Constant(list) = &added
+            {
+                constant.push_str(list);
+                continue;
+            }
+
+            if !constant.is_empty() {
+                let mut text = String::new();
+
+                js::write_string(&mut text, &std::mem::take(&mut constant));
+                terms.push(vec![Piece::Text(text)]);
+            }
+
+            // The condition wraps the guarded read, so the guard closes first.
+            let mut open = String::new();
+            let mut close = String::new();
+
+            if let Some(condition) = known.condition {
+                let _ = write!(open, "(({})?", self.text(module, condition));
+                close.push_str(":\"\")");
+            }
+
+            if !self.initialized(known) {
+                let callee = &known.callee;
+
+                let _ = write!(open, "(({callee}{cast})||{callee}(),");
+                close.insert(0, ')');
+            }
+
+            let mut term = vec![Piece::Text(open)];
+
+            match added {
+                Added::Constant(list) => {
+                    let mut text = String::new();
+
+                    js::write_string(&mut text, &list);
+                    term.push(Piece::Text(text));
+                }
+                Added::Pieces(pieces) => term.extend(pieces),
+            }
+
+            term.push(Piece::Text(close));
+            terms.push(term);
+        }
+
+        let (start, mut text) = match call.spread {
+            Some(spread) => (spread.start, String::from("className={")),
+            None => (call.start, String::from("({className:")),
+        };
+        let end = if call.spread.is_some() { "" } else { "})" };
+
+        if terms.is_empty() {
+            state
+                .constants
+                .insert(call.start, (call.end, constant.clone()));
+            js::write_string(&mut text, &constant);
+            text.push_str(end);
+            module.overwrite(start, call.end, text)?;
+            return Ok(true);
+        }
+
+        if !constant.is_empty() {
+            let mut trailing = String::new();
+
+            js::write_string(&mut trailing, &constant);
+            terms.push(vec![Piece::Text(trailing)]);
+        }
+
+        let mut previous = start;
+
+        for (index, term) in terms.iter().enumerate() {
+            if index > 0 {
+                text.push('+');
+            }
+
+            for piece in term {
+                match piece {
+                    Piece::Text(part) => text.push_str(part),
+                    Piece::Value(span) => {
+                        module.overwrite(previous, span.start, std::mem::take(&mut text))?;
+                        previous = span.end;
+                    }
+                }
+            }
+        }
+
+        text.push_str(end);
+        module.overwrite(previous, call.end, text)?;
 
         Ok(true)
     }
@@ -3901,8 +4171,17 @@ impl<'a> Generator<'_, 'a> {
                     }
                 }
 
-                // A table of class lists replaces the whole call, including its recipe
-                // applications, so nothing remains to overwrite.
+                // A flat composition and a table of class lists replace the whole call,
+                // including its recipe applications, so nothing remains to overwrite.
+                if let Some(plan) = call
+                    .composition_flat
+                    .as_ref()
+                    .filter(|_| compositions::flat(call, self.composition, self.development))
+                    && self.flat_composition(module, &mut state, call, inputs, plan, helpers)?
+                {
+                    continue;
+                }
+
                 if call.composition_table
                     && !html
                     && self.composition_table(module, &mut state, call, inputs, &known, helpers)?

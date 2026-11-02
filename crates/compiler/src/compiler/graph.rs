@@ -31,7 +31,7 @@ use crate::compiler::internal::{
     wrappers,
 };
 use crate::compiler::native;
-use crate::compiler::source::{self, Code, Diagnostic, ExtractError, Extracted, Target};
+use crate::compiler::source::{self, Call, Code, Diagnostic, ExtractError, Extracted, Target};
 use crate::compiler::transform::{self, Owners};
 use crate::data::Data;
 use crate::error::{Error, Result};
@@ -291,7 +291,10 @@ struct CallSummary {
 }
 
 impl Module {
-    fn detach(extracted: &Extracted<'_>) -> Self {
+    fn detach(extracted: &Extracted<'_>, options: &Options) -> Self {
+        let flat =
+            |call: &Call<'_>| compositions::flat(call, options.composition, options.development);
+
         Self {
             calls: extracted
                 .calls
@@ -328,7 +331,7 @@ impl Module {
             namespaces: extracted.namespaces.clone(),
             native_vars: extracted.native_vars.clone(),
             opaque: false,
-            replaced: compositions::replaced(&extracted.calls),
+            replaced: compositions::replaced(&extracted.calls, flat),
             scope_schemes: extracted
                 .scope_folds
                 .iter()
@@ -2128,7 +2131,7 @@ impl<'p, 'a> Build<'p, 'a> {
         let module = Arc::new(Module {
             literals: linked.literals,
             opaque: linked.opaque,
-            ..Module::detach(&linked.extracted)
+            ..Module::detach(&linked.extracted, self.options)
         });
         // A module re-extracted only because a dependency changed usually extracts as before.
         // Keeping the previous identity then lets the modules that read it reuse their own
@@ -4246,7 +4249,9 @@ impl Build<'_, '_> {
                 let mut units = registry.scope(module_id, qualifier, visible);
 
                 if dense_names {
-                    dense::rename(&mut extracted, &mut units);
+                    dense::rename(&mut extracted, &mut units, |call| {
+                        compositions::flat(call, options.composition, options.development)
+                    });
                 }
 
                 let imported: wrappers::Imports = read

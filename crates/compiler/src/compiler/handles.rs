@@ -975,7 +975,13 @@ pub fn transform(input: &Value, separate: Option<&str>) -> Result<String> {
     let mut units = registry.scope(module_id, qualifier, Visibility::All);
 
     if dense_names {
-        dense::rename(&mut extracted, &mut units);
+        dense::rename(&mut extracted, &mut units, |call| {
+            crate::compiler::internal::compositions::flat(
+                call,
+                options.composition,
+                options.development,
+            )
+        });
     }
 
     let output = transform::compile(

@@ -9,10 +9,10 @@
 
 use std::sync::Arc;
 
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::compiler::internal::recipes;
-use crate::compiler::source::Extracted;
+use crate::compiler::source::{Call, Extracted};
 use crate::style::{NamedStyle, Rule};
 use crate::web::internal::class_name::Units;
 
@@ -21,8 +21,14 @@ type Renamed = FxHashMap<Arc<str>, Arc<str>>;
 
 /// Replaces every module-owned choice-class prefix with a dense prefix from `units`. Recipes are
 /// named first, in source order, then the copies each composition renames, in source order, so the
-/// table allocates the same names whenever the module compiles after the same modules.
-pub fn rename(extracted: &mut Extracted<'_>, units: &mut Units<'_>) {
+/// table allocates the same names whenever the module compiles after the same modules. `flat`
+/// marks the compositions that compose flat, which name their override copies instead of
+/// renamed recipe rules.
+pub fn rename(
+    extracted: &mut Extracted<'_>,
+    units: &mut Units<'_>,
+    flat: impl Fn(&Call<'_>) -> bool,
+) {
     let mut renamed = Renamed::default();
 
     for call in &mut extracted.calls {
@@ -33,7 +39,33 @@ pub fn rename(extracted: &mut Extracted<'_>, units: &mut Units<'_>) {
         }
     }
 
+    // A flat composition and its presence alternatives print no renamed recipe rules.
+    let skipped: FxHashSet<Arc<str>> = extracted
+        .calls
+        .iter()
+        .filter(|call| flat(call))
+        .flat_map(|call| call.composition_cases.iter().flatten().cloned())
+        .collect();
+
     for call in &mut extracted.calls {
+        if flat(call) {
+            // A composition without conflicts names no copies.
+            if let Some(plan) = &mut call.composition_flat
+                && plan
+                    .inputs
+                    .iter()
+                    .any(|input| !input.classes.is_empty() || !input.choices.is_empty())
+            {
+                plan.prefix = allocate(&mut renamed, units, &plan.prefix);
+            }
+
+            continue;
+        }
+
+        if skipped.contains(&call.name) {
+            continue;
+        }
+
         for (_, _, to) in call.composition_renames.iter_mut().flatten() {
             *to = allocate(&mut renamed, units, to);
         }
@@ -41,6 +73,27 @@ pub fn rename(extracted: &mut Extracted<'_>, units: &mut Units<'_>) {
 
     if renamed.is_empty() {
         return;
+    }
+
+    for plan in extracted
+        .calls
+        .iter_mut()
+        .filter_map(|call| call.composition_flat.as_mut())
+    {
+        for input in &mut plan.inputs {
+            for class in
+                input
+                    .classes
+                    .iter_mut()
+                    .chain(input.choices.iter_mut().flat_map(|(choice, classes)| {
+                        std::iter::once(choice).chain(classes.iter_mut())
+                    }))
+            {
+                if let Some(dense) = rename_class(class, &renamed) {
+                    *class = dense;
+                }
+            }
+        }
     }
 
     for call in &mut extracted.calls {

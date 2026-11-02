@@ -5609,6 +5609,294 @@ namespace styles {
       `)
     })
 
+    test('concatenates independent compositions argument by argument with override copies', async () => {
+      // Conditions read component bindings, so no argument is a literal omission, and the
+      // module evaluates no call before the definitions, so no application needs a guard.
+      const source = `import { cx, style, variants } from 'zyzz'
+export const App = (props: { on?: boolean }) => {
+const on = props.on ?? true
+const off = !on
+const tone: 'loud' | 'quiet' = on ? 'loud' : 'quiet'
+return <main>
+<span {...cx(styles.base(), off && styles.mid(), styles.last())}>absent earlier argument</span>
+<span {...cx(styles.base(), on && styles.mid(), styles.last())}>present earlier argument</span>
+<span {...cx(styles.base(), on && styles.mid())}>conditional wins</span>
+<span {...cx(styles.badge({ tone: 'loud' }), styles.last())}>plain over choice</span>
+<span {...cx(styles.base(), styles.badge({ tone: 'loud' }))}>choice over plain</span>
+<span {...cx(styles.base(), styles.badge({ tone: null }))}>null choice</span>
+<span {...cx(styles.base(), styles.badge())}>default choice</span>
+<span {...cx(styles.base(), on && styles.badge({ tone }))}>conditional runtime choice</span>
+<span {...cx(styles.base(), on && styles.mid(), off && styles.last(), on && styles.badge({ tone: 'loud' }))}>three conditions</span>
+<span {...cx(styles.edge(), off && styles.edgeOn())}>pseudo-class without the conditional argument</span>
+<span {...cx(styles.edge(), on && styles.edgeOn())}>pseudo-class conflict</span>
+</main>
+}
+namespace styles {
+  export const base = style({ color: 'rgb(10, 10, 10)', paddingLeft: '1px' })
+  export const mid = style({ color: 'rgb(20, 20, 20)', paddingLeft: '2px' })
+  export const last = style({ color: 'rgb(30, 30, 30)' })
+  export const edge = style({ color: 'rgb(40, 40, 40)', ':not(.off)': { color: 'rgb(50, 50, 50)' } })
+  export const edgeOn = style({ ':not(.off)': { color: 'rgb(60, 60, 60)' } })
+  export const badge = variants({ base: { borderLeft: '1px solid' }, defaultVariants: { tone: 'quiet' }, variants: { tone: { loud: { color: 'rgb(255, 0, 0)' }, quiet: { color: 'rgb(128, 128, 128)' } } } })
+}`
+      const output = Transform.compile({
+        composition: 'independent',
+        moduleId: 'App.tsx',
+        source,
+        target: 'lynx',
+      })
+
+      // Each argument adds its own classes behind its condition, a recipe argument through
+      // its own selector, so no module imports the composition runtime or a combination
+      // table.
+      expect(output.code).toMatchInlineSnapshot(`
+        "
+        const __zyzzClasses0=["zk","zk zA00 zA80","zk zA01 zA81"];
+        function __zyzzSelect0(p0:unknown){return __zyzzClasses0[(p0===void 0?2:p0==="loud"?1:p0==="quiet"?2:0)]}
+
+        export const App = (props: { on?: boolean }) => {
+        const on = props.on ?? true
+        const off = !on
+        const tone: 'loud' | 'quiet' = on ? 'loud' : 'quiet'
+        return <main>
+        <span className={"zc zd"+((off)?" ze zf zA10 zA11":"")+" zg zA12"}>absent earlier argument</span>
+        <span className={"zc zd"+((on)?" ze zf zA20 zA21":"")+" zg zA22"}>present earlier argument</span>
+        <span className={"zc zd"+((on)?" ze zf zA30 zA31":"")}>conditional wins</span>
+        <span className={"zk zA00 zg zA40"}>plain over choice</span>
+        <span className={"zc zd zk zA00 zA50"}>choice over plain</span>
+        <span className={"zc zd zk"}>null choice</span>
+        <span className={"zc zd zk zA01 zA71"}>default choice</span>
+        <span className={"zc zd"+((on)?" "+__zyzzSelect0(tone):"")}>conditional runtime choice</span>
+        <span className={"zc zd"+((on)?" ze zf zA90 zA91":"")+((off)?" zg zA92":"")+((on)?" zk zA00 zA93":"")}>three conditions</span>
+        <span className={"zh zi"+((off)?" zj zAa0":"")}>pseudo-class without the conditional argument</span>
+        <span className={"zh zi"+((on)?" zj zAb0":"")}>pseudo-class conflict</span>
+        </main>
+        }
+        namespace styles {
+          export declare const base: import('zyzz').style.ReturnType
+          export declare const mid: import('zyzz').style.ReturnType
+          export declare const last: import('zyzz').style.ReturnType
+          export declare const edge: import('zyzz').style.ReturnType
+          export declare const edgeOn: import('zyzz').style.ReturnType
+          export const badge = (((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className,style=input.style,vars=input.vars,inline=vars?{...vars,...style}:style;let value,className="zk";value=Object.prototype.hasOwnProperty.call(input,"tone")?input["tone"]:void 0;if(value===void 0)value="quiet";if(value!==null&&value!==void 0){value=String(value);className+=value==="loud"?" zA00":value==="quiet"?" zA01":""}if(external)className+=" "+external;return inline?{className,style:inline}:{className}}) as unknown as import('zyzz').variants.ReturnType<{selection:'class';variants:{"tone":{"loud":{};"quiet":{}}}}>)
+        }"
+      `)
+      expect(output.code.includes('zyzz/runtime')).toMatchInlineSnapshot(
+        `false`,
+      )
+
+      // Each style prints its rules once. A declaration conflicting with an earlier argument's
+      // prints one more copy after every shared unit, in argument order.
+      expect(output.css).toMatchInlineSnapshot(`
+        ".zc{color:rgb(10, 10, 10);}
+        .zd{padding-left:1px;}
+        .ze{color:rgb(20, 20, 20);}
+        .zf{padding-left:2px;}
+        .zg{color:rgb(30, 30, 30);}
+        .zh{color:rgb(40, 40, 40);}
+        .zi:not(.off){color:rgb(50, 50, 50);}
+        .zj:not(.off){color:rgb(60, 60, 60);}
+        .zk{border-left:1px solid;}
+        .zA00{color:rgb(255, 0, 0);}
+        .zA01{color:rgb(128, 128, 128);}
+        .zA10{color:rgb(20, 20, 20);}
+        .zA11{padding-left:2px;}
+        .zA12{color:rgb(30, 30, 30);}
+        .zA20{color:rgb(20, 20, 20);}
+        .zA21{padding-left:2px;}
+        .zA22{color:rgb(30, 30, 30);}
+        .zA30{color:rgb(20, 20, 20);}
+        .zA31{padding-left:2px;}
+        .zA40{color:rgb(30, 30, 30);}
+        .zA50{color:rgb(255, 0, 0);}
+        .zA51{color:rgb(128, 128, 128);}
+        .zA60{color:rgb(255, 0, 0);}
+        .zA61{color:rgb(128, 128, 128);}
+        .zA70{color:rgb(255, 0, 0);}
+        .zA71{color:rgb(128, 128, 128);}
+        .zA80{color:rgb(255, 0, 0);}
+        .zA81{color:rgb(128, 128, 128);}
+        .zA90{color:rgb(20, 20, 20);}
+        .zA91{padding-left:2px;}
+        .zA92{color:rgb(30, 30, 30);}
+        .zA93{color:rgb(255, 0, 0);}
+        .zA94{color:rgb(128, 128, 128);}
+        .zAa0:not(.off){color:rgb(60, 60, 60);}
+        .zAb0:not(.off){color:rgb(60, 60, 60);}"
+      `)
+
+      const rendered = await Wrappers.render({
+        css: output.css,
+        entry: 'App.tsx',
+        modules: { 'App.tsx': output.code },
+      })
+
+      // Later arguments win whether or not an earlier conditional argument is present, under
+      // pseudo-classes as well, and `null` selects nothing while an omitted axis takes its
+      // default.
+      expect(rendered.elements).toMatchInlineSnapshot(`
+        [
+          {
+            "borderLeftWidth": "0px",
+            "className": "zc zd zg zA12",
+            "color": "rgb(30, 30, 30)",
+            "paddingLeft": "1px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "0px",
+            "className": "zc zd ze zf zA20 zA21 zg zA22",
+            "color": "rgb(30, 30, 30)",
+            "paddingLeft": "2px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "0px",
+            "className": "zc zd ze zf zA30 zA31",
+            "color": "rgb(20, 20, 20)",
+            "paddingLeft": "2px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "1px",
+            "className": "zk zA00 zg zA40",
+            "color": "rgb(30, 30, 30)",
+            "paddingLeft": "0px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "1px",
+            "className": "zc zd zk zA00 zA50",
+            "color": "rgb(255, 0, 0)",
+            "paddingLeft": "1px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "1px",
+            "className": "zc zd zk",
+            "color": "rgb(10, 10, 10)",
+            "paddingLeft": "1px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "1px",
+            "className": "zc zd zk zA01 zA71",
+            "color": "rgb(128, 128, 128)",
+            "paddingLeft": "1px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "1px",
+            "className": "zc zd zk zA00 zA80",
+            "color": "rgb(255, 0, 0)",
+            "paddingLeft": "1px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "1px",
+            "className": "zc zd ze zf zA90 zA91 zk zA00 zA93",
+            "color": "rgb(255, 0, 0)",
+            "paddingLeft": "2px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "0px",
+            "className": "zh zi",
+            "color": "rgb(50, 50, 50)",
+            "paddingLeft": "0px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "0px",
+            "className": "zh zi zj zAb0",
+            "color": "rgb(60, 60, 60)",
+            "paddingLeft": "0px",
+            "tag": "span",
+          },
+        ]
+      `)
+
+      // The same source composes the same way on the web target.
+      const web = Transform.compile({ moduleId: 'App.tsx', source })
+      const webRendered = await Wrappers.render({
+        css: web.css,
+        entry: 'App.tsx',
+        modules: { 'App.tsx': web.code },
+      })
+      const computed = (elements: readonly Wrappers.Element[]) =>
+        elements.map(({ className: _, ...styles }) => styles)
+
+      expect(computed(rendered.elements)).toEqual(
+        computed(webRendered.elements),
+      )
+    })
+
+    test('guards flat composition arguments read before initialization', async () => {
+      // A module-scope call may run the component before the definitions initialize, so each
+      // argument reads its callee first, and a conditional argument reads it only when present.
+      const output = Transform.compile({
+        composition: 'independent',
+        moduleId: 'App.tsx',
+        source: `import { cx, style, variants } from 'zyzz'
+const flag = Math.random() >= 0
+export const App = () => <main>
+<span {...cx(styles.base(), flag && styles.mid(), styles.badge({ tone: flag ? 'loud' : 'quiet' }))}>guarded</span>
+</main>
+namespace styles {
+  export const base = style({ color: 'rgb(10, 10, 10)' })
+  export const mid = style({ color: 'rgb(20, 20, 20)' })
+  export const badge = variants({ base: { borderLeft: '1px solid' }, variants: { tone: { loud: { color: 'rgb(255, 0, 0)' }, quiet: { color: 'rgb(128, 128, 128)' } } } })
+}`,
+        target: 'lynx',
+      })
+
+      expect(output.code).toMatchInlineSnapshot(`
+        "
+        const __zyzzClasses0=["z4","z4 zA00 zA11","z4 zA01 zA12"];
+        function __zyzzSelect0(p0:unknown){return __zyzzClasses0[(p0==="loud"?1:p0==="quiet"?2:0)]}
+
+        import { Props as __zyzzProps } from 'zyzz/runtime';
+
+        const flag = Math.random() >= 0
+        export const App = () => <main>
+        <span className={((styles.base as unknown)||styles.base(),"z2")+((flag)?((styles.mid as unknown)||styles.mid()," z3 zA10"):"")+((styles.badge as unknown)||styles.badge()," "+__zyzzSelect0(flag ? 'loud' : 'quiet'))}>guarded</span>
+        </main>
+        namespace styles {
+          export const base = /*#__PURE__*/__zyzzProps.create({className:"z2"})
+          export const mid = /*#__PURE__*/__zyzzProps.create({className:"z3"})
+          export const badge = (((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className,style=input.style,vars=input.vars,inline=vars?{...vars,...style}:style;let value,className="z4";value=Object.prototype.hasOwnProperty.call(input,"tone")?input["tone"]:void 0;if(value!==null&&value!==void 0){value=String(value);className+=value==="loud"?" zA00":value==="quiet"?" zA01":""}if(external)className+=" "+external;return inline?{className,style:inline}:{className}}) as unknown as import('zyzz').variants.ReturnType<{selection:'class';variants:{"tone":{"loud":{};"quiet":{}}}}>)
+        }"
+      `)
+      expect(output.css).toMatchInlineSnapshot(`
+        ".z2{color:rgb(10, 10, 10);}
+        .z3{color:rgb(20, 20, 20);}
+        .z4{border-left:1px solid;}
+        .zA00{color:rgb(255, 0, 0);}
+        .zA01{color:rgb(128, 128, 128);}
+        .zA10{color:rgb(20, 20, 20);}
+        .zA11{color:rgb(255, 0, 0);}
+        .zA12{color:rgb(128, 128, 128);}"
+      `)
+
+      const rendered = await Wrappers.render({
+        css: output.css,
+        entry: 'App.tsx',
+        modules: { 'App.tsx': output.code },
+      })
+
+      expect(rendered.elements).toMatchInlineSnapshot(`
+        [
+          {
+            "borderLeftWidth": "1px",
+            "className": "z2 z3 zA10 z4 zA00 zA11",
+            "color": "rgb(255, 0, 0)",
+            "paddingLeft": "0px",
+            "tag": "span",
+          },
+        ]
+      `)
+    })
+
     test('emits sp and rpx lengths and rejects them on the web target', () => {
       const source = `import { style } from 'zyzz'
 export const props = style({ marginTop: '-6.4sp', paddingLeft: 'calc(10rpx + 1px)', '@media (width >= 1px)': { fontSize: '14sp' } })()`
