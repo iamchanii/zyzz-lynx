@@ -3573,6 +3573,140 @@ export namespace styles {
     `)
   })
 
+  test('leaves out the selector of an exported configuration that only folded selections read', () => {
+    const modules = {
+      'config.ts': `import { defineConfig, defineVars } from 'zyzz'
+const theme = defineVars({ color: { brand: '#06c' } })
+export const { style, vars } = defineConfig({ vars: theme })`,
+      'index.tsx': `import { cx } from 'zyzz'
+import { style, vars } from './config.ts'
+export const App = () => <main {...vars({})}>
+  <i {...cx(vars({ colorScheme: 'dark' }), styles.page())}>page</i>
+</main>
+namespace styles {
+  export const page = style({ color: vars.color.brand })
+}`,
+    }
+    const options = {
+      [ClassName.complete]: true,
+      [ClassName.references]: true,
+      modules,
+    }
+    const lynx = Graph.compile({ ...options, target: 'lynx' })
+
+    // Every selection folded to constant props, so the configuration needs no runtime selector.
+    expect(lynx.modules['config.ts']!.code).toMatchInlineSnapshot(`
+      "
+      const theme = ({} as import('zyzz').Vars.Definition<{readonly "color":{readonly "brand":"#06c"}}>)
+      export const { style, vars } = ({} as import('zyzz').Config.VariableConfig<{readonly "vars":{readonly "color":{readonly "brand":"#06c"}}}>)"
+    `)
+    expect(lynx.modules['index.tsx']!.code).toMatchInlineSnapshot(`
+      "
+      import { style, vars } from './config.ts'
+      import './config.ts';
+      export const App = () => <main {...({className:"z-theme-theme"})}>
+        <i {...({className:"z-theme-theme z_scheme-dark z0",style:{colorScheme:"dark"}})}>page</i>
+      </main>
+      "
+    `)
+
+    // The web target applies the same proof.
+    expect(Graph.compile(options).modules['config.ts']!.code)
+      .toMatchInlineSnapshot(`
+      "
+      const theme = ({} as import('zyzz').Vars.Definition<{readonly "color":{readonly "brand":"#06c"}}>)
+      export const { style, vars } = ({} as import('zyzz').Config.VariableConfig<{readonly "vars":{readonly "color":{readonly "brand":"#06c"}}}>)"
+    `)
+
+    const selector = (compiled: ReturnType<typeof Graph.compile>) =>
+      compiled.modules['config.ts']!.code.includes('__zyzzSelection.create(')
+    const edited = (replacement: string) => ({
+      ...modules,
+      'index.tsx': modules['index.tsx'].replace('vars({})', replacement),
+    })
+
+    // A dynamic selection, a selector read as a value, a re-export, a dynamic import of the
+    // module, a graph that may lack readers, and development keep the selector.
+    expect(
+      selector(
+        Graph.compile({
+          ...options,
+          modules: edited(
+            "vars({ colorScheme: Math.random() > 0.5 ? 'dark' : 'light' })",
+          ),
+        }),
+      ),
+    ).toMatchInlineSnapshot(`true`)
+    expect(
+      selector(
+        Graph.compile({
+          ...options,
+          modules: {
+            ...modules,
+            'index.tsx': `${modules['index.tsx']}\nexport const select = vars`,
+          },
+        }),
+      ),
+    ).toMatchInlineSnapshot(`true`)
+    expect(
+      selector(
+        Graph.compile({
+          ...options,
+          modules: {
+            ...modules,
+            'theme.ts': `export { vars } from './config.ts'`,
+          },
+        }),
+      ),
+    ).toMatchInlineSnapshot(`true`)
+    // Hosts list static imports only, so the dynamic import resolves among the modules.
+    expect(
+      selector(
+        Graph.compile({
+          ...options,
+          imports: {
+            'config.ts': { zyzz: null },
+            'index.tsx': { './config.ts': 'config.ts', zyzz: null },
+            'lazy.ts': {},
+          },
+          modules: {
+            ...modules,
+            'lazy.ts': `export const config = () => import('./config.ts')`,
+          },
+        }),
+      ),
+    ).toMatchInlineSnapshot(`true`)
+    expect(
+      selector(Graph.compile({ [ClassName.references]: true, modules })),
+    ).toMatchInlineSnapshot(`true`)
+    expect(
+      selector(Graph.compile({ ...options, development: true })),
+    ).toMatchInlineSnapshot(`true`)
+
+    // A whole exported configuration qualifies through its vars member.
+    const whole = Graph.compile({
+      ...options,
+      modules: {
+        'config.ts': `import { defineConfig, defineVars } from 'zyzz'
+const theme = defineVars({ color: { brand: '#06c' } })
+export const config = defineConfig({ vars: theme })`,
+        'index.tsx': `import { config } from './config.ts'
+export const App = () => <main {...config.vars({})}><i {...styles.page()}>page</i></main>
+namespace styles {
+  export const page = config.style({ color: config.vars.color.brand })
+}`,
+      },
+    })
+
+    expect(whole.modules['config.ts']!.code).toMatchInlineSnapshot(`
+      "
+      import { Appearance as __zyzzAppearance } from 'zyzz/runtime';
+
+      const theme = ({} as import('zyzz').Vars.Definition<{readonly "color":{readonly "brand":"#06c"}}>)
+      export const config = ({appearance:__zyzzAppearance.root([]),script:__zyzzAppearance.create([])} as import('zyzz').Config.VariableConfig<{readonly "vars":{readonly "color":{readonly "brand":"#06c"}}}>)"
+    `)
+  })
+
   test('folds wrappers over imported cx calls and imported dynamic components', async () => {
     const modules = {
       'base.ts': `import { style } from 'zyzz'

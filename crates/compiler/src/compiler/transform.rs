@@ -30,6 +30,7 @@ use crate::compiler::internal::selections;
 use crate::compiler::internal::statics::key_literal;
 use crate::compiler::internal::syntax::Parsed;
 use crate::compiler::internal::themes::{self, Output as ThemeOutput};
+use crate::compiler::internal::unapplied;
 use crate::compiler::internal::wrappers;
 use crate::compiler::internal::{dynamic, dynamics};
 use crate::compiler::source::{Call, Extracted, ImportedApplication, KnownInput, RuntimeInput};
@@ -68,9 +69,11 @@ pub struct Options<'s, 'a> {
     pub owners: Option<&'s Owners>,
     /// Class names of styles compiled elsewhere in the graph, by style identity.
     pub style_classes: Option<&'s FxHashMap<Arc<str>, Arc<str>>>,
-    /// Exported definitions that no module of a complete graph applies outside the compositions
-    /// replacing their class lists, so they emit no rules. `None` emits every definition.
-    pub unapplied: Option<&'s FxHashSet<Arc<str>>>,
+    /// Exports that no module of a complete graph reads at runtime: definitions applied only
+    /// where compositions replace their class lists emit no rules, and variable configurations
+    /// selected only with folded literal arguments emit no runtime selector. `None` emits every
+    /// definition and selector.
+    pub unapplied: Option<&'s unapplied::Unused>,
     /// Exported wrapper folds of imported source modules, by import specifier.
     pub wrappers: Option<&'s wrappers::Imports>,
     /// Default CSS representation for styles without their own mode.
@@ -1768,7 +1771,7 @@ pub fn compile<'a>(
             options
                 .unapplied
                 .iter()
-                .flat_map(|names| names.iter())
+                .flat_map(|unused| unused.definitions.iter())
                 .cloned(),
         );
 
@@ -1933,6 +1936,7 @@ pub fn compile<'a>(
         identifiers: &walker.identifiers,
         parsed,
         typed,
+        unapplied: options.unapplied,
     };
     let mut state =
         generator.rewrite(&mut module, &walker, local.as_ref(), &found, &folded_starts)?;
@@ -3003,6 +3007,8 @@ struct Generator<'g, 'a> {
     identifiers: &'g FxHashMap<&'a str, Vec<Span>>,
     parsed: &'g Parsed<'a>,
     typed: bool,
+    /// Exports a complete graph proved no module reads at runtime.
+    unapplied: Option<&'g unapplied::Unused>,
 }
 
 impl<'a> Generator<'_, 'a> {
@@ -4108,17 +4114,23 @@ impl<'a> Generator<'_, 'a> {
         let html = option("output").as_str() == Some("html");
 
         if call.variable_config {
+            // An exported configuration keeps its selector for readers the module cannot see,
+            // unless a complete graph proved every selection of it folded.
+            let unselected = self
+                .unapplied
+                .is_some_and(|unused| unused.selectors.contains(&call.name));
             let selected = extracted.theme_selections.contains(&call.name)
-                || extracted
-                    .theme_exports
-                    .iter()
-                    .flat_map(js::Record::values)
-                    .any(|link| {
-                        link.call.name == call.name
-                            && link.kind == themes::LinkKind::Config
-                            && !link.call.initialization
-                            && !link.call.root
-                    });
+                || (!unselected
+                    && extracted
+                        .theme_exports
+                        .iter()
+                        .flat_map(js::Record::values)
+                        .any(|link| {
+                            link.call.name == call.name
+                                && link.kind == themes::LinkKind::Config
+                                && !link.call.initialization
+                                && !link.call.root
+                        }));
             let entries: Vec<(String, Option<&String>)> = if themes {
                 members
                     .iter()

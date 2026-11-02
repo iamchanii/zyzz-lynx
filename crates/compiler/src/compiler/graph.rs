@@ -255,6 +255,8 @@ struct Module {
     calls: Vec<CallSummary>,
     contribution_starts: Vec<u32>,
     contributions: Vec<Contribution>,
+    /// Starts of scope selections folded to constant props.
+    folded: FxHashSet<u32>,
     /// Identities of imported styles whose applications fold to their class lists.
     imported: Vec<Arc<str>>,
     literals: Record<Arc<str>>,
@@ -312,6 +314,11 @@ impl Module {
                 .collect(),
             contribution_starts: extracted.contribution_starts.clone(),
             contributions: extracted.contributions.clone(),
+            folded: extracted
+                .scope_folds
+                .iter()
+                .map(|fold| fold.start)
+                .collect(),
             imported: extracted
                 .imported_applications
                 .iter()
@@ -382,8 +389,8 @@ struct Transformed {
     /// The settled import names the transform read.
     settled: Option<FxHashSet<Arc<str>>>,
     themes: Record<Arc<Definition>>,
-    /// The exported definitions the transform left without rules.
-    unapplied: Option<FxHashSet<Arc<str>>>,
+    /// The exported definitions and selectors the transform left without their runtime.
+    unapplied: Option<unapplied::Unused>,
 }
 
 /// Token resources a lean graph emitted once for the references of its deferred modules.
@@ -425,7 +432,7 @@ struct Cache {
     sources: Map<Arc<str>>,
     themes: Record<Arc<Definition>>,
     transformed: Map<Transformed>,
-    unapplied: Option<Arc<unapplied::Definitions>>,
+    unapplied: Option<Arc<unapplied::Exports>>,
 }
 
 /// The bound on cached extractions and transforms, evicting the earliest cached module. A recompile
@@ -3379,14 +3386,15 @@ impl Build<'_, '_> {
     }
 
     /// Exported definitions that no module applies outside the compositions replacing their
-    /// class lists, by module identity.
-    fn unapplied(&self) -> unapplied::Definitions {
+    /// class lists, and exported variable configurations whose selector no module calls with
+    /// other than folded literal arguments, by module identity.
+    fn unapplied(&self) -> unapplied::Exports {
         let none = FxHashSet::default();
         let mut modules = Vec::with_capacity(self.options.modules.len());
 
-        // Every supplied module may read a definition, extracted or not.
+        // Every supplied module may read a definition or selector, extracted or not.
         for id in self.options.modules.keys() {
-            // An unparsed module could read any definition.
+            // An unparsed module could read any export.
             let Some(parsed) = self.parse(id) else {
                 return FxHashMap::default();
             };
@@ -3401,9 +3409,16 @@ impl Build<'_, '_> {
                     })
                     .map(|call| (call.start, &call.name))
                     .collect(),
+                folded: module.map_or(&none, |module| &module.folded),
                 id,
                 parsed,
                 replaced: module.map_or(&none, |module| &module.replaced),
+                selectors: module
+                    .iter()
+                    .flat_map(|module| &module.theme_calls)
+                    .filter(|call| call.variable_config)
+                    .map(|call| (call.start, &call.name))
+                    .collect(),
             });
         }
 

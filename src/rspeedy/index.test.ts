@@ -92,6 +92,29 @@ async function template(root: string, entry = 'main') {
   }
 }
 
+/**
+ * The per-thread scripts of a production build that loaded the selection runtime, by the chunk
+ * name with its content hash elided. The runtime's helper import and its validation message
+ * mark the chunk.
+ */
+async function selecting(root: string, entry = 'main') {
+  const directory = Path.join(root, 'dist/.lynx', entry)
+  const chunks: string[] = []
+
+  for (const file of await files(directory)) {
+    if (!file.endsWith('.js')) continue
+    const source = await Fs.readFile(Path.join(directory, file), 'utf8')
+
+    if (
+      source.includes('__zyzzSelection') ||
+      source.includes('Invalid variable selection.')
+    )
+      chunks.push(file.replace(/\.[0-9a-f]+\.js$/, '.[hash].js'))
+  }
+
+  return chunks
+}
+
 describe('zyzz', () => {
   test('bundles the zyzz.css module into the Lynx template', async () => {
     const root = await fixture()
@@ -390,6 +413,74 @@ describe('zyzz', () => {
       await Fs.rm(root, { force: true, recursive: true })
     }
   }, 60_000)
+
+  test('leaves the selection runtime out of production chunks when every selection folds', async () => {
+    const root = await fixture()
+    const debug = process.env.DEBUG
+    try {
+      // Rspack reads the nearest package.json for side effects. Without one, the fixture inherits
+      // this repository's `sideEffects` list and drops the configuration module whole.
+      await Fs.writeFile(
+        Path.join(root, 'package.json'),
+        '{ "name": "fixture", "private": true, "type": "module" }\n',
+      )
+      await Fs.writeFile(
+        Path.join(root, 'src/config.ts'),
+        `import { defineConfig, defineVars } from 'zyzz'\n\nconst theme = defineVars({ color: { brand: '#0066cc' }, spacing: { page: '16px' } })\n\nexport const { style, variants, vars } = defineConfig({ vars: theme })\n`,
+      )
+      await Fs.writeFile(
+        Path.join(root, 'src/App.tsx'),
+        `import { style, variants, vars } from './config'\n\nexport function App() {\n  return <view {...vars({})}><text {...styles.title()}>Hello</text><text {...styles.tone({ tone: 'quiet' })}>World</text></view>\n}\n\nnamespace styles {\n  export const title = style({ color: vars.color.brand, padding: vars.spacing.page })\n  export const tone = variants({ variants: { tone: { quiet: { color: 'brand' }, loud: { padding: 'page' } } } })\n}\n`,
+      )
+
+      // The template plugin keeps the per-thread scripts beside the bundle when DEBUG names
+      // rspeedy. Unminified output leaves tree shaking as the only reason a module disappears.
+      process.env.DEBUG = 'rspeedy'
+      const result = await (
+        await create(root, { mode: 'production', output: { minify: false } })
+      ).build()
+      await result.close()
+
+      expect(
+        (await files(Path.join(root, 'dist/.lynx/main')))
+          .filter((file) => file.endsWith('.js'))
+          .map((file) => file.replace(/\.[0-9a-f]+\.js$/, '.[hash].js')),
+      ).toMatchInlineSnapshot(`
+        [
+          "background.[hash].js",
+          "main-thread.js",
+        ]
+      `)
+      // The configuration module emits no selector, so neither thread loads the runtime.
+      expect(await selecting(root)).toMatchInlineSnapshot(`[]`)
+
+      // A selection with a dynamic argument keeps the selector on both threads.
+      await Fs.writeFile(
+        Path.join(root, 'src/config.ts'),
+        `import { defineConfig } from 'zyzz'\n\nexport const { style, vars } = defineConfig({ defaultVars: 'base', vars: { base: { color: { brand: '#0066cc' } }, mint: { color: { brand: '#117755' } } } })\n`,
+      )
+      await Fs.writeFile(
+        Path.join(root, 'src/App.tsx'),
+        `import { style, vars } from './config'\n\nexport function App(props: { theme: 'base' | 'mint' }) {\n  return <view {...vars({ set: props.theme })}><text {...styles.title()}>Hello</text></view>\n}\n\nnamespace styles {\n  export const title = style({ color: vars.color.brand })\n}\n`,
+      )
+
+      const dynamic = await (
+        await create(root, { mode: 'production', output: { minify: false } })
+      ).build()
+      await dynamic.close()
+
+      expect(await selecting(root)).toMatchInlineSnapshot(`
+        [
+          "background.[hash].js",
+          "main-thread.js",
+        ]
+      `)
+    } finally {
+      if (debug === undefined) delete process.env.DEBUG
+      else process.env.DEBUG = debug
+      await Fs.rm(root, { force: true, recursive: true })
+    }
+  }, 120_000)
 
   test('compiles sources before pre-enforced loaders', async () => {
     const root = await fixture()
