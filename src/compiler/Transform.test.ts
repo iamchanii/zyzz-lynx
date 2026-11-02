@@ -12678,7 +12678,8 @@ export const dynamic = styles.dynamic({ width: '20px' });`
         moduleId: 'scopes.ts',
         source: `import {style} from 'zyzz';
       namespace first { const base = {color:'red'} as const; export const card = style(base); }
-      namespace second { const base = {color:'blue'} as const; export const card = style(base); }`,
+      namespace second { const base = {color:'blue'} as const; export const card = style(base); }
+      export const cards = [first.card().className, second.card().className];`,
       })
 
       expect(output.css).toMatchInlineSnapshot(`
@@ -12730,6 +12731,10 @@ import { Css } from 'zyzz/web';export const { style, variants, vars:theme } = Co
             ".z-theme-theme{--z-color-brand:red;}
             .z_scheme-dark{color-scheme:dark;}
             .z_scheme-light{color-scheme:light;}
+      // Both namespaces erase with their records once every application folds.
+      expect(output.code.trim()).toMatchInlineSnapshot(
+        `"export const cards = ["z_dRwjil0", "z_dRwjil1"];"`,
+      )
             .z_scheme-light-dark{color-scheme:light dark;}
             .z_Zf5JrJ0{color:var(--z-color-brand,red);}
             .z_Zf5JrJ1{padding:8px;}
@@ -13685,6 +13690,125 @@ describe('performance', () => {
       expect(consumer.pick(false)).toMatchInlineSnapshot(`
         {
           "className": "z_iFQJXQ2",
+    test('composes members of namespaces that hold spread records', () => {
+      const source = `import { cx, style } from 'zyzz'
+
+export function Chip(props: { checked: boolean }) {
+  return <view {...cx(styles.root(), props.checked && styles.selected())} />
+}
+
+namespace styles {
+  const row = { alignItems: 'center', display: 'flex', flexDirection: 'row' } as const
+
+  export const root = style({ ...row, padding: '8px' })
+
+  export const selected = style({ backgroundColor: '#000' })
+}
+`
+      const output = Transform.compile({ moduleId: 'Chip.tsx', source })
+
+      // The hoisted component can run before the namespace, so its applications keep guards.
+      expect(output.code).toMatchInlineSnapshot(`
+        "
+        const __zyzzComposition105=["z_Ve3Ri60 z_Ve3Ri61 z_Ve3Ri62 z_Ve3Ri63","z_Ve3Ri60 z_Ve3Ri61 z_Ve3Ri62 z_Ve3Ri63 z_Ve3Ri64"];
+
+        import { Props as __zyzzProps } from 'zyzz/runtime';
+
+
+        export function Chip(props: { checked: boolean }) {
+          return <view className={__zyzzComposition105[((styles.root as unknown)||styles.root(),0)|((props.checked)?((styles.selected as unknown)||styles.selected(),1):0)]} />
+        }
+
+        namespace styles {
+          const row = { alignItems: 'center', display: 'flex', flexDirection: 'row' } as const
+
+          export const root = /*#__PURE__*/__zyzzProps.create({className:""})
+
+          export const selected = /*#__PURE__*/__zyzzProps.create({className:""})
+        }
+        "
+      `)
+      expect(output.css).toMatchInlineSnapshot(`
+        ".z_Ve3Ri60{align-items:center;}
+        .z_Ve3Ri61{display:flex;}
+        .z_Ve3Ri62{flex-direction:row;}
+        .z_Ve3Ri63{padding:8px;}
+        .z_Ve3Ri64{background-color:#000;}"
+      `)
+      expect(
+        Transform.compile({ moduleId: 'Chip.tsx', source, target: 'lynx' })
+          .code,
+      ).toBe(output.code)
+
+      const exported = Transform.compile({
+        moduleId: 'Chip.tsx',
+        source: source.replace('  const row', '  export const row'),
+      })
+
+      expect(exported.code).toBe(
+        output.code.replace('  const row', '  export const row'),
+      )
+
+      // Applications that follow initialization erase the namespace with its record.
+      const erased = Transform.compile({
+        moduleId: 'Chip.tsx',
+        source: `import { cx, style } from 'zyzz'
+
+namespace styles {
+  const row = { alignItems: 'center', display: 'flex', flexDirection: 'row' } as const
+
+  export const root = style({ ...row, padding: '8px' })
+
+  export const selected = style({ backgroundColor: '#000' })
+}
+
+export const Chip = (props: { checked: boolean }) => <view {...cx(styles.root(), props.checked && styles.selected())} />
+`,
+      })
+
+      expect(erased.code).toMatchInlineSnapshot(`
+        "
+
+
+
+        export const Chip = (props: { checked: boolean }) => <view className={(props.checked)?"z_Ve3Ri60 z_Ve3Ri61 z_Ve3Ri62 z_Ve3Ri63 z_Ve3Ri64":"z_Ve3Ri60 z_Ve3Ri61 z_Ve3Ri62 z_Ve3Ri63"} />
+        "
+      `)
+
+      // A record another read reaches keeps the namespace object beside the folded members.
+      const read = Transform.compile({
+        moduleId: 'Chip.tsx',
+        source: source
+          .replace('  const row', '  export const row')
+          .replace(
+            '\nnamespace styles',
+            '\nexport const layout = styles.row\nnamespace styles',
+          ),
+      })
+
+      expect(read.code).toMatchInlineSnapshot(`
+        "
+        const __zyzzComposition105=["z_Ve3Ri60 z_Ve3Ri61 z_Ve3Ri62 z_Ve3Ri63","z_Ve3Ri60 z_Ve3Ri61 z_Ve3Ri62 z_Ve3Ri63 z_Ve3Ri64"];
+
+        import { Props as __zyzzProps } from 'zyzz/runtime';
+
+
+        export function Chip(props: { checked: boolean }) {
+          return <view className={__zyzzComposition105[((styles.root as unknown)||styles.root(),0)|((props.checked)?((styles.selected as unknown)||styles.selected(),1):0)]} />
+        }
+
+        export const layout = styles.row
+        namespace styles {
+          export const row = { alignItems: 'center', display: 'flex', flexDirection: 'row' } as const
+
+          export const root = /*#__PURE__*/__zyzzProps.create({className:""})
+
+          export const selected = /*#__PURE__*/__zyzzProps.create({className:""})
+        }
+        "
+      `)
+    })
+
         }
       `)
       expect(consumer.both()).toMatchInlineSnapshot(`
