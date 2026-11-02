@@ -31,9 +31,11 @@ Each row measures the `zyzz` sample after one change on the `lynx-bundle` branch
 | Baseline, fork `main`                                                      | `980230d` | 291.9 kB       |          | 139.6 kB         | 49.1 kB         | 51.4 kB     | 1177 / 1338 / 1187             |
 | Expand `inset` into longhands on Lynx                                      | `01a75f6` | 292.0 kB       | +0.1 kB  | 139.6 kB         | 49.1 kB         | 51.4 kB     | 1177 / 1341 / 1187             |
 | Dense graph-wide class names on Lynx                                       | `2829786` | 260.7 kB       | −31.3 kB | 121.3 kB         | 41.6 kB         | 43.7 kB     | 1177 / 1333 / 1187             |
-| Same, with `composition: 'independent'` in the sample config (not default) | `2829786` | 219.8 kB       | −40.9 kB | 120.5 kB         | 41.0 kB         | 31.2 kB     | 674 / 871 / 682                |
+| Compose namespace members declared beside `const` records                  | `6423ed0` | 260.7 kB       | 0        | 121.3 kB         | 41.6 kB         | 43.7 kB     | 1177 / 1333 / 1187             |
+| Fold literal `vars()` selections into constant props                       | `4a13a96` | 260.0 kB       | −0.7 kB  | 121.1 kB         | 41.4 kB         | 43.6 kB     | 1174 / 1330 / 1184             |
+| Same, with `composition: 'independent'` in the sample config (not default) | `4a13a96` | 219.2 kB       | −40.8 kB | 120.4 kB         | 40.7 kB         | 31.1 kB     | 671 / 868 / 679                |
 
-With dense names alone both thread scripts are already smaller than the vanilla-extract build (121.3 against 131.4 kB and 41.6 against 37.3 kB), and the remaining 13.4 kB gap is the rule count. Independent composition closes it and lands 27.5 kB (11%) under the vanilla-extract bundle.
+With dense names the main thread is already smaller than the vanilla-extract build (121.1 against 131.4 kB) while the background thread stays 4 kB larger, and the remaining 12.7 kB bundle gap is the rule count. The `vars()` fold removes only the root scope's runtime call here, since the `JobPostDetails` calendar still composes a recipe application with conditions at runtime and the exported config keeps its `vars` selector, so every runtime module except nothing is still bundled. Independent composition closes the gap and lands 28.1 kB (11%) under the vanilla-extract bundle.
 
 ## Grouped Output Experiment
 
