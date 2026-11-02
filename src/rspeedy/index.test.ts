@@ -354,12 +354,12 @@ describe('zyzz', () => {
           ".z_scheme-light { color-scheme: light }",
           ".z_scheme-light-dark { color-scheme: light dark }",
           ".z-theme-theme {  }",
-          ".z_i6Fywm0 { color: {{--z-color-brand}} }",
+          ".z0 { color: {{--z-color-brand}} }",
         ]
       `)
       expect(mainThread.match(/"z-theme-theme[^"]*"/g)).toMatchInlineSnapshot(`
         [
-          ""z-theme-theme z_i6Fywm0"",
+          ""z-theme-theme z0"",
           ""z-theme-theme z_scheme-dark"",
         ]
       `)

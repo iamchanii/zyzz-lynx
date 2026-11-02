@@ -5331,10 +5331,10 @@ export const light = <text {...cx(vars({ colorScheme: 'light' }), styles.page())
         const theme = ({} as import('zyzz').Vars.Definition<{readonly "color":{readonly "brand":"#06c"}}>)
         const { style, vars } = ({} as import('zyzz').Config.VariableConfig<{readonly "vars":{readonly "color":{readonly "brand":"#06c"}}}>)
 
-        export const page = <view className={"z-theme-theme z_l0kPgl0"} />
+        export const page = <view className={"z-theme-theme z0"} />
         export const dark = <text {...({className:"z-theme-theme z_scheme-dark",style:{colorScheme:"dark"}})} />
         export const plain = <text {...({className:"z-theme-theme"})} />
-        export const light = <text {...({className:"z-theme-theme z_scheme-light z_l0kPgl0",style:{colorScheme:"light"}})} />"
+        export const light = <text {...({className:"z-theme-theme z_scheme-light z0",style:{colorScheme:"light"}})} />"
       `)
       expect(lynx.code.includes('zyzz/runtime')).toMatchInlineSnapshot(`false`)
       expect(lynx.css).toMatchInlineSnapshot(`
@@ -5342,7 +5342,7 @@ export const light = <text {...cx(vars({ colorScheme: 'light' }), styles.page())
         .z_scheme-dark{color-scheme:dark;}
         .z_scheme-light{color-scheme:light;}
         .z_scheme-light-dark{color-scheme:light dark;}
-        .z_l0kPgl0{color:var(--z-color-brand,#06c);}"
+        .z0{color:var(--z-color-brand,#06c);}"
       `)
 
       const web = Transform.compile({ moduleId: 'App.tsx', source })
