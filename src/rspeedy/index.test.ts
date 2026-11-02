@@ -571,37 +571,37 @@ namespace styles {
       const { css, mainThread } = await template(root)
       expect(css).toMatchInlineSnapshot(`
         [
-          ".z3 { align-items: center }",
-          ".z4 { top: 4px; right: 0; bottom: 4px; left: 0 }",
-          ".z5 { display: flex }",
-          ".z6 { flex-direction: row }",
-          ".z7 { justify-content: center }",
-          ".z8 { position: absolute }",
+          ".z2 { align-items: center }",
+          ".z3 { top: 4px; right: 0; bottom: 4px; left: 0 }",
+          ".z4 { display: flex }",
+          ".z5 { flex-direction: row }",
+          ".z6 { justify-content: center }",
+          ".z7 { position: absolute }",
           ".zA00 { border-top-right-radius: 999px; border-bottom-right-radius: 999px; padding-left: 4px; right: 4px }",
           ".zA02 { left: 4px; right: 4px }",
           ".zA03 { border-radius: 50%; left: 4px; right: 4px }",
           ".zA04 { border-top-left-radius: 999px; border-bottom-left-radius: 999px; padding-right: 4px; left: 4px }",
-          ".z9 { aspect-ratio: 1 }",
-          ".za { position: relative }",
-          ".zb { width: 14.2857% }",
-          ".zc { color: #1a1a1a }",
-          ".zd { font-size: 14px }",
-          ".ze { white-space: nowrap }",
-          ".zf { color: #ff6f0f }",
-          ".zg { color: #868e96 }",
-          ".zh { background-color: #e9ecef }",
-          ".zi { background-color: #212529 }",
-          ".zj { color: #fff }",
-          ".zk { left: 0; right: 4px }",
-          ".zl { left: 4px; right: 0 }",
+          ".z8 { aspect-ratio: 1 }",
+          ".z9 { position: relative }",
+          ".za { width: 14.2857% }",
+          ".zb { color: #1a1a1a }",
+          ".zc { font-size: 14px }",
+          ".zd { white-space: nowrap }",
+          ".ze { color: #ff6f0f }",
+          ".zf { color: #868e96 }",
+          ".zg { background-color: #e9ecef }",
+          ".zh { background-color: #212529 }",
+          ".zi { color: #fff }",
+          ".zj { left: 0; right: 4px }",
+          ".zk { left: 4px; right: 0 }",
           ".zA10 { left: 4px }",
           ".zA11 { right: 0 }",
           ".zA12 { left: 0 }",
           ".zA13 { right: 4px }",
           ".zA14 { background-color: #212529 }",
-          ".zA20 { color: #fff }",
-          ".zA21 { color: #868e96 }",
-          ".zA22 { color: #ff6f0f }",
+          ".zA15 { color: #fff }",
+          ".zA16 { color: #868e96 }",
+          ".zA17 { color: #ff6f0f }",
         ]
       `)
 
@@ -613,9 +613,9 @@ namespace styles {
       expect(repeated).toMatchInlineSnapshot(`
         [
           ".zA14",
-          ".zA20",
-          ".zA21",
-          ".zA22",
+          ".zA15",
+          ".zA16",
+          ".zA17",
         ]
       `)
 
@@ -639,6 +639,7 @@ namespace styles {
 
       expect(classes).toMatchInlineSnapshot(`
         [
+          "z2",
           "z3",
           "z4",
           "z5",
@@ -655,9 +656,9 @@ namespace styles {
           "zA12",
           "zA13",
           "zA14",
-          "zA20",
-          "zA21",
-          "zA22",
+          "zA15",
+          "zA16",
+          "zA17",
           "za",
           "zb",
           "zc",
@@ -669,7 +670,6 @@ namespace styles {
           "zi",
           "zj",
           "zk",
-          "zl",
         ]
       `)
       expect(classes.filter((name) => !selectors.has(`.${name}`))).toEqual([])

@@ -876,15 +876,20 @@ fn write_literal(output: &mut String, literal: &Literal) {
     }
 }
 
+/// The choice name a literal value selects on an axis with `default`: `undefined` selects the
+/// default, and `null` selects nothing, as at runtime. A name the axis does not declare selects
+/// nothing either, which callers check against the axis.
+pub fn selected(literal: &Literal, default: Option<&str>) -> Option<String> {
+    match literal {
+        Literal::Undefined => default.map(str::to_owned),
+        literal => literal.text(),
+    }
+}
+
 /// The slot of the class a literal selection adds on an axis, `0` adding none. `undefined`
 /// selects the default, and `null` or an unknown choice selects nothing, as at runtime.
 fn slot(axis: &Axis, slots: &[&str], literal: &Literal) -> usize {
-    let choice = match literal {
-        Literal::Undefined => axis.default.as_deref().map(str::to_owned),
-        literal => literal.text(),
-    };
-
-    choice
+    selected(literal, axis.default.as_deref())
         .and_then(|choice| axis.choices.iter().find(|(name, _)| **name == *choice))
         .and_then(|(_, class)| slots.iter().position(|slot| *slot == &**class))
         .unwrap_or(0)

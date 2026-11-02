@@ -22,8 +22,8 @@ type Renamed = FxHashMap<Arc<str>, Arc<str>>;
 /// Replaces every module-owned choice-class prefix with a dense prefix from `units`. Recipes are
 /// named first, in source order, then the copies each composition renames, in source order, so the
 /// table allocates the same names whenever the module compiles after the same modules. `flat`
-/// marks the compositions that compose flat, which name their override copies instead of
-/// renamed recipe rules.
+/// marks the compositions that compose flat, which name the module's shared override copies
+/// instead of renamed recipe rules.
 pub fn rename(
     extracted: &mut Extracted<'_>,
     units: &mut Units<'_>,
@@ -46,16 +46,22 @@ pub fn rename(
         .filter(|call| flat(call))
         .flat_map(|call| call.composition_cases.iter().flatten().cloned())
         .collect();
+    // A module whose flat compositions have no conflicts names no copies.
+    let copies = extracted
+        .calls
+        .iter()
+        .filter(|call| flat(call))
+        .filter_map(|call| call.composition_flat.as_ref())
+        .any(|plan| {
+            plan.inputs
+                .iter()
+                .any(|input| !input.classes.is_empty() || !input.choices.is_empty())
+        });
 
     for call in &mut extracted.calls {
         if flat(call) {
-            // A composition without conflicts names no copies.
-            if let Some(plan) = &mut call.composition_flat
-                && plan
-                    .inputs
-                    .iter()
-                    .any(|input| !input.classes.is_empty() || !input.choices.is_empty())
-            {
+            // The flat compositions of a module share one prefix, allocated on its first use.
+            if copies && let Some(plan) = &mut call.composition_flat {
                 plan.prefix = allocate(&mut renamed, units, &plan.prefix);
             }
 

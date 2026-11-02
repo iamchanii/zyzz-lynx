@@ -5651,7 +5651,7 @@ namespace styles {
       // table.
       expect(output.code).toMatchInlineSnapshot(`
         "
-        const __zyzzClasses0=["zk","zk zA00 zA80","zk zA01 zA81"];
+        const __zyzzClasses0=["za","za zA00 zA13","za zA01 zA14"];
         function __zyzzSelect0(p0:unknown){return __zyzzClasses0[(p0===void 0?2:p0==="loud"?1:p0==="quiet"?2:0)]}
 
         export const App = (props: { on?: boolean }) => {
@@ -5659,17 +5659,17 @@ namespace styles {
         const off = !on
         const tone: 'loud' | 'quiet' = on ? 'loud' : 'quiet'
         return <main>
-        <span className={"zc zd"+((off)?" ze zf zA10 zA11":"")+" zg zA12"}>absent earlier argument</span>
-        <span className={"zc zd"+((on)?" ze zf zA20 zA21":"")+" zg zA22"}>present earlier argument</span>
-        <span className={"zc zd"+((on)?" ze zf zA30 zA31":"")}>conditional wins</span>
-        <span className={"zk zA00 zg zA40"}>plain over choice</span>
-        <span className={"zc zd zk zA00 zA50"}>choice over plain</span>
-        <span className={"zc zd zk"}>null choice</span>
-        <span className={"zc zd zk zA01 zA71"}>default choice</span>
-        <span className={"zc zd"+((on)?" "+__zyzzSelect0(tone):"")}>conditional runtime choice</span>
-        <span className={"zc zd"+((on)?" ze zf zA90 zA91":"")+((off)?" zg zA92":"")+((on)?" zk zA00 zA93":"")}>three conditions</span>
-        <span className={"zh zi"+((off)?" zj zAa0":"")}>pseudo-class without the conditional argument</span>
-        <span className={"zh zi"+((on)?" zj zAb0":"")}>pseudo-class conflict</span>
+        <span className={"z2 z3"+((off)?" z4 z5 zA10 zA11":"")+" z6 zA12"}>absent earlier argument</span>
+        <span className={"z2 z3"+((on)?" z4 z5 zA10 zA11":"")+" z6 zA12"}>present earlier argument</span>
+        <span className={"z2 z3"+((on)?" z4 z5 zA10 zA11":"")}>conditional wins</span>
+        <span className={"za zA00 z6 zA12"}>plain over choice</span>
+        <span className={"z2 z3 za zA00 zA13"}>choice over plain</span>
+        <span className={"z2 z3 za"}>null choice</span>
+        <span className={"z2 z3 za zA01 zA14"}>default choice</span>
+        <span className={"z2 z3"+((on)?" "+__zyzzSelect0(tone):"")}>conditional runtime choice</span>
+        <span className={"z2 z3"+((on)?" z4 z5 zA10 zA11":"")+((off)?" z6 zA12":"")+((on)?" za zA00 zA13":"")}>three conditions</span>
+        <span className={"z7 z8"+((off)?" z9 zA15":"")}>pseudo-class without the conditional argument</span>
+        <span className={"z7 z8"+((on)?" z9 zA15":"")}>pseudo-class conflict</span>
         </main>
         }
         namespace styles {
@@ -5678,7 +5678,7 @@ namespace styles {
           export declare const last: import('zyzz').style.ReturnType
           export declare const edge: import('zyzz').style.ReturnType
           export declare const edgeOn: import('zyzz').style.ReturnType
-          export const badge = (((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className,style=input.style,vars=input.vars,inline=vars?{...vars,...style}:style;let value,className="zk";value=Object.prototype.hasOwnProperty.call(input,"tone")?input["tone"]:void 0;if(value===void 0)value="quiet";if(value!==null&&value!==void 0){value=String(value);className+=value==="loud"?" zA00":value==="quiet"?" zA01":""}if(external)className+=" "+external;return inline?{className,style:inline}:{className}}) as unknown as import('zyzz').variants.ReturnType<{selection:'class';variants:{"tone":{"loud":{};"quiet":{}}}}>)
+          export const badge = (((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className,style=input.style,vars=input.vars,inline=vars?{...vars,...style}:style;let value,className="za";value=Object.prototype.hasOwnProperty.call(input,"tone")?input["tone"]:void 0;if(value===void 0)value="quiet";if(value!==null&&value!==void 0){value=String(value);className+=value==="loud"?" zA00":value==="quiet"?" zA01":""}if(external)className+=" "+external;return inline?{className,style:inline}:{className}}) as unknown as import('zyzz').variants.ReturnType<{selection:'class';variants:{"tone":{"loud":{};"quiet":{}}}}>)
         }"
       `)
       expect(output.code.includes('zyzz/runtime')).toMatchInlineSnapshot(
@@ -5688,41 +5688,23 @@ namespace styles {
       // Each style prints its rules once. A declaration conflicting with an earlier argument's
       // prints one more copy after every shared unit, in argument order.
       expect(output.css).toMatchInlineSnapshot(`
-        ".zc{color:rgb(10, 10, 10);}
-        .zd{padding-left:1px;}
-        .ze{color:rgb(20, 20, 20);}
-        .zf{padding-left:2px;}
-        .zg{color:rgb(30, 30, 30);}
-        .zh{color:rgb(40, 40, 40);}
-        .zi:not(.off){color:rgb(50, 50, 50);}
-        .zj:not(.off){color:rgb(60, 60, 60);}
-        .zk{border-left:1px solid;}
+        ".z2{color:rgb(10, 10, 10);}
+        .z3{padding-left:1px;}
+        .z4{color:rgb(20, 20, 20);}
+        .z5{padding-left:2px;}
+        .z6{color:rgb(30, 30, 30);}
+        .z7{color:rgb(40, 40, 40);}
+        .z8:not(.off){color:rgb(50, 50, 50);}
+        .z9:not(.off){color:rgb(60, 60, 60);}
+        .za{border-left:1px solid;}
         .zA00{color:rgb(255, 0, 0);}
         .zA01{color:rgb(128, 128, 128);}
         .zA10{color:rgb(20, 20, 20);}
         .zA11{padding-left:2px;}
         .zA12{color:rgb(30, 30, 30);}
-        .zA20{color:rgb(20, 20, 20);}
-        .zA21{padding-left:2px;}
-        .zA22{color:rgb(30, 30, 30);}
-        .zA30{color:rgb(20, 20, 20);}
-        .zA31{padding-left:2px;}
-        .zA40{color:rgb(30, 30, 30);}
-        .zA50{color:rgb(255, 0, 0);}
-        .zA51{color:rgb(128, 128, 128);}
-        .zA60{color:rgb(255, 0, 0);}
-        .zA61{color:rgb(128, 128, 128);}
-        .zA70{color:rgb(255, 0, 0);}
-        .zA71{color:rgb(128, 128, 128);}
-        .zA80{color:rgb(255, 0, 0);}
-        .zA81{color:rgb(128, 128, 128);}
-        .zA90{color:rgb(20, 20, 20);}
-        .zA91{padding-left:2px;}
-        .zA92{color:rgb(30, 30, 30);}
-        .zA93{color:rgb(255, 0, 0);}
-        .zA94{color:rgb(128, 128, 128);}
-        .zAa0:not(.off){color:rgb(60, 60, 60);}
-        .zAb0:not(.off){color:rgb(60, 60, 60);}"
+        .zA13{color:rgb(255, 0, 0);}
+        .zA14{color:rgb(128, 128, 128);}
+        .zA15:not(.off){color:rgb(60, 60, 60);}"
       `)
 
       const rendered = await Wrappers.render({
@@ -5738,77 +5720,77 @@ namespace styles {
         [
           {
             "borderLeftWidth": "0px",
-            "className": "zc zd zg zA12",
+            "className": "z2 z3 z6 zA12",
             "color": "rgb(30, 30, 30)",
             "paddingLeft": "1px",
             "tag": "span",
           },
           {
             "borderLeftWidth": "0px",
-            "className": "zc zd ze zf zA20 zA21 zg zA22",
+            "className": "z2 z3 z4 z5 zA10 zA11 z6 zA12",
             "color": "rgb(30, 30, 30)",
             "paddingLeft": "2px",
             "tag": "span",
           },
           {
             "borderLeftWidth": "0px",
-            "className": "zc zd ze zf zA30 zA31",
+            "className": "z2 z3 z4 z5 zA10 zA11",
             "color": "rgb(20, 20, 20)",
             "paddingLeft": "2px",
             "tag": "span",
           },
           {
             "borderLeftWidth": "1px",
-            "className": "zk zA00 zg zA40",
+            "className": "za zA00 z6 zA12",
             "color": "rgb(30, 30, 30)",
             "paddingLeft": "0px",
             "tag": "span",
           },
           {
             "borderLeftWidth": "1px",
-            "className": "zc zd zk zA00 zA50",
+            "className": "z2 z3 za zA00 zA13",
             "color": "rgb(255, 0, 0)",
             "paddingLeft": "1px",
             "tag": "span",
           },
           {
             "borderLeftWidth": "1px",
-            "className": "zc zd zk",
+            "className": "z2 z3 za",
             "color": "rgb(10, 10, 10)",
             "paddingLeft": "1px",
             "tag": "span",
           },
           {
             "borderLeftWidth": "1px",
-            "className": "zc zd zk zA01 zA71",
+            "className": "z2 z3 za zA01 zA14",
             "color": "rgb(128, 128, 128)",
             "paddingLeft": "1px",
             "tag": "span",
           },
           {
             "borderLeftWidth": "1px",
-            "className": "zc zd zk zA00 zA80",
+            "className": "z2 z3 za zA00 zA13",
             "color": "rgb(255, 0, 0)",
             "paddingLeft": "1px",
             "tag": "span",
           },
           {
             "borderLeftWidth": "1px",
-            "className": "zc zd ze zf zA90 zA91 zk zA00 zA93",
+            "className": "z2 z3 z4 z5 zA10 zA11 za zA00 zA13",
             "color": "rgb(255, 0, 0)",
             "paddingLeft": "2px",
             "tag": "span",
           },
           {
             "borderLeftWidth": "0px",
-            "className": "zh zi",
+            "className": "z7 z8",
             "color": "rgb(50, 50, 50)",
             "paddingLeft": "0px",
             "tag": "span",
           },
           {
             "borderLeftWidth": "0px",
-            "className": "zh zi zj zAb0",
+            "className": "z7 z8 z9 zA15",
             "color": "rgb(60, 60, 60)",
             "paddingLeft": "0px",
             "tag": "span",
@@ -5895,6 +5877,252 @@ namespace styles {
           },
         ]
       `)
+    })
+
+    test('shares identical override copies across arguments and sibling compositions', async () => {
+      // Every call composes the same four colors, so their copies print once per module
+      // wherever stylesheet order still lets a later argument win.
+      const source = `import { cx, style } from 'zyzz'
+export const App = (props: { on?: boolean }) => {
+const on = props.on ?? true
+const off = !on
+return <main>
+<span {...cx(styles.a(), on && styles.b(), on && styles.c(), on && styles.d())}>all present</span>
+<span {...cx(styles.a(), on && styles.b(), off && styles.c(), off && styles.d())}>b present</span>
+<span {...cx(styles.a(), off && styles.b(), on && styles.c(), off && styles.d())}>c present</span>
+<span {...cx(styles.a(), off && styles.b(), on && styles.c(), on && styles.d())}>c and d present</span>
+<span {...cx(styles.a(), on && styles.b(), on && styles.e())}>identical later declarations</span>
+<span {...cx(styles.a(), on && styles.f())}>sibling</span>
+</main>
+}
+namespace styles {
+  export const a = style({ color: 'rgb(0, 0, 255)' })
+  export const b = style({ color: 'rgb(255, 0, 0)' })
+  export const c = style({ color: 'rgb(0, 128, 0)' })
+  export const d = style({ color: 'rgb(255, 0, 0)' })
+  export const e = style({ color: 'rgb(255, 0, 0)' })
+  export const f = style({ color: 'rgb(255, 0, 0)' })
+}`
+      const output = Transform.compile({
+        composition: 'independent',
+        moduleId: 'App.tsx',
+        source,
+        target: 'lynx',
+      })
+
+      // The red of `d` cannot reuse the red copy of `b`, since the green copy of `c` prints
+      // between them. Identical declarations never conflict, so `e` reuses the copy of `b`, as
+      // do the sibling calls.
+      expect(output.code).toMatchInlineSnapshot(`
+        "
+        export const App = (props: { on?: boolean }) => {
+        const on = props.on ?? true
+        const off = !on
+        return <main>
+        <span className={"z1"+((on)?" z2 zA00":"")+((on)?" z3 zA01":"")+((on)?" z2 zA02":"")}>all present</span>
+        <span className={"z1"+((on)?" z2 zA00":"")+((off)?" z3 zA01":"")+((off)?" z2 zA02":"")}>b present</span>
+        <span className={"z1"+((off)?" z2 zA00":"")+((on)?" z3 zA01":"")+((off)?" z2 zA02":"")}>c present</span>
+        <span className={"z1"+((off)?" z2 zA00":"")+((on)?" z3 zA01":"")+((on)?" z2 zA02":"")}>c and d present</span>
+        <span className={"z1"+((on)?" z2 zA00":"")+((on)?" z2 zA00":"")}>identical later declarations</span>
+        <span className={"z1"+((on)?" z2 zA00":"")}>sibling</span>
+        </main>
+        }
+        "
+      `)
+      expect(output.css).toMatchInlineSnapshot(`
+        ".z1{color:rgb(0, 0, 255);}
+        .z2{color:rgb(255, 0, 0);}
+        .z3{color:rgb(0, 128, 0);}
+        .zA00{color:rgb(255, 0, 0);}
+        .zA01{color:rgb(0, 128, 0);}
+        .zA02{color:rgb(255, 0, 0);}"
+      `)
+
+      const rendered = await Wrappers.render({
+        css: output.css,
+        entry: 'App.tsx',
+        modules: { 'App.tsx': output.code },
+      })
+
+      expect(rendered.elements).toMatchInlineSnapshot(`
+        [
+          {
+            "borderLeftWidth": "0px",
+            "className": "z1 z2 zA00 z3 zA01 z2 zA02",
+            "color": "rgb(255, 0, 0)",
+            "paddingLeft": "0px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "0px",
+            "className": "z1 z2 zA00",
+            "color": "rgb(255, 0, 0)",
+            "paddingLeft": "0px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "0px",
+            "className": "z1 z3 zA01",
+            "color": "rgb(0, 128, 0)",
+            "paddingLeft": "0px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "0px",
+            "className": "z1 z3 zA01 z2 zA02",
+            "color": "rgb(255, 0, 0)",
+            "paddingLeft": "0px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "0px",
+            "className": "z1 z2 zA00 z2 zA00",
+            "color": "rgb(255, 0, 0)",
+            "paddingLeft": "0px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "0px",
+            "className": "z1 z2 zA00",
+            "color": "rgb(255, 0, 0)",
+            "paddingLeft": "0px",
+            "tag": "span",
+          },
+        ]
+      `)
+
+      const web = Transform.compile({ moduleId: 'App.tsx', source })
+      const webRendered = await Wrappers.render({
+        css: web.css,
+        entry: 'App.tsx',
+        modules: { 'App.tsx': web.code },
+      })
+      const computed = (elements: readonly Wrappers.Element[]) =>
+        elements.map(({ className: _, ...styles }) => styles)
+
+      expect(computed(rendered.elements)).toEqual(
+        computed(webRendered.elements),
+      )
+    })
+
+    test('copies only the selectable choices of a literally applied recipe', async () => {
+      const source = `import { cx, style, variants } from 'zyzz'
+export const App = (props: { tone?: 'loud' | 'quiet' }) => {
+const tone = props.tone ?? 'loud'
+return <main>
+<span {...cx(styles.base(), styles.badge({ tone: 'loud' }))}>literal choice</span>
+<span {...cx(styles.base(), styles.badge({ tone: null }))}>null choice</span>
+<span {...cx(styles.base(), styles.badge())}>default choice</span>
+<span {...cx(styles.badge({ tone: 'quiet' }), styles.last())}>later argument against the selected choice</span>
+<span {...cx(styles.base(), styles.badge({ tone }))}>runtime choice</span>
+</main>
+}
+namespace styles {
+  export const base = style({ color: 'rgb(10, 10, 10)' })
+  export const last = style({ color: 'rgb(30, 30, 30)', paddingLeft: '2px' })
+  export const badge = variants({ base: { borderLeft: '1px solid' }, defaultVariants: { tone: 'quiet' }, variants: { tone: { loud: { color: 'rgb(255, 0, 0)', paddingLeft: '1px' }, quiet: { color: 'rgb(128, 128, 128)' } } } })
+}`
+      const output = Transform.compile({
+        composition: 'independent',
+        moduleId: 'App.tsx',
+        source,
+        target: 'lynx',
+      })
+
+      // A literal choice copies that choice alone, `null` copies nothing, and an omitted axis
+      // copies its default. A later argument conflicts only with the selected choice, so the
+      // padding of `last` needs no copy after `quiet`. The runtime choice reuses both copies.
+      expect(output.code).toMatchInlineSnapshot(`
+        "
+        const __zyzzClasses0=["z5","z5 zA00 zA10","z5 zA01 zA11"];
+        function __zyzzSelect0(p0:unknown){return __zyzzClasses0[(p0===void 0?2:p0==="loud"?1:p0==="quiet"?2:0)]}
+
+        export const App = (props: { tone?: 'loud' | 'quiet' }) => {
+        const tone = props.tone ?? 'loud'
+        return <main>
+        <span className={"z2 z5 zA00 zA10"}>literal choice</span>
+        <span className={"z2 z5"}>null choice</span>
+        <span className={"z2 z5 zA01 zA11"}>default choice</span>
+        <span className={"z5 zA01 z3 z4 zA12"}>later argument against the selected choice</span>
+        <span className={"z2"+" "+__zyzzSelect0(tone)}>runtime choice</span>
+        </main>
+        }
+        namespace styles {
+          export declare const base: import('zyzz').style.ReturnType
+          export declare const last: import('zyzz').style.ReturnType
+          export const badge = (((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className,style=input.style,vars=input.vars,inline=vars?{...vars,...style}:style;let value,className="z5";value=Object.prototype.hasOwnProperty.call(input,"tone")?input["tone"]:void 0;if(value===void 0)value="quiet";if(value!==null&&value!==void 0){value=String(value);className+=value==="loud"?" zA00":value==="quiet"?" zA01":""}if(external)className+=" "+external;return inline?{className,style:inline}:{className}}) as unknown as import('zyzz').variants.ReturnType<{selection:'class';variants:{"tone":{"loud":{};"quiet":{}}}}>)
+        }"
+      `)
+      expect(output.css).toMatchInlineSnapshot(`
+        ".z2{color:rgb(10, 10, 10);}
+        .z3{color:rgb(30, 30, 30);}
+        .z4{padding-left:2px;}
+        .z5{border-left:1px solid;}
+        .zA00{color:rgb(255, 0, 0);padding-left:1px;}
+        .zA01{color:rgb(128, 128, 128);}
+        .zA10{color:rgb(255, 0, 0);}
+        .zA11{color:rgb(128, 128, 128);}
+        .zA12{color:rgb(30, 30, 30);}"
+      `)
+
+      const rendered = await Wrappers.render({
+        css: output.css,
+        entry: 'App.tsx',
+        modules: { 'App.tsx': output.code },
+      })
+
+      expect(rendered.elements).toMatchInlineSnapshot(`
+        [
+          {
+            "borderLeftWidth": "1px",
+            "className": "z2 z5 zA00 zA10",
+            "color": "rgb(255, 0, 0)",
+            "paddingLeft": "1px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "1px",
+            "className": "z2 z5",
+            "color": "rgb(10, 10, 10)",
+            "paddingLeft": "0px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "1px",
+            "className": "z2 z5 zA01 zA11",
+            "color": "rgb(128, 128, 128)",
+            "paddingLeft": "0px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "1px",
+            "className": "z5 zA01 z3 z4 zA12",
+            "color": "rgb(30, 30, 30)",
+            "paddingLeft": "2px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "1px",
+            "className": "z2 z5 zA00 zA10",
+            "color": "rgb(255, 0, 0)",
+            "paddingLeft": "1px",
+            "tag": "span",
+          },
+        ]
+      `)
+
+      const web = Transform.compile({ moduleId: 'App.tsx', source })
+      const webRendered = await Wrappers.render({
+        css: web.css,
+        entry: 'App.tsx',
+        modules: { 'App.tsx': web.code },
+      })
+      const computed = (elements: readonly Wrappers.Element[]) =>
+        elements.map(({ className: _, ...styles }) => styles)
+
+      expect(computed(rendered.elements)).toEqual(
+        computed(webRendered.elements),
+      )
     })
 
     test('emits sp and rpx lengths and rejects them on the web target', () => {

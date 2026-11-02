@@ -97,14 +97,16 @@ pub struct ComposedValue {
     pub span: Span,
 }
 
-/// The override copies of one flat Lynx composition, as `Call.composition_flat` describes.
+/// The override copies of one flat Lynx composition, as `Call.composition_flat` describes. The
+/// copies of every flat composition in a module share one style and one prefix, so identical
+/// copies print once.
 #[derive(Clone, Debug)]
 pub struct Flat {
     /// The copies each runtime input adds, by input position.
     pub inputs: Vec<FlatInput>,
-    /// Hashed choice-class prefix of the copy classes, which a dense graph renames.
+    /// Hashed choice-class prefix of the module's copy classes, which a dense graph renames.
     pub prefix: Arc<str>,
-    /// Name of the style whose class rules print the copies after every shared unit.
+    /// Name of the module's style whose class rules print the copies after every shared unit.
     pub style: Arc<str>,
 }
 
@@ -193,8 +195,9 @@ pub struct Call<'a> {
     /// A runtime composition of known local styles and class-selection recipe applications on
     /// the Lynx target, whose class list a production build with independent composition
     /// concatenates argument by argument. Each argument keeps its own rules, and a declaration
-    /// that conflicts with an earlier argument's gets one copy under a class of this call,
-    /// printed after every shared unit, so later arguments win by stylesheet order.
+    /// that conflicts with an earlier argument's gets a copy under a class the module's flat
+    /// compositions share, printed after every shared unit, so later arguments win by
+    /// stylesheet order.
     pub composition_flat: Option<Flat>,
     /// Choice-class prefixes this composition renames, as (runtime input, from, to), when it
     /// copies the class rules of a Lynx recipe under classes of its own.
@@ -3198,9 +3201,15 @@ pub fn extract<'a>(allocator: &'a Allocator, options: &Options<'_, 'a>) -> Resul
 
         match collected {
             Ok(collected) => {
-                imported_applications = collected.imported;
+                let compositions::Collected {
+                    entries,
+                    imported,
+                    overrides,
+                } = collected;
 
-                for (position, entry) in collected.entries.into_iter().enumerate() {
+                imported_applications = imported;
+
+                for (position, entry) in entries.into_iter().enumerate() {
                     let authored = parsed
                         .names()
                         .get(entry.call.start)
@@ -3222,12 +3231,13 @@ pub fn extract<'a>(allocator: &'a Allocator, options: &Options<'_, 'a>) -> Resul
                     calls.push(composed);
                     styles.extend(entry.cases.into_iter().map(|(_, style)| style));
                     styles.push(entry.style);
-                    // Copies print after the composed styles, whose rules precede every unit
-                    // they override.
-                    if let Some((owner, overrides)) = entry.overrides {
-                        calls.push(owner);
-                        styles.push(overrides);
-                    }
+                }
+
+                // The module's copies print after every composed style, whose rules precede every
+                // unit they override.
+                if let Some((owner, overrides)) = overrides {
+                    calls.push(owner);
+                    styles.push(overrides);
                 }
             }
             // A failed definition leaves its applications unknown, so composition reports only

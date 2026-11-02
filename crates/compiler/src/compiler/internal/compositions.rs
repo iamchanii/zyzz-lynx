@@ -39,6 +39,7 @@ use crate::internal::token::{Composition, CssOutput};
 use crate::internal::{identity, literal};
 use crate::js::{self, Record, Utf16Index};
 use crate::runtime::composition::Owner;
+use crate::runtime::recipe;
 use crate::style::{Declaration, NamedStyle, Rule};
 use crate::web::internal::combination;
 
@@ -77,6 +78,10 @@ pub struct Collected<'a> {
     pub entries: Vec<Entry<'a>>,
     /// Imported style applications spread alone onto DOM elements.
     pub imported: Vec<ImportedApplication>,
+    /// The class rules of the override copies every flat composition of the module shares, as
+    /// `Call.composition_flat` describes, with the CSS-only call that owns them for declaration
+    /// maps. Present once the module plans a flat composition.
+    pub overrides: Option<(Call<'a>, Arc<NamedStyle>)>,
 }
 
 /// One composition and its precompiled presence alternatives.
@@ -85,9 +90,6 @@ pub struct Entry<'a> {
     pub call: Call<'a>,
     /// Presence alternatives for conditional arguments, in bitmask order.
     pub cases: Vec<(Call<'a>, Arc<NamedStyle>)>,
-    /// The class rules of a flat composition's override copies, as `Call.composition_flat`
-    /// describes, with the CSS-only call that owns them for declaration maps.
-    pub overrides: Option<(Call<'a>, Arc<NamedStyle>)>,
     /// The composed style.
     pub style: Arc<NamedStyle>,
 }
@@ -721,32 +723,117 @@ fn nested(conditions: &[&Arc<str>], declaration: &Declaration) -> NamedStyle {
     )
 }
 
-/// The override copies of a flat composition and the style that prints them. A declaration of an
-/// argument that conflicts with a declaration of an earlier argument under the same conditions,
-/// including any choice of an earlier recipe, is copied once under a class of this call, in
-/// argument order. A recipe argument's copies attach to the choice class that declares them.
-/// Identical copies share one class within an argument only, since a copy shared across
-/// arguments could not follow both arguments' conflicting copies.
-fn overrides(
-    name: &str,
-    selected: &[Call<'_>],
-    styles: &FxHashMap<Arc<str>, Arc<NamedStyle>>,
-) -> (Flat, NamedStyle) {
-    let prefix: Arc<str> = Arc::from(recipes::prefix(&format!("{name}:flat")));
-    let style_name: Arc<str> = Arc::from(format!("{name}-flat"));
-    let mut rules: Vec<Rule> = Vec::new();
-    let mut inputs: Vec<FlatInput> = Vec::with_capacity(selected.len());
-    let mut earlier: Vec<Item<'_>> = Vec::new();
+/// The override copies of a module's flat compositions, which share one style and one class
+/// prefix. The copies print in creation order after every shared unit, so a copy is reused
+/// wherever that order still lets a later argument win.
+struct Copies {
+    /// The condition path and declaration of each copy, by rule index.
+    entries: Vec<(Vec<Arc<str>>, Declaration)>,
+    /// Hashed choice-class prefix of the copy classes, which a dense graph renames.
+    prefix: Arc<str>,
+    /// The class rules, in creation order.
+    rules: Vec<Rule>,
+    /// Name of the style whose class rules print the copies.
+    style: Arc<str>,
+}
 
-    for call in selected {
+impl Copies {
+    fn new(identity: &str) -> Self {
+        Self {
+            entries: Vec::new(),
+            prefix: Arc::from(recipes::prefix(&format!("composition-{identity}:flat"))),
+            rules: Vec::new(),
+            style: Arc::from(format!("composition-{identity}-flat")),
+        }
+    }
+}
+
+/// A copy one argument of a flat composition references, which bounds where the composition's
+/// later copies may print.
+struct Referenced<'s> {
+    /// The choice class the referencing item prints under.
+    class: Option<&'s Arc<str>>,
+    /// Argument position within the composition.
+    position: usize,
+    /// Rule index of the copy.
+    rule: usize,
+}
+
+/// The choice classes an application of a class-selection recipe can select, from its authored
+/// values: a literal selects one choice or none, an omitted axis selects its default, and a
+/// runtime value selects any choice of its axis.
+fn selectable(definition: &recipe::Definition, composed: &ComposedRecipe) -> FxHashSet<Arc<str>> {
+    let mut output = FxHashSet::default();
+    let Some(prefix) = &definition.prefix else {
+        return output;
+    };
+    let positions = recipes::Positions::new(&definition.axes);
+
+    for (axis, choices) in definition.axes.iter() {
+        let default = definition
+            .defaults
+            .get(axis)
+            .and_then(|default| default.as_deref());
+        let value = composed.values.iter().find(|value| value.axis == *axis);
+        let selected: Vec<&Arc<str>> = match value.map(|value| value.literal.as_ref()) {
+            Some(None) => choices.iter().collect(),
+            Some(Some(literal)) => selections::selected(literal, default)
+                .and_then(|name| choices.iter().find(|choice| ***choice == *name))
+                .into_iter()
+                .collect(),
+            None => default
+                .and_then(|name| choices.iter().find(|choice| ***choice == *name))
+                .into_iter()
+                .collect(),
+        };
+
+        for choice in selected {
+            if let Some(class) = positions.class(prefix, axis, choice, None) {
+                output.insert(Arc::from(class));
+            }
+        }
+    }
+
+    output
+}
+
+/// The override copies of a flat composition, drawn from the module's shared pool. A declaration
+/// of an argument that conflicts with a declaration of an earlier argument under the same
+/// conditions, including any selectable choice of an earlier recipe, is copied under a class of
+/// the pool, and a recipe argument's copies attach to the choice class that declares them.
+///
+/// The earliest existing copy with the same conditions and declaration is reused when its rule
+/// index exceeds that of every copy this composition referenced before it whose declaration
+/// conflicts with the item, so stylesheet order still resolves the conflict in argument order.
+/// Copies under different choice classes of one argument never apply together, so they bound
+/// nothing between themselves. Otherwise a new copy is appended to the pool.
+fn overrides(
+    copies: &mut Copies,
+    selected: &[Call<'_>],
+    inputs: &[&RuntimeInput],
+    styles: &FxHashMap<Arc<str>, Arc<NamedStyle>>,
+) -> Flat {
+    let mut flat: Vec<FlatInput> = Vec::with_capacity(selected.len());
+    let mut earlier: Vec<Item<'_>> = Vec::new();
+    let mut referenced: Vec<Referenced<'_>> = Vec::new();
+
+    for (position, call) in selected.iter().enumerate() {
         let mut current: Vec<Item<'_>> = Vec::new();
 
         if let Some(style) = styles.get(&call.name) {
             items(style, None, &mut Vec::new(), &mut current);
         }
 
+        // A literally applied recipe declares only what its selectable choices print.
+        if let Some(definition) = &call.recipe
+            && let Some(composed) = inputs.get(position).and_then(|input| input.recipe.as_ref())
+        {
+            let choices = selectable(definition, composed);
+
+            current.retain(|item| item.class.is_none_or(|class| choices.contains(class)));
+        }
+
         let mut input = FlatInput::default();
-        let mut copies: Vec<(&Item<'_>, Arc<str>)> = Vec::new();
 
         for item in &current {
             let conflicting = earlier.iter().any(|previous| {
@@ -758,22 +845,61 @@ fn overrides(
                 continue;
             }
 
-            let copied = copies.iter().find(|(copied, _)| {
-                copied.conditions == item.conditions && copied.declaration == item.declaration
-            });
-            let class = if let Some((_, class)) = copied {
-                Arc::clone(class)
-            } else {
-                let class: Arc<str> = Arc::from(recipes::class(&prefix, rules.len(), None));
+            let bound = referenced
+                .iter()
+                .filter(|reference| {
+                    let exclusive = reference.position == position
+                        && reference.class.is_some()
+                        && item.class.is_some()
+                        && reference.class != item.class;
+                    let Some((conditions, declaration)) = copies.entries.get(reference.rule) else {
+                        return false;
+                    };
 
-                rules.push(Rule {
-                    class: Some(Arc::clone(&class)),
+                    !exclusive
+                        && conditions.iter().eq(item.conditions.iter().copied())
+                        && conflicts(declaration, item.declaration)
+                })
+                .map(|reference| reference.rule)
+                .max();
+            let existing = copies
+                .entries
+                .iter()
+                .enumerate()
+                .filter(|(rule, _)| bound.is_none_or(|bound| *rule > bound))
+                .find(|(_, (conditions, declaration))| {
+                    conditions.iter().eq(item.conditions.iter().copied())
+                        && declaration == item.declaration
+                })
+                .map(|(rule, _)| rule);
+            let rule = existing.unwrap_or_else(|| {
+                let rule = copies.rules.len();
+                let class: Arc<str> = Arc::from(recipes::class(&copies.prefix, rule, None));
+
+                copies.rules.push(Rule {
+                    class: Some(class),
                     condition: None,
                     style: Arc::new(nested(&item.conditions, item.declaration)),
                 });
-                copies.push((item, Arc::clone(&class)));
-                class
+                copies.entries.push((
+                    item.conditions
+                        .iter()
+                        .map(|condition| Arc::clone(condition))
+                        .collect(),
+                    item.declaration.clone(),
+                ));
+                rule
+            });
+            let Some(class) = copies.rules.get(rule).and_then(|copy| copy.class.clone()) else {
+                continue;
             };
+
+            referenced.push(Referenced {
+                class: item.class,
+                position,
+                rule,
+            });
+
             let classes = match item.class {
                 None => &mut input.classes,
                 Some(choice) => {
@@ -796,25 +922,15 @@ fn overrides(
             }
         }
 
-        inputs.push(input);
+        flat.push(input);
         earlier.extend(current);
     }
 
-    (
-        Flat {
-            inputs,
-            prefix,
-            style: Arc::clone(&style_name),
-        },
-        NamedStyle {
-            composition: Some(Composition::Independent),
-            css_output: Some(CssOutput::Atomic),
-            declarations: Vec::new(),
-            name: style_name,
-            rules: Some(rules),
-            targets: None,
-        },
-    )
+    Flat {
+        inputs: flat,
+        prefix: Arc::clone(&copies.prefix),
+        style: Arc::clone(&copies.style),
+    }
 }
 
 struct Synthesizer<'o, 'a> {
@@ -1038,6 +1154,7 @@ pub fn collect<'o, 'a>(options: Options<'o, 'a>) -> Result<Collected<'a>> {
         return Ok(Collected {
             entries: Vec::new(),
             imported,
+            overrides: None,
         });
     }
 
@@ -1082,6 +1199,7 @@ pub fn collect<'o, 'a>(options: Options<'o, 'a>) -> Result<Collected<'a>> {
         .iter()
         .map(|call| (call.start, call.clone()))
         .collect();
+    let mut copies = Copies::new(options.identity);
     let mut result: Vec<Entry<'a>> = Vec::new();
 
     // Contained calls end first, so nested compositions resolve before the calls that read them.
@@ -1100,6 +1218,7 @@ pub fn collect<'o, 'a>(options: Options<'o, 'a>) -> Result<Collected<'a>> {
             &by_name,
             &mut calls,
             &mut styles,
+            &mut copies,
             &bodies,
         )?;
 
@@ -1119,10 +1238,77 @@ pub fn collect<'o, 'a>(options: Options<'o, 'a>) -> Result<Collected<'a>> {
             .any(|(start, end)| *start < entry.call.start && *end >= entry.call.end)
     });
 
+    let overrides = owner(options.allocator, &copies, &result);
+
     Ok(Collected {
         entries: result,
         imported,
+        overrides,
     })
+}
+
+/// The style printing the module's override copies, with the CSS-only call that owns it for
+/// declaration maps, or `None` when no composition composes flat. The copies map to the authored
+/// declarations they repeat through the composed bodies of every flat composition, in order. The
+/// owner spans the first flat composition, so a lookup by call start that resolves to the owner
+/// still matches that composition's call.
+fn owner<'a>(
+    allocator: &'a Allocator,
+    copies: &Copies,
+    entries: &[Entry<'a>],
+) -> Option<(Call<'a>, Arc<NamedStyle>)> {
+    let flat: Vec<&Call<'a>> = entries
+        .iter()
+        .map(|entry| &entry.call)
+        .filter(|call| call.composition_flat.is_some())
+        .collect();
+    let first = flat.first()?;
+    let ast = AstBuilder::new(allocator);
+    let span = Span::new(first.start, first.end);
+    let properties = ArenaVec::from_iter_in(
+        flat.iter()
+            .filter_map(|call| call.body)
+            .flat_map(|body| &body.properties)
+            .map(|property| property.clone_in_with_semantic_ids(allocator)),
+        &allocator,
+    );
+    let identities: Vec<&str> = flat
+        .iter()
+        .filter_map(|call| call.identity.as_deref())
+        .collect();
+    let typography = |queries: bool| -> FxHashMap<u32, u32> {
+        flat.iter()
+            .flat_map(|call| {
+                if queries {
+                    call.typography_queries.iter()
+                } else {
+                    call.typography.iter()
+                }
+            })
+            .flat_map(|map| map.iter().map(|(start, count)| (*start, *count)))
+            .collect()
+    };
+    let call = Call {
+        body: Some(allocator.alloc(ObjectExpression::new(span, properties, &ast))),
+        composition_case: true,
+        end: first.end,
+        identity: (!identities.is_empty()).then(|| Arc::from(identities.join(" "))),
+        name: Arc::clone(&copies.style),
+        start: first.start,
+        typography: Some(typography(false)),
+        typography_queries: Some(typography(true)),
+        ..Call::default()
+    };
+    let style = NamedStyle {
+        composition: Some(Composition::Independent),
+        css_output: Some(CssOutput::Atomic),
+        declarations: Vec::new(),
+        name: Arc::clone(&copies.style),
+        rules: Some(copies.rules.clone()),
+        targets: None,
+    };
+
+    Some((call, Arc::new(style)))
 }
 
 #[expect(
@@ -1141,6 +1327,7 @@ fn compose<'o, 'a>(
     by_name: &FxHashMap<Arc<str>, Call<'a>>,
     calls: &mut FxHashMap<u32, Call<'a>>,
     styles: &mut FxHashMap<Arc<str>, Arc<NamedStyle>>,
+    copies: &mut Copies,
     bodies: &FxHashMap<u32, &'a ObjectExpression<'a>>,
 ) -> Result<Entry<'a>> {
     let mut selected: Vec<Call<'a>> = Vec::new();
@@ -1645,10 +1832,16 @@ fn compose<'o, 'a>(
             .iter()
             .all(|input| input.recipe.is_none() || input.condition.is_none());
 
+    // Omitted bindings retain evaluation but own no selected style.
+    let selected_inputs: Vec<&RuntimeInput> = inputs
+        .iter()
+        .filter(|input| !input.name.is_empty())
+        .collect();
+
     // A Lynx production build composing independently concatenates the arguments' own classes,
     // so the plan needs no combination cap. Styles configured to compose ordered keep the
     // runtime paths, as do nested compositions, whose spans the outer call rewrites.
-    let overrides = (options.lynx
+    if options.lynx
         && runtime
         && !html
         && scopes.is_empty()
@@ -1661,11 +1854,9 @@ fn compose<'o, 'a>(
                     .composition
                     .is_none_or(|composition| composition == Composition::Independent)
             })
-        }))
-    .then(|| self::overrides(&name, &selected, styles));
-
-    if let Some((flat, _)) = &overrides {
-        call.composition_flat = Some(flat.clone());
+        })
+    {
+        call.composition_flat = Some(overrides(copies, &selected, &selected_inputs, styles));
     }
 
     if runtime {
@@ -1686,11 +1877,6 @@ fn compose<'o, 'a>(
 
     let mut cases = Vec::new();
     let mut names: Vec<Arc<str>> = Vec::new();
-    // Omitted bindings retain evaluation but own no selected style.
-    let selected_inputs: Vec<&RuntimeInput> = inputs
-        .iter()
-        .filter(|input| !input.name.is_empty())
-        .collect();
 
     for mask in 0..(1_u32 << conditions) - 1 {
         let included_positions: Vec<usize> = selected_inputs
@@ -1753,27 +1939,5 @@ fn compose<'o, 'a>(
         calls.insert(node.span.start, call.clone());
     }
 
-    // The copies map to the authored declarations they repeat, through the composed body.
-    let overrides = overrides.map(|(_, overrides)| {
-        let owner = Call {
-            body: call.body,
-            composition_case: true,
-            end: call.end,
-            identity: call.identity.clone(),
-            name: Arc::clone(&overrides.name),
-            start: call.start,
-            typography: call.typography.clone(),
-            typography_queries: call.typography_queries.clone(),
-            ..Call::default()
-        };
-
-        (owner, Arc::new(overrides))
-    });
-
-    Ok(Entry {
-        call,
-        cases,
-        overrides,
-        style,
-    })
+    Ok(Entry { call, cases, style })
 }
