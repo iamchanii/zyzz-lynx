@@ -44,6 +44,8 @@
   "exclude": [
     ".fixture-*/**",
     "bench/results/**",
+    "bench/lynx/ve",
+    "bench/lynx/zyzz",
     "bench/native/app",
     "dist",
     "examples/*/dist",

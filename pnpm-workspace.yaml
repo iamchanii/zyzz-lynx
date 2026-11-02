@@ -1,5 +1,6 @@
 packages:
   - '.'
+  - bench/lynx/*
   - bench/native/app
   - examples/*
   - site
@@ -30,6 +31,7 @@ catalog:
   '@lynx-js/react': '^0.128.0'
   '@lynx-js/react-rsbuild-plugin': '^0.21.0'
   '@lynx-js/rspeedy': '^0.18.2'
+  '@lynx-js/types': '^4.2.1'
   '@mdn/browser-compat-data': '8.1.2'
   '@mdx-js/mdx': '^3.1.1'
   '@mdx-js/rollup': '^3.1.1'
@@ -63,6 +65,7 @@ catalog:
   '@types/react-dom': '^19.2.7'
   '@vanilla-extract/css': '^1.21.2'
   '@vanilla-extract/esbuild-plugin': '^2.3.22'
+  '@vanilla-extract/webpack-plugin': '^2.3.26'
   '@vitejs/plugin-react': '^6.1.1'
   '@vitest/browser-playwright': '4.1.9'
   '@vitest/coverage-v8': '4.1.9'
@@ -115,6 +118,9 @@ catalog:
   'zyzz': 'workspace:zyzz-lynx@*'
 
 catalogs:
+  # Rspeedy loads lynx.config.ts through the TypeScript JavaScript API.
+  lynx:
+    'typescript': '6.0.3'
   native:
     'react': '19.2.3'
   peers:
