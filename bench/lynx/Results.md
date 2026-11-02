@@ -138,6 +138,14 @@ The `zyzz` sample measured against a worktree of each `lynx-bundle` compiler com
 
 The vanilla-extract sample measures 247.3 kB, 131.4 / 29.0 kB, 37.3 / 12.3 kB, and 47.6 / 6.4 kB with 503 / 1827 / 462 throughout.
 
+## Visual Comparison
+
+`visual/Compare.ts` renders both samples' web bundles (`lynx.web.config.ts` in each sample, built with `rspeedy build -c lynx.web.config.ts`) through `@lynx-js/web-core` in headless Chromium at 390×844 CSS px and device scale factor 2, drives both through the same eleven states, and compares the screenshots with `pixelmatch` at threshold 0.1 with anti-aliasing excluded. The states are the loading skeleton, the ready screen with the notification nudge, the nudge dismissed, the snackbar after saving an interest, the snackbar closed through its action after removing the interest, the scrolled screen with the solid app bar, the calendar opened, the description expanded, the bottom of the screen, the error screen after the call button, and the recovered screen after retry. Screenshots, diff images, and a summary land in `bench/results/lynx/visual/`.
+
+Recorded on 2026-11-02 at `904924f` with the Chromium that Playwright 1.63 installs: eight states are pixel-identical, and the three states after the calendar opens differ in 499, 327, and 1167 of 1,316,160 pixels (at most 0.09%). The loading and ready states are informational, since the skeleton shimmer and the nudge countdown bar move while the screenshot is taken, and they came out identical in the recorded run.
+
+The three differences have one cause. The calendar cell is authored as `width: '14.285714285714286%'` with `aspectRatio: '1'`. The vanilla-extract build keeps that text, and the Zyzz build prints `14.2857%`, because the compiler prints declarations through Lightning CSS, whose `cssparser` serializer writes numbers with six significant digits. At a 378 px row the cell is 54 px against 53.984375 px (Chromium's 1/64 px layout unit), so the open calendar is 229.953 px tall instead of 230 px, and every element below it sits 0.047 px higher. Boxes at half-pixel positions, such as the vertically centered "접기" label and the 12 px glyphs inside 19 px rows, then round to a different device pixel, which the diff images show as 1 px vertical shifts. Rebuilding the vanilla-extract sample with `14.2857%` makes all eleven states identical, which confirms that no other styling difference remains. The sub-pixel loss applies to any authored number with more than six significant digits, and a fix would keep authored numeric text instead of reprinting it.
+
 ## Porting Findings
 
 Compiler behavior recorded while porting the sample, each a candidate fix or a documentation note:

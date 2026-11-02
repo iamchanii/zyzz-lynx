@@ -45,6 +45,7 @@
     ".fixture-*/**",
     "bench/results/**",
     "bench/lynx/ve",
+    "bench/lynx/visual",
     "bench/lynx/zyzz",
     "bench/native/app",
     "dist",

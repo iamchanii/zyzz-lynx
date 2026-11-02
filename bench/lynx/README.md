@@ -47,6 +47,21 @@ pnpm exec zile && node scripts/build-default-theme.ts && node scripts/build-nati
 
 The fork history is linear, so a worktree at commit N holds the Rspeedy base commits plus every compiler commit up to N, which is the same state as cherry-picking those commits onto the base.
 
+## Visual Comparison
+
+`visual/Compare.ts` checks that both samples render the same. Each sample's `lynx.web.config.ts` builds a `dist-web/jobPost.web.bundle` for Lynx for Web, and the script hosts each bundle in `@lynx-js/web-core`, drives both through the same interaction states in headless Chromium, and compares the screenshots with `pixelmatch`.
+
+```sh
+# Builds the web bundles
+(cd bench/lynx/ve && pnpm exec rspeedy build -c lynx.web.config.ts)
+(cd bench/lynx/zyzz && pnpm exec rspeedy build -c lynx.web.config.ts)
+
+# Writes screenshots, diff images, and a summary to bench/results/lynx/visual/
+node bench/lynx/visual/Compare.ts
+```
+
+The script exits with status 1 when a state that does not animate differs. [Results.md](Results.md) records the latest comparison and the cause of the remaining difference.
+
 ## Results
 
 See [Results.md](Results.md) for the recorded comparison and the per-commit history.
