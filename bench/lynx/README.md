@@ -64,4 +64,48 @@ The script exits with status 1 when a state that does not animate differs. [Resu
 
 ## Results
 
-See [Results.md](Results.md) for the recorded comparison and the per-commit history.
+Recorded on 2026-11-02 with `Measure.ts` on an Apple Silicon macOS host: Rspeedy 0.18.2, `@lynx-js/react` 0.128.0, `@vanilla-extract/css` 1.21.2, and the workspace Zyzz build at `904924f`. Sizes are bytes on disk divided by 1024, compressed with `node:zlib` at gzip level 9 and the default Brotli quality (11). [Results.md](Results.md) holds the per-commit ledger, the experiments behind each change, and the analysis of what remains.
+
+### Shipped Artifacts
+
+The headline is `jobPost.lynx.bundle` from a plain production build. The thread scripts and the encoded stylesheet come from the `DEBUG=rspeedy` build, which keeps the intermediates the encoder otherwise deletes.
+
+| Artifact         | vanilla-extract raw / gzip / br | Zyzz raw / gzip / br   | Δ raw           | Δ gzip          | Δ br            |
+| ---------------- | ------------------------------- | ---------------------- | --------------- | --------------- | --------------- |
+| `.lynx.bundle`   | 247.3 / 63.3 / 52.4 kB          | 195.2 / 60.9 / 50.8 kB | −52.1 kB (−21%) | −2.4 kB (−3.8%) | −1.6 kB (−3.1%) |
+| `main-thread.js` | 131.4 / 29.0 / 24.5 kB          | 115.4 / 30.1 / 25.8 kB | −16.0 kB (−12%) | +1.1 kB (+3.8%) | +1.3 kB (+5.3%) |
+| `background.js`  | 37.3 / 12.3 / 10.4 kB           | 35.6 / 11.9 / 10.1 kB  | −1.7 kB (−4.6%) | −0.4 kB (−3.3%) | −0.3 kB (−2.9%) |
+| Encoded CSS      | 47.6 / 6.4 / 5.8 kB             | 22.9 / 4.5 / 3.9 kB    | −24.7 kB (−52%) | −1.9 kB (−30%)  | −1.9 kB (−33%)  |
+| External chunks  | 54.8 / 20.6 / 18.7 kB           | 54.8 / 20.6 / 18.7 kB  | 0               | 0               | 0               |
+
+| Stylesheet         | vanilla-extract | Zyzz |
+| ------------------ | --------------- | ---- |
+| Rules              | 503             | 506  |
+| Declarations       | 1827            | 569  |
+| Classes            | 462             | 509  |
+| `@media` rules     | 3               | 7    |
+| `@keyframes` rules | 11              | 11   |
+
+The raw bundle gap closes through the stylesheet and the class-name text, which compress well, so the compressed gap is smaller than the raw one. The Zyzz main thread is 16 kB smaller raw but compresses 1.1 kB larger under gzip, which points at the class lists: several short shared names per element repeat less than vanilla-extract's one hashed class per element. The external chunks are the same ReactLynx runtime in both builds.
+
+### Progress
+
+Each row is the `zyzz` sample's `.lynx.bundle` after one change on this branch, measured against a worktree of that commit. The vanilla-extract sample stays at 247.3 / 63.3 / 52.4 kB.
+
+| Change                                                               | Commit    | raw      | gzip    | br      |
+| -------------------------------------------------------------------- | --------- | -------- | ------- | ------- |
+| Baseline, fork `main`                                                | `980230d` | 291.9 kB | 72.6 kB | 58.3 kB |
+| Expand `inset` into longhands on Lynx                                | `01a75f6` | 292.0 kB | 72.6 kB | 58.3 kB |
+| Dense graph-wide class names on Lynx                                 | `2829786` | 260.7 kB | 70.4 kB | 56.7 kB |
+| Compose namespace members declared beside `const` records            | `6423ed0` | 260.7 kB | 70.4 kB | 56.7 kB |
+| Fold literal `vars()` selections into constant props                 | `4a13a96` | 260.0 kB | 70.3 kB | 56.7 kB |
+| Leave out the selector of configurations only folded selections read | `05f0f4c` | 257.3 kB | 69.0 kB | 55.5 kB |
+| Select recipe and conditional style compositions from class tables   | `44595ed` | 259.2 kB | 67.9 kB | 54.2 kB |
+| Compose definitions independently by default on Lynx                 | `ec8a4ee` | 219.0 kB | 63.6 kB | 52.3 kB |
+| Share recipe base declarations as units                              | `8f14e0d` | 211.4 kB | 62.8 kB | 51.8 kB |
+| Concatenate flat Lynx compositions with override copies              | `2f027bd` | 195.4 kB | 60.9 kB | 50.8 kB |
+| Share override copies across a module's compositions                 | `904924f` | 195.2 kB | 60.9 kB | 50.8 kB |
+
+### Rendering
+
+`visual/Compare.ts` renders both samples through Lynx for Web and compares eleven interaction states pixel by pixel. Eight states are identical. The three states with the calendar open differ in at most 0.09% of pixels, all from one cause: the compiler prints `width: 14.285714285714286%` as `14.2857%`, since it reprints declarations through Lightning CSS with six significant digits, which shortens the calendar by 0.047 px and shifts half-pixel boxes below it by one device pixel. Rebuilding the vanilla-extract sample with `14.2857%` makes every state identical. Results.md records the run and the diff images live in `bench/results/lynx/visual/`.
