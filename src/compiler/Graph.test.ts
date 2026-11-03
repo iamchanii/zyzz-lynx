@@ -118,6 +118,316 @@ export const badge = variants({
     )
   })
 
+  test('names lynx production classes from one dense table across a complete graph', async () => {
+    const modules = {
+      'index.tsx': `import { style } from 'zyzz'
+import { badge, label, quiet } from './styles.ts'
+const local = style({ color: 'rgb(0, 0, 255)' })
+export const App = () => <main>
+  <b {...label()}>label</b>
+  <u {...quiet()}>quiet</u>
+  <i {...local()}>local</i>
+  <span className={badge({ size: 'large' })}>badge</span>
+</main>`,
+      'styles.ts': `import { style, variants } from 'zyzz'
+export const label = style({ color: 'rgb(0, 0, 255)' })
+export const quiet = style({ color: 'rgb(0, 0, 255)' })
+export const badge = variants({
+  selection: 'className',
+  variants: { size: { large: { paddingLeft: '8px' }, small: { paddingLeft: '4px' } } },
+})`,
+    }
+    const options = {
+      [ClassName.complete]: true,
+      [ClassName.references]: true,
+      modules,
+      target: 'lynx',
+    } as const
+    const compiler = Graph.create()
+    const output = compiler.compile(options)
+
+    // The dependency compiles first: its recipe prefix, then one unit for both equal bodies.
+    // The consumer continues the table with its own rule for the body it also declares.
+    expect(output.modules['styles.ts']!.css).toMatchInlineSnapshot(`
+      ".z1{color:rgb(0, 0, 255);}
+      .zA00{padding-left:8px;}
+      .zA01{padding-left:4px;}"
+    `)
+    expect(output.modules['styles.ts']!.classes).toMatchInlineSnapshot(`
+      {
+        "style-1u33cwi148qjze-116": "z1",
+        "style-1u33cwi148qjze-172": "",
+        "style-1u33cwi148qjze-60": "z1",
+      }
+    `)
+    expect(output.modules['index.tsx']!.css).toMatchInlineSnapshot(
+      `".z2{color:rgb(0, 0, 255);}"`,
+    )
+
+    const rendered = await Wrappers.render({
+      css: Object.values(output.modules)
+        .map((module) => module.css)
+        .join('\n'),
+      entry: 'index.tsx',
+      modules: Object.fromEntries(
+        Object.entries(output.modules).map(([id, module]) => [id, module.code]),
+      ),
+    })
+
+    expect(rendered.elements).toMatchInlineSnapshot(`
+      [
+        {
+          "borderLeftWidth": "0px",
+          "className": "z1",
+          "color": "rgb(0, 0, 255)",
+          "paddingLeft": "0px",
+          "tag": "b",
+        },
+        {
+          "borderLeftWidth": "0px",
+          "className": "z1",
+          "color": "rgb(0, 0, 255)",
+          "paddingLeft": "0px",
+          "tag": "u",
+        },
+        {
+          "borderLeftWidth": "0px",
+          "className": "z2",
+          "color": "rgb(0, 0, 255)",
+          "paddingLeft": "0px",
+          "tag": "i",
+        },
+        {
+          "borderLeftWidth": "0px",
+          "className": "zA00",
+          "color": "rgb(0, 0, 0)",
+          "paddingLeft": "8px",
+          "tag": "span",
+        },
+      ]
+    `)
+
+    // Web builds, development builds, and graphs without every module keep readable names.
+    const readable = (css: string | undefined) => css?.split('\n')[0]
+
+    expect(
+      readable(
+        Graph.compile({ ...options, target: 'web' }).modules['styles.ts']!.css,
+      ),
+    ).toMatchInlineSnapshot(`".z_b8Bx0E0{color:rgb(0, 0, 255);}"`)
+    expect(
+      readable(
+        Graph.compile({ ...options, development: true }).modules['styles.ts']!
+          .css,
+      ),
+    ).toMatchInlineSnapshot(`".z-b8Bx0E-label-text-0{color:rgb(0, 0, 255);}"`)
+    expect(
+      readable(
+        Graph.compile({ modules, target: 'lynx' }).modules['styles.ts']!.css,
+      ),
+    ).toMatchInlineSnapshot(`".z_b8Bx0E0{color:rgb(0, 0, 255);}"`)
+
+    // A definition applied in the earlier module shifts the table, so the cached consumer,
+    // whose source is unchanged, recompiles to the names a fresh compilation chooses instead
+    // of keeping names the dependency now holds.
+    const edited = {
+      ...options,
+      modules: {
+        ...modules,
+        'styles.ts': modules['styles.ts'].replace(
+          'export const label',
+          "export const extra = style({ margin: '1px' })\nexport const spacer = extra()\nexport const label",
+        ),
+      },
+    }
+    const recompiled = compiler.compile(edited)
+    const fresh = Graph.compile(edited)
+
+    expect(recompiled.modules['styles.ts']!.css).toMatchInlineSnapshot(`
+      ".z1{margin:1px;}
+      .z2{color:rgb(0, 0, 255);}
+      .zA00{padding-left:8px;}
+      .zA01{padding-left:4px;}"
+    `)
+    expect(recompiled.modules['index.tsx']!.css).toMatchInlineSnapshot(
+      `".z3{color:rgb(0, 0, 255);}"`,
+    )
+    expect(recompiled.modules['index.tsx']).toEqual(fresh.modules['index.tsx'])
+    expect(recompiled.modules['styles.ts']).toEqual(fresh.modules['styles.ts'])
+  })
+
+  test('names lynx production token properties and keyframes densely and prints no fallbacks', async () => {
+    const modules = {
+      'config.ts': `import { defineConfig, defineVars } from 'zyzz'
+const theme = defineVars({ color: { brand: 'rgb(0, 102, 204)', muted: 'rgb(85, 93, 109)' }, spacing: { gap: '8px' } })
+export const { style, vars } = defineConfig({ vars: theme })`,
+      'motion.ts': `import { keyframes } from 'zyzz/web'
+import { style, vars } from './config.ts'
+export const fade = keyframes({ from: { opacity: 0 }, to: { opacity: 1 } })
+export const toast = style({ animation: \`\${fade} 1s linear\`, color: vars.color.brand })`,
+      'index.tsx': `import { style, vars } from './config.ts'
+import { fade, toast } from './motion.ts'
+const badge = style({ animationName: fade, color: vars.color.muted, paddingLeft: vars.spacing.gap })
+export const App = () => <main {...vars({})}>
+  <b {...toast()}>toast</b>
+  <i {...badge()}>badge</i>
+</main>`,
+    }
+    const options = {
+      [ClassName.complete]: true,
+      [ClassName.references]: true,
+      [ThemeRules.shared]: 'all',
+      modules,
+      target: 'lynx',
+    } as const
+    const compiler = Graph.create()
+    const output = compiler.compile(options)
+
+    // The theme table names each token property once, in path order, and the graph's keyframes
+    // take one table in module order. Every module prints those names: the root rule, the
+    // keyframes rule, the binding constant, and each declaration. No reference carries a
+    // fallback, since the Lynx root carries the theme scope.
+    expect(output.sharedCss).toMatchInlineSnapshot(`
+      "@keyframes z0{from{opacity:0;}to{opacity:1;}}
+      .z-theme-theme{--z0:rgb(0, 102, 204);}
+      .z-theme-theme{--z1:rgb(85, 93, 109);--z2:8px;}"
+    `)
+    expect(output.modules['motion.ts']!.css).toMatchInlineSnapshot(`
+      ".z0{animation:z0 1s linear;}
+      .z1{color:var(--z0);}"
+    `)
+    expect(output.modules['motion.ts']!.code).toMatchInlineSnapshot(`
+      "
+      import { Props as __zyzzProps } from 'zyzz/runtime';
+
+      import { style, vars } from './config.ts'
+      export const fade = "z0"
+      export const toast = /*#__PURE__*/__zyzzProps.create({className:"z0 z1"})"
+    `)
+    expect(output.modules['index.tsx']!.css).toMatchInlineSnapshot(`
+      ".z2{animation-name:z0;}
+      .z3{color:var(--z1);}
+      .z4{padding-left:var(--z2);}"
+    `)
+    expect(output.modules['index.tsx']!.code).toMatchInlineSnapshot(`
+      "import { style, vars } from './config.ts'
+      import './config.ts';
+      import { fade, toast } from './motion.ts'
+      import './motion.ts';
+      const badge = (void 0 as unknown as import('zyzz').style.ReturnType)
+      export const App = () => <main {...({className:"z-theme-theme"})}>
+        <b className={"z0 z1"}>toast</b>
+        <i className={"z2 z3 z4"}>badge</i>
+      </main>"
+    `)
+
+    const css = (result: Graph.compile.ReturnType) =>
+      [
+        result.sharedCss,
+        ...Object.values(result.modules).map((module) => module.css),
+      ].join('\n')
+    const web = Graph.compile({ ...options, target: 'web' })
+
+    // The web target keeps readable names and fallbacks.
+    expect(web.sharedCss).toMatchInlineSnapshot(`
+      "@keyframes z-k-GyRc6i-fade{from{opacity:0;}to{opacity:1;}}
+      .z-theme-theme{--z-color-brand:rgb(0, 102, 204);}
+      .z-theme-theme{--z-color-muted:rgb(85, 93, 109);--z-spacing-gap:8px;}"
+    `)
+    expect(web.modules['motion.ts']!.css).toMatchInlineSnapshot(`
+      ".z_GyRc6i0{animation:z-k-GyRc6i-fade 1s linear;}
+      .z_GyRc6i1{color:var(--z-color-brand,rgb(0, 102, 204));}"
+    `)
+
+    // A development Lynx build keeps readable names and still prints no fallback.
+    const development = Graph.compile({ ...options, development: true })
+
+    expect(development.modules['motion.ts']!.css).toMatchInlineSnapshot(`
+      ".z-GyRc6i-animation-\\5b z-k-GyRc6i-fade_20_1s_20_linear\\5d{animation:z-k-GyRc6i-fade 1s linear;}
+      .z-GyRc6i-text-\\5b var\\28 --z-color-brand\\29 \\5d{color:var(--z-color-brand);}"
+    `)
+    expect(development.sharedCss?.includes('@keyframes z-k-')).toBe(true)
+
+    // Rendered under the theme scope, the dense stylesheet computes what the web one does.
+    const browser = await chromium.launch()
+    try {
+      const page = await browser.newPage()
+      const computed = async (result: Graph.compile.ReturnType) => {
+        const rendered = await Wrappers.render({
+          css: css(result),
+          entry: 'index.tsx',
+          modules: Object.fromEntries(
+            Object.entries(result.modules).map(([id, module]) => [
+              id,
+              module.code,
+            ]),
+          ),
+        })
+
+        await page.setContent(`<style>${css(result)}</style>${rendered.markup}`)
+
+        return page.locator('main > *').evaluateAll((nodes) =>
+          nodes.map((node) => {
+            const style = getComputedStyle(node)
+
+            return {
+              animationName: style.animationName,
+              color: style.color,
+              paddingLeft: style.paddingLeft,
+            }
+          }),
+        )
+      }
+      const lynx = await computed(output)
+
+      expect(lynx).toMatchInlineSnapshot(`
+        [
+          {
+            "animationName": "z0",
+            "color": "rgb(0, 102, 204)",
+            "paddingLeft": "0px",
+          },
+          {
+            "animationName": "z0",
+            "color": "rgb(85, 93, 109)",
+            "paddingLeft": "8px",
+          },
+        ]
+      `)
+      expect(await computed(web)).toEqual(
+        lynx.map((element) => ({
+          ...element,
+          animationName: expect.stringMatching(/^z-k-/),
+        })),
+      )
+    } finally {
+      await browser.close()
+    }
+
+    // A keyframes definition added to the dependency shifts the keyframe table, so the cached
+    // consumer, whose source is unchanged, recompiles to the names a fresh compilation chooses.
+    const edited = {
+      ...options,
+      modules: {
+        ...modules,
+        'motion.ts': modules['motion.ts'].replace(
+          'export const fade',
+          "export const spin = keyframes({ to: { transform: 'rotate(1turn)' } })\nexport const fade",
+        ),
+      },
+    }
+    const recompiled = compiler.compile(edited)
+    const fresh = Graph.compile(edited)
+
+    expect(recompiled.modules['index.tsx']!.css).toMatchInlineSnapshot(`
+      ".z2{animation-name:z1;}
+      .z3{color:var(--z1);}
+      .z4{padding-left:var(--z2);}"
+    `)
+    expect(recompiled.modules['index.tsx']).toEqual(fresh.modules['index.tsx'])
+    expect(recompiled.modules['motion.ts']).toEqual(fresh.modules['motion.ts'])
+  })
+
   test('publishes lynx flat class rules in version 37 contracts', () => {
     const publisher = Graph.compile({
       modules: {
@@ -532,18 +842,12 @@ export const nested=style({color:fields.foo.bar,vars:{[fields['foo-bar']]:'red',
     expect(output.modules['first.js']!.css).toMatchInlineSnapshot(`
       ".z-theme-first-theme{--z-first-color-brand:red;}
       .z-theme-second-theme{--z-second-color-brand:blue;}
-      .z_scheme-dark{color-scheme:dark;}
-      .z_scheme-light{color-scheme:light;}
-      .z_scheme-light-dark{color-scheme:light dark;}
       .z_first-bugww80{color:var(--z-first-color-brand,red);}
       .z_first-bugww81{&:hover{opacity:1;}}"
     `)
     expect(output.modules['second.js']!.css).toMatchInlineSnapshot(`
       ".z-theme-first-theme{--z-first-color-brand:red;}
       .z-theme-second-theme{--z-second-color-brand:blue;}
-      .z_scheme-dark{color-scheme:dark;}
-      .z_scheme-light{color-scheme:light;}
-      .z_scheme-light-dark{color-scheme:light dark;}
       .z_second-XWlTb20{color:var(--z-second-color-brand,blue);}
       .z_second-XWlTb21{&:hover{opacity:1;}}"
     `)
@@ -1753,20 +2057,18 @@ ${web.modules['app.ts']!.code}`,
 
     expect(output.modules['pkg/card.ts']!.css).toMatchInlineSnapshot(`
       ".z-theme-theme{--z-spacing-md:8px;--z-color-brand:#06c;}
-      .z_scheme-dark{color-scheme:dark;}
-      .z_scheme-light{color-scheme:light;}
-      .z_scheme-light-dark{color-scheme:light dark;}
       .z_LMAxOH0{padding:var(--z-spacing-md,8px);}
       .z_LMAxOH1{color:var(--z-color-brand,#06c);}"
     `)
     expect(output.modules['pkg/card.ts']!.code).toMatchInlineSnapshot(`
       "
       import { Props as __zyzzProps } from 'zyzz/runtime';
-      import { style, theme } from './index.js'; export namespace styles {
+      import { style, theme } from './index.js';
+      import './index.js'; export namespace styles {
         export const card = /*#__PURE__*/__zyzzProps.create({className:"z_LMAxOH0 z-style-LMAxOH-styles-card"})
 
         export const label = /*#__PURE__*/__zyzzProps.create({className:"z_LMAxOH1 z-style-LMAxOH-styles-label"})
-      } export const props = styles.card(); export const scope = theme().className;"
+      } export const props = styles.card(); export const scope = ({className:"z-theme-theme"}).className;"
     `)
 
     const packed = Graph.compile({
@@ -1781,9 +2083,6 @@ ${web.modules['app.ts']!.code}`,
 
     expect(packed.modules['app/card.ts']!.css).toMatchInlineSnapshot(`
       ".z-theme-theme{--z-color-brand:#06c;--z-spacing-md:8px;}
-      .z_scheme-dark{color-scheme:dark;}
-      .z_scheme-light{color-scheme:light;}
-      .z_scheme-light-dark{color-scheme:light dark;}
       .z_rnRBDm0{color:var(--z-color-brand,#06c);}"
     `)
   })
@@ -1798,9 +2097,6 @@ ${web.modules['app.ts']!.code}`,
 
     expect(output.modules['app/card.ts']!.css).toMatchInlineSnapshot(`
       ".z-theme-theme{--z-color-brand:#06c;}
-      .z_scheme-dark{color-scheme:dark;}
-      .z_scheme-light{color-scheme:light;}
-      .z_scheme-light-dark{color-scheme:light dark;}
       .z_rnRBDm0{color:var(--z-color-brand,#06c);}"
     `)
   })
@@ -1863,7 +2159,7 @@ ${web.modules['app.ts']!.code}`,
       `
       "
       import { Appearance as __zyzzAppearance, Selection as __zyzzSelection } from 'zyzz/runtime';
-       export const zyzz = ({appearance:__zyzzAppearance.root([["brand.dark","z-theme-brand_2e_dark"]],{"defaultVars":"brand.dark"}),script:__zyzzAppearance.create([["brand.dark","z-theme-brand_2e_dark"]]),vars:__zyzzSelection.create([["brand.dark","z-theme-brand_2e_dark"]],false,'set',"brand.dark")}); export const props = ({className:"z_TqLXxb0"}); export const scope = zyzz.vars({set:'brand.dark'}).className;"
+       export const zyzz = ({appearance:__zyzzAppearance.root([["brand.dark","z-theme-brand_2e_dark"]],{"defaultVars":"brand.dark"}),script:__zyzzAppearance.create([["brand.dark","z-theme-brand_2e_dark"]]),vars:__zyzzSelection.create([["brand.dark","z-theme-brand_2e_dark"]],false,'set',"brand.dark")}); export const props = ({className:"z_TqLXxb0"}); export const scope = ({className:"z-theme-brand_2e_dark"}).className;"
     `,
     )
 
@@ -1878,9 +2174,6 @@ ${web.modules['app.ts']!.code}`,
     expect(Graph.compile(options).modules['app/card.js']!.css)
       .toMatchInlineSnapshot(`
         ".z-theme-brand_2e_dark{--z-color-brand:#06c;}
-        .z_scheme-dark{color-scheme:dark;}
-        .z_scheme-light{color-scheme:light;}
-        .z_scheme-light-dark{color-scheme:light dark;}
         .z_jnRBM80{color:var(--z-color-brand,#06c);}"
       `)
     expect(() =>
@@ -1919,7 +2212,7 @@ ${web.modules['app.ts']!.code}`,
     `,
     )
     expect(output.modules['pkg/card.ts']!.code).toMatchInlineSnapshot(
-      `"import { design } from './index.js'; const zyzz = (design as import('zyzz').Config.VariableConfig<{readonly "layers":readonly ["reset","components"];readonly "vars":{readonly "mint":{readonly "color":{readonly "brand":{readonly "light":"#175";readonly "dark":"#afa"}};readonly "spacing":{readonly "md":"12px"}};readonly "base":{readonly "color":{readonly "brand":{readonly "light":"#06c";readonly "dark":"#9cf"}};readonly "spacing":{readonly "md":"8px"}}};readonly "defaultVars":"base"}>); const { style } = (zyzz as import('zyzz').Config.VariableConfig<{readonly "layers":readonly ["reset","components"];readonly "vars":{readonly "mint":{readonly "color":{readonly "brand":{readonly "light":"#175";readonly "dark":"#afa"}};readonly "spacing":{readonly "md":"12px"}};readonly "base":{readonly "color":{readonly "brand":{readonly "light":"#06c";readonly "dark":"#9cf"}};readonly "spacing":{readonly "md":"8px"}}};readonly "defaultVars":"base"}>); export const props = ({className:"z_LMAxOH0 z_LMAxOH1"}); export const scope = zyzz.vars({set:'mint'}).className;"`,
+      `"import { design } from './index.js'; const zyzz = (design as import('zyzz').Config.VariableConfig<{readonly "layers":readonly ["reset","components"];readonly "vars":{readonly "mint":{readonly "color":{readonly "brand":{readonly "light":"#175";readonly "dark":"#afa"}};readonly "spacing":{readonly "md":"12px"}};readonly "base":{readonly "color":{readonly "brand":{readonly "light":"#06c";readonly "dark":"#9cf"}};readonly "spacing":{readonly "md":"8px"}}};readonly "defaultVars":"base"}>); const { style } = (zyzz as import('zyzz').Config.VariableConfig<{readonly "layers":readonly ["reset","components"];readonly "vars":{readonly "mint":{readonly "color":{readonly "brand":{readonly "light":"#175";readonly "dark":"#afa"}};readonly "spacing":{readonly "md":"12px"}};readonly "base":{readonly "color":{readonly "brand":{readonly "light":"#06c";readonly "dark":"#9cf"}};readonly "spacing":{readonly "md":"8px"}}};readonly "defaultVars":"base"}>); export const props = ({className:"z_LMAxOH0 z_LMAxOH1"}); export const scope = ({className:"z-theme-mint"}).className;"`,
     )
 
     const updated = compiler.compile({
@@ -1959,14 +2252,14 @@ ${web.modules['app.ts']!.code}`,
       ".z-theme-base{--z-color-brand:light-dark(#06c,#9cf);--z-spacing-md:8px;}
       .z-theme-mint{--z-color-brand:light-dark(#175,#afa);--z-spacing-md:12px;}
       .z-theme-base{--z-color-brand:light-dark(#06c,#9cf);--z-spacing-md:8px;}
-      .z_scheme-dark{color-scheme:dark;}
-      .z_scheme-light{color-scheme:light;}
-      .z_scheme-light-dark{color-scheme:light dark;}
       .z_rnRBDm0{color:var(--z-color-brand,light-dark(#06c,#9cf));}
       .z_rnRBDm1{padding:var(--z-spacing-md,8px);}"
     `)
     expect(packed.modules['app/card.ts']!.code).toMatchInlineSnapshot(
-      `"import { design as zyzz } from '@acme/theme'; export const props = ({className:"z_rnRBDm0 z_rnRBDm1"}); export const scope = zyzz.vars({set:'mint'}).className;"`,
+      `
+      "import { design as zyzz } from '@acme/theme';
+      import '@acme/theme'; export const props = ({className:"z_rnRBDm0 z_rnRBDm1"}); export const scope = ({className:"z-theme-mint"}).className;"
+    `,
     )
   })
 
@@ -2097,18 +2390,11 @@ ${web.modules['app.ts']!.code}`,
       .z-theme-mint{--z-color-brand:#175;--z-spacing-md:8px;}
       .z-theme-mint-theme{--z-mint-color-brand:#175;--z-mint-spacing-md:8px;}
       .z-theme-local{--z-color-brand:#f00;--z-spacing-md:8px;}
-      .z_scheme-dark{color-scheme:dark;}
-      .z_scheme-light{color-scheme:light;}
-      .z_scheme-light-dark{color-scheme:light dark;}
       .z_rnRBDm0{color:var(--z-color-brand,#06c);}
       .z_rnRBDm1{padding:var(--z-spacing-md,8px);}"
     `)
     expect(output.modules['app/card.ts']!.code).toMatchInlineSnapshot(
-      `
-      "
-      import { Selection as __zyzzSelection } from 'zyzz/runtime';
-      import { mint, style, theme } from '@acme/theme';  export const local = ({} as import('zyzz').Vars.Definition<{readonly "color":{readonly "brand":"#06c"};readonly "spacing":{readonly "md":"8px"}}>); export const props = ({className:"z_rnRBDm0 z_rnRBDm1"}); const scopeConfig=({vars:__zyzzSelection.create([["default","z-theme-mint-theme"]],false,'set',"default")} as import('zyzz').Config.VariableConfig<{readonly "id":"mint";readonly "vars":{readonly "color":{readonly "brand":"#175"};readonly "spacing":{readonly "md":"8px"}}}>);export const scope=scopeConfig.vars().className;"
-    `,
+      `"import { mint, style, theme } from '@acme/theme';  export const local = ({} as import('zyzz').Vars.Definition<{readonly "color":{readonly "brand":"#06c"};readonly "spacing":{readonly "md":"8px"}}>); export const props = ({className:"z_rnRBDm0 z_rnRBDm1"}); const scopeConfig=({} as import('zyzz').Config.VariableConfig<{readonly "id":"mint";readonly "vars":{readonly "color":{readonly "brand":"#175"};readonly "spacing":{readonly "md":"8px"}}}>);export const scope=({className:"z-theme-mint-theme"}).className;"`,
     )
 
     const updated = compiler.compile({
@@ -2131,9 +2417,6 @@ ${web.modules['app.ts']!.code}`,
       .z-theme-mint{--z-color-brand:#080;--z-spacing-md:8px;}
       .z-theme-mint-theme{--z-mint-color-brand:#080;--z-mint-spacing-md:8px;}
       .z-theme-local{--z-color-brand:#f00;--z-spacing-md:8px;}
-      .z_scheme-dark{color-scheme:dark;}
-      .z_scheme-light{color-scheme:light;}
-      .z_scheme-light-dark{color-scheme:light dark;}
       .z_rnRBDm0{color:var(--z-color-brand,#06c);}
       .z_rnRBDm1{padding:var(--z-spacing-md,8px);}"
     `)
@@ -2322,14 +2605,14 @@ ${web.modules['app.ts']!.code}`,
       }
     `)
     expect(output.modules['pkg/card.ts']!.code).toMatchInlineSnapshot(
-      `"import { vars, style } from './index.js'; export const props = ({className:"z_LMAxOH0 z_LMAxOH1"}); export const scope = vars({set:'mint'}).className;"`,
+      `
+      "import { vars, style } from './index.js';
+      import './index.js'; export const props = ({className:"z_LMAxOH0 z_LMAxOH1"}); export const scope = ({className:"z-theme-mint"}).className;"
+    `,
     )
     expect(output.modules['pkg/card.ts']!.css).toMatchInlineSnapshot(`
       ".z-theme-base{--z-color-brand:#06c;--z-spacing-md:8px;}
       .z-theme-mint{--z-color-brand:#175;--z-spacing-md:8px;}
-      .z_scheme-dark{color-scheme:dark;}
-      .z_scheme-light{color-scheme:light;}
-      .z_scheme-light-dark{color-scheme:light dark;}
       .z_LMAxOH0{color:var(--z-color-brand,#06c);}
       .z_LMAxOH1{padding:var(--z-spacing-md,8px);}"
     `)
@@ -2447,30 +2730,18 @@ ${web.modules['app.ts']!.code}`,
       },
     })
 
-    expect(removed.modules['pkg/alternate.ts']!.css).toMatchInlineSnapshot(`
-      ".z-theme-mint-theme{--z-mint-color-brand:#175;--z-mint-spacing-md:8px;--z-mint-spacing-unused:99px;}
-      .z_scheme-dark{color-scheme:dark;}
-      .z_scheme-light{color-scheme:light;}
-      .z_scheme-light-dark{color-scheme:light dark;}"
-    `)
-    expect(removed.modules['pkg/card.ts']!.css).toMatchInlineSnapshot(`
-      ".z-theme-mint-theme{--z-mint-color-brand:#175;--z-mint-spacing-md:8px;--z-mint-spacing-unused:99px;}
-      .z_scheme-dark{color-scheme:dark;}
-      .z_scheme-light{color-scheme:light;}
-      .z_scheme-light-dark{color-scheme:light dark;}"
-    `)
-    expect(removed.modules['pkg/index.ts']!.css).toMatchInlineSnapshot(`
-      ".z-theme-mint-theme{--z-mint-color-brand:#175;--z-mint-spacing-md:8px;--z-mint-spacing-unused:99px;}
-      .z_scheme-dark{color-scheme:dark;}
-      .z_scheme-light{color-scheme:light;}
-      .z_scheme-light-dark{color-scheme:light dark;}"
-    `)
-    expect(removed.modules['pkg/theme.ts']!.css).toMatchInlineSnapshot(`
-      ".z-theme-mint-theme{--z-mint-color-brand:#175;--z-mint-spacing-md:8px;--z-mint-spacing-unused:99px;}
-      .z_scheme-dark{color-scheme:dark;}
-      .z_scheme-light{color-scheme:light;}
-      .z_scheme-light-dark{color-scheme:light dark;}"
-    `)
+    expect(removed.modules['pkg/alternate.ts']!.css).toMatchInlineSnapshot(
+      `".z-theme-mint-theme{--z-mint-color-brand:#175;--z-mint-spacing-md:8px;--z-mint-spacing-unused:99px;}"`,
+    )
+    expect(removed.modules['pkg/card.ts']!.css).toMatchInlineSnapshot(
+      `".z-theme-mint-theme{--z-mint-color-brand:#175;--z-mint-spacing-md:8px;--z-mint-spacing-unused:99px;}"`,
+    )
+    expect(removed.modules['pkg/index.ts']!.css).toMatchInlineSnapshot(
+      `".z-theme-mint-theme{--z-mint-color-brand:#175;--z-mint-spacing-md:8px;--z-mint-spacing-unused:99px;}"`,
+    )
+    expect(removed.modules['pkg/theme.ts']!.css).toMatchInlineSnapshot(
+      `".z-theme-mint-theme{--z-mint-color-brand:#175;--z-mint-spacing-md:8px;--z-mint-spacing-unused:99px;}"`,
+    )
   })
 
   test('linked scopes render inherited values in Chromium', async () => {
@@ -3474,6 +3745,140 @@ export namespace styles {
     `)
   })
 
+  test('leaves out the selector of an exported configuration that only folded selections read', () => {
+    const modules = {
+      'config.ts': `import { defineConfig, defineVars } from 'zyzz'
+const theme = defineVars({ color: { brand: '#06c' } })
+export const { style, vars } = defineConfig({ vars: theme })`,
+      'index.tsx': `import { cx } from 'zyzz'
+import { style, vars } from './config.ts'
+export const App = () => <main {...vars({})}>
+  <i {...cx(vars({ colorScheme: 'dark' }), styles.page())}>page</i>
+</main>
+namespace styles {
+  export const page = style({ color: vars.color.brand })
+}`,
+    }
+    const options = {
+      [ClassName.complete]: true,
+      [ClassName.references]: true,
+      modules,
+    }
+    const lynx = Graph.compile({ ...options, target: 'lynx' })
+
+    // Every selection folded to constant props, so the configuration needs no runtime selector.
+    expect(lynx.modules['config.ts']!.code).toMatchInlineSnapshot(`
+      "
+      const theme = ({} as import('zyzz').Vars.Definition<{readonly "color":{readonly "brand":"#06c"}}>)
+      export const { style, vars } = ({} as import('zyzz').Config.VariableConfig<{readonly "vars":{readonly "color":{readonly "brand":"#06c"}}}>)"
+    `)
+    expect(lynx.modules['index.tsx']!.code).toMatchInlineSnapshot(`
+      "
+      import { style, vars } from './config.ts'
+      import './config.ts';
+      export const App = () => <main {...({className:"z-theme-theme"})}>
+        <i {...({className:"z-theme-theme z_scheme-dark z0",style:{colorScheme:"dark"}})}>page</i>
+      </main>
+      "
+    `)
+
+    // The web target applies the same proof.
+    expect(Graph.compile(options).modules['config.ts']!.code)
+      .toMatchInlineSnapshot(`
+      "
+      const theme = ({} as import('zyzz').Vars.Definition<{readonly "color":{readonly "brand":"#06c"}}>)
+      export const { style, vars } = ({} as import('zyzz').Config.VariableConfig<{readonly "vars":{readonly "color":{readonly "brand":"#06c"}}}>)"
+    `)
+
+    const selector = (compiled: ReturnType<typeof Graph.compile>) =>
+      compiled.modules['config.ts']!.code.includes('__zyzzSelection.create(')
+    const edited = (replacement: string) => ({
+      ...modules,
+      'index.tsx': modules['index.tsx'].replace('vars({})', replacement),
+    })
+
+    // A dynamic selection, a selector read as a value, a re-export, a dynamic import of the
+    // module, a graph that may lack readers, and development keep the selector.
+    expect(
+      selector(
+        Graph.compile({
+          ...options,
+          modules: edited(
+            "vars({ colorScheme: Math.random() > 0.5 ? 'dark' : 'light' })",
+          ),
+        }),
+      ),
+    ).toMatchInlineSnapshot(`true`)
+    expect(
+      selector(
+        Graph.compile({
+          ...options,
+          modules: {
+            ...modules,
+            'index.tsx': `${modules['index.tsx']}\nexport const select = vars`,
+          },
+        }),
+      ),
+    ).toMatchInlineSnapshot(`true`)
+    expect(
+      selector(
+        Graph.compile({
+          ...options,
+          modules: {
+            ...modules,
+            'theme.ts': `export { vars } from './config.ts'`,
+          },
+        }),
+      ),
+    ).toMatchInlineSnapshot(`true`)
+    // Hosts list static imports only, so the dynamic import resolves among the modules.
+    expect(
+      selector(
+        Graph.compile({
+          ...options,
+          imports: {
+            'config.ts': { zyzz: null },
+            'index.tsx': { './config.ts': 'config.ts', zyzz: null },
+            'lazy.ts': {},
+          },
+          modules: {
+            ...modules,
+            'lazy.ts': `export const config = () => import('./config.ts')`,
+          },
+        }),
+      ),
+    ).toMatchInlineSnapshot(`true`)
+    expect(
+      selector(Graph.compile({ [ClassName.references]: true, modules })),
+    ).toMatchInlineSnapshot(`true`)
+    expect(
+      selector(Graph.compile({ ...options, development: true })),
+    ).toMatchInlineSnapshot(`true`)
+
+    // A whole exported configuration qualifies through its vars member.
+    const whole = Graph.compile({
+      ...options,
+      modules: {
+        'config.ts': `import { defineConfig, defineVars } from 'zyzz'
+const theme = defineVars({ color: { brand: '#06c' } })
+export const config = defineConfig({ vars: theme })`,
+        'index.tsx': `import { config } from './config.ts'
+export const App = () => <main {...config.vars({})}><i {...styles.page()}>page</i></main>
+namespace styles {
+  export const page = config.style({ color: config.vars.color.brand })
+}`,
+      },
+    })
+
+    expect(whole.modules['config.ts']!.code).toMatchInlineSnapshot(`
+      "
+      import { Appearance as __zyzzAppearance } from 'zyzz/runtime';
+
+      const theme = ({} as import('zyzz').Vars.Definition<{readonly "color":{readonly "brand":"#06c"}}>)
+      export const config = ({appearance:__zyzzAppearance.root([]),script:__zyzzAppearance.create([])} as import('zyzz').Config.VariableConfig<{readonly "vars":{readonly "color":{readonly "brand":"#06c"}}}>)"
+    `)
+  })
+
   test('folds wrappers over imported cx calls and imported dynamic components', async () => {
     const modules = {
       'base.ts': `import { style } from 'zyzz'
@@ -4027,18 +4432,12 @@ export const App = () => <Box>box</Box>`,
     expect(after.modules['pkg/card0.ts']!.css).toMatchInlineSnapshot(`
       ".z-theme-base{--z-color-brand:#06c;}
       .z-theme-mint{--z-color-brand:#175;}
-      .z_scheme-dark{color-scheme:dark;}
-      .z_scheme-light{color-scheme:light;}
-      .z_scheme-light-dark{color-scheme:light dark;}
       .z_I2R_br0{color:var(--z-color-brand,#06c);}
       .z_I2R_br1{padding:20px;}"
     `)
     expect(before.modules['pkg/card0.ts']!.css).toMatchInlineSnapshot(`
       ".z-theme-base{--z-color-brand:#06c;}
       .z-theme-mint{--z-color-brand:#175;}
-      .z_scheme-dark{color-scheme:dark;}
-      .z_scheme-light{color-scheme:light;}
-      .z_scheme-light-dark{color-scheme:light dark;}
       .z_I2R_br0{color:var(--z-color-brand,#06c);}
       .z_I2R_br1{padding:0px;}"
     `)
@@ -4060,9 +4459,6 @@ export const App = () => <Box>box</Box>`,
     expect(after.modules['pkg/card.ts']!.css).toMatchInlineSnapshot(`
       ".z-theme-base{--z-color-brand:#f00;--z-spacing-md:8px;}
       .z-theme-mint{--z-color-brand:#175;--z-spacing-md:8px;}
-      .z_scheme-dark{color-scheme:dark;}
-      .z_scheme-light{color-scheme:light;}
-      .z_scheme-light-dark{color-scheme:light dark;}
       .z_LMAxOH0{color:var(--z-color-brand,#f00);}
       .z_LMAxOH1{padding:var(--z-spacing-md,8px);}"
     `)
@@ -4113,11 +4509,7 @@ export const App = () => <Box>box</Box>`,
         "pkg/theme.ts",
       ]
     `)
-    expect(after.modules['pkg/card.ts']!.css).toMatchInlineSnapshot(`
-      ".z_scheme-dark{color-scheme:dark;}
-      .z_scheme-light{color-scheme:light;}
-      .z_scheme-light-dark{color-scheme:light dark;}"
-    `)
+    expect(after.modules['pkg/card.ts']!.css).toMatchInlineSnapshot(`""`)
   })
 
   test('import edits preserve the new graph scope order', () => {
@@ -4184,9 +4576,6 @@ export const App = () => <Box>box</Box>`,
     `)
     expect(after.modules['pkg/card.ts']!.css).toMatchInlineSnapshot(`
       ".z-theme-mint-theme{--z-mint-color-brand:#f00;--z-mint-spacing-md:8px;--z-mint-spacing-unused:99px;}
-      .z_scheme-dark{color-scheme:dark;}
-      .z_scheme-light{color-scheme:light;}
-      .z_scheme-light-dark{color-scheme:light dark;}
       .z_mint-LMAxOH0{color:var(--z-mint-color-brand,#f00);}"
     `)
   })
@@ -4219,11 +4608,7 @@ export const App = () => <Box>box</Box>`,
     expect(after.modules['pkg/card.ts']!.code).toMatchInlineSnapshot(
       `"export const value = 'recovered';"`,
     )
-    expect(after.modules['pkg/card.ts']!.css).toMatchInlineSnapshot(`
-      ".z_scheme-dark{color-scheme:dark;}
-      .z_scheme-light{color-scheme:light;}
-      .z_scheme-light-dark{color-scheme:light dark;}"
-    `)
+    expect(after.modules['pkg/card.ts']!.css).toMatchInlineSnapshot(`""`)
   })
 
   test('file additions recheck ambiguity and removals drop stale scopes', () => {
@@ -5973,9 +6358,6 @@ export const vars=({gap:variable('signedLength', {inherits:false,initialValue:'}
 
       expect(result.modules['app.ts']!.css).toMatchInlineSnapshot(`
         ".z-theme-theme{--z-color-ink:#123;}
-        .z_scheme-dark{color-scheme:dark;}
-        .z_scheme-light{color-scheme:light;}
-        .z_scheme-light-dark{color-scheme:light dark;}
         .z_Zf5JrJ0{width:10px;}
         .z_Zf5JrJ1{color:var(--z-color-ink,#123);}"
       `)

@@ -1,0 +1,22 @@
+{
+  "name": "@zyzz/bench-lynx-ve",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "rspeedy build",
+    "check:types": "tsc --noEmit",
+    "dev": "rspeedy dev"
+  },
+  "dependencies": {
+    "@lynx-js/react": "catalog:",
+    "@vanilla-extract/css": "catalog:"
+  },
+  "devDependencies": {
+    "@lynx-js/react-rsbuild-plugin": "catalog:",
+    "@lynx-js/rspeedy": "catalog:",
+    "@lynx-js/types": "catalog:",
+    "@rsbuild/core": "catalog:",
+    "@vanilla-extract/webpack-plugin": "catalog:",
+    "typescript": "catalog:lynx"
+  }
+}

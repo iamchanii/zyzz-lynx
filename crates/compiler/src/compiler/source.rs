@@ -32,9 +32,12 @@ use crate::compiler::internal::dynamic::{self, Slots};
 use crate::compiler::internal::expression::{self, Template, unwrap};
 use crate::compiler::internal::lightning::Options as Transform;
 use crate::compiler::internal::scope::{self, Declaration, Mode};
+use crate::compiler::internal::selections::Literal;
 use crate::compiler::internal::statics::{self, Static};
 use crate::compiler::internal::syntax::{self, Parsed};
-use crate::compiler::internal::themes::{self, Alias, Context, Link, Output, Themes, VarsRead};
+use crate::compiler::internal::themes::{
+    self, Alias, Context, Fold, Link, Output, Themes, VarsRead,
+};
 use crate::compiler::internal::vars::{self, Variables};
 use crate::compiler::internal::{
     at_rules, base_ui, compositions, contributions, identifiers, names, packed_styles,
@@ -72,6 +75,50 @@ pub struct NativeContext {
     pub vars: Record<Arc<Definition>>,
 }
 
+/// A class-selection recipe application whose choices a composition table indexes, as
+/// `Call.composition_table` describes.
+#[derive(Clone, Debug)]
+pub struct ComposedRecipe {
+    /// The reads the application keeps once the table replaces it: its callee, read for
+    /// truthiness before initialization, as a known input keeps them.
+    pub known: KnownInput,
+    /// Authored values in authored order.
+    pub values: Vec<ComposedValue>,
+}
+
+/// One authored value of a composed recipe application.
+#[derive(Clone, Debug)]
+pub struct ComposedValue {
+    /// The axis the value selects.
+    pub axis: Arc<str>,
+    /// The literal value, or `None` for an expression the selector receives as a parameter.
+    pub literal: Option<Literal>,
+    /// Span of the authored value.
+    pub span: Span,
+}
+
+/// The override copies of one flat Lynx composition, as `Call.composition_flat` describes. The
+/// copies of every flat composition in a module share one style and one prefix, so identical
+/// copies print once.
+#[derive(Clone, Debug)]
+pub struct Flat {
+    /// The copies each runtime input adds, by input position.
+    pub inputs: Vec<FlatInput>,
+    /// Hashed choice-class prefix of the module's copy classes, which a dense graph renames.
+    pub prefix: Arc<str>,
+    /// Name of the module's style whose class rules print the copies after every shared unit.
+    pub style: Arc<str>,
+}
+
+/// The override copies one argument of a flat composition adds to its own classes.
+#[derive(Clone, Debug, Default)]
+pub struct FlatInput {
+    /// Copies of the declarations every selection of the argument applies.
+    pub classes: Vec<Arc<str>>,
+    /// Copies of the declarations a recipe choice applies, by choice class.
+    pub choices: Vec<(Arc<str>, Vec<Arc<str>>)>,
+}
+
 /// One input of a runtime composition.
 #[derive(Clone, Debug)]
 pub struct RuntimeInput {
@@ -87,6 +134,9 @@ pub struct RuntimeInput {
     pub name: Arc<str>,
     /// Attribute and private variable ownership.
     pub owners: Vec<Owner>,
+    /// The class-selection recipe application a composition table can select, with its authored
+    /// values.
+    pub recipe: Option<ComposedRecipe>,
     /// Inclusive offset of the application argument.
     pub start: u32,
 }
@@ -142,6 +192,13 @@ pub struct Call<'a> {
     pub composition_case: bool,
     /// Names of precompiled presence alternatives in bitmask order.
     pub composition_cases: Option<Vec<Arc<str>>>,
+    /// A runtime composition of known local styles and class-selection recipe applications on
+    /// the Lynx target, whose class list a production build with independent composition
+    /// concatenates argument by argument. Each argument keeps its own rules, and a declaration
+    /// that conflicts with an earlier argument's gets a copy under a class the module's flat
+    /// compositions share, printed after every shared unit, so later arguments win by
+    /// stylesheet order.
+    pub composition_flat: Option<Flat>,
     /// Choice-class prefixes this composition renames, as (runtime input, from, to), when it
     /// copies the class rules of a Lynx recipe under classes of its own.
     pub composition_renames: Option<Vec<Rename>>,
@@ -151,9 +208,16 @@ pub struct Call<'a> {
     /// Starts of every input application of a compile-time composition, including those of the
     /// compositions it contains. Guards read only truthiness, so none reads a class list.
     pub composition_inputs: Vec<u32>,
+    /// Folded scope applications a compile-time composition merges into its constant props, in
+    /// argument order.
+    pub composition_scopes: Vec<Fold>,
     /// Starts of a compile-time composition's input applications that keep no guard, since
     /// they always follow their definition's initialization.
     pub composition_settled: Vec<u32>,
+    /// Whether a runtime composition of known styles and class-selection recipe applications
+    /// selects its class list from a compile-time table indexed by the recipes' choices and the
+    /// presence bits of its conditional arguments, replacing every input.
+    pub composition_table: bool,
     /// Readable authored binding for contextual CSS names.
     pub css_name: Option<Arc<str>>,
     /// Configuration namespace for emitted CSS.
@@ -281,14 +345,32 @@ impl ExtractError {
     }
 }
 
+/// A scope application with literal arguments, replaced by the constant props its selector
+/// would return.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ScopeFold {
+    /// Exclusive offset of the callee, whose import read the fold consumes.
+    pub callee_end: u32,
+    /// Exclusive offset of the application.
+    pub end: u32,
+    /// The selected set and scheme.
+    pub fold: Fold,
+    /// `html` when the configuration emits HTML attributes.
+    pub output: Option<Output>,
+    /// Inclusive offset of the application.
+    pub start: u32,
+}
+
 /// A scope read in a static binding, replaced by its serialized class constant.
 #[derive(Clone, Debug, PartialEq)]
 pub struct StaticThemeReference {
     /// Exclusive offset of the read.
     pub end: u32,
+    /// The token read, which a target serializes under its own names.
+    pub reference: Arc<token::Reference>,
     /// Inclusive offset of the read.
     pub start: u32,
-    /// Serialized CSS value.
+    /// Serialized CSS value with readable names and the defining fallback.
     pub value: String,
 }
 
@@ -344,6 +426,8 @@ pub struct Extracted<'a> {
     pub namespaces: Vec<namespace::Definition>,
     /// Readonly native variable arguments and their complete catalogs.
     pub native_vars: Vec<VarsRead>,
+    /// Scope applications replaced by constant props.
+    pub scope_folds: Vec<ScopeFold>,
     /// Scope reads replaced by class constants.
     pub static_theme_references: Vec<StaticThemeReference>,
     /// Validated definitions accepted by `Css.compile`, with readable class labels.
@@ -3108,6 +3192,7 @@ pub fn extract<'a>(allocator: &'a Allocator, options: &Options<'_, 'a>) -> Resul
             calls: &calls,
             identity: &namespace,
             links: context.map(|context| &context.links),
+            lynx: options.target == Target::Lynx,
             offsets: &parsed.offsets,
             program,
             scopes: themes.as_ref().map(|themes| &themes.scope_applications),
@@ -3118,9 +3203,15 @@ pub fn extract<'a>(allocator: &'a Allocator, options: &Options<'_, 'a>) -> Resul
 
         match collected {
             Ok(collected) => {
-                imported_applications = collected.imported;
+                let compositions::Collected {
+                    entries,
+                    imported,
+                    overrides,
+                } = collected;
 
-                for (position, entry) in collected.entries.into_iter().enumerate() {
+                imported_applications = imported;
+
+                for (position, entry) in entries.into_iter().enumerate() {
                     let authored = parsed
                         .names()
                         .get(entry.call.start)
@@ -3142,6 +3233,13 @@ pub fn extract<'a>(allocator: &'a Allocator, options: &Options<'_, 'a>) -> Resul
                     calls.push(composed);
                     styles.extend(entry.cases.into_iter().map(|(_, style)| style));
                     styles.push(entry.style);
+                }
+
+                // The module's copies print after every composed style, whose rules precede every
+                // unit they override.
+                if let Some((owner, overrides)) = overrides {
+                    calls.push(owner);
+                    styles.push(overrides);
                 }
             }
             // A failed definition leaves its applications unknown, so composition reports only
@@ -3374,6 +3472,7 @@ pub fn extract<'a>(allocator: &'a Allocator, options: &Options<'_, 'a>) -> Resul
             lynx: options.target == Target::Lynx,
             namespaces,
             native_vars: Vec::new(),
+            scope_folds: Vec::new(),
             static_theme_references: Vec::new(),
             styles: style::Definition {
                 labels: Some(Arc::new(labels)),
@@ -3398,6 +3497,7 @@ pub fn extract<'a>(allocator: &'a Allocator, options: &Options<'_, 'a>) -> Resul
 
             Some(StaticThemeReference {
                 end: node.end,
+                reference: Arc::clone(&token.reference),
                 start: node.start,
                 value: web_themes::Themes::new().serialize(&token.reference),
             })
@@ -3408,6 +3508,19 @@ pub fn extract<'a>(allocator: &'a Allocator, options: &Options<'_, 'a>) -> Resul
     } else {
         &themes.selections
     };
+    let scope_folds = themes
+        .scope_applications
+        .iter()
+        .filter_map(|(start, scope)| {
+            Some(ScopeFold {
+                callee_end: scope.callee_end,
+                end: scope.end,
+                fold: scope.fold.clone()?,
+                output: scope.output,
+                start: *start,
+            })
+        })
+        .collect();
 
     Ok(Extracted {
         calls,
@@ -3419,6 +3532,7 @@ pub fn extract<'a>(allocator: &'a Allocator, options: &Options<'_, 'a>) -> Resul
         lynx: options.target == Target::Lynx,
         namespaces,
         native_vars: themes.vars_reads,
+        scope_folds,
         static_theme_references,
         styles: style::Definition {
             labels: Some(Arc::new(labels)),

@@ -1,0 +1,15 @@
+{
+  "name": "@zyzz/bench-lynx-visual",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "compare": "node Compare.ts"
+  },
+  "devDependencies": {
+    "@lynx-js/web-core": "catalog:",
+    "@types/pngjs": "catalog:",
+    "pixelmatch": "catalog:",
+    "playwright": "catalog:",
+    "pngjs": "catalog:"
+  }
+}

@@ -8,6 +8,7 @@ import * as Snapshot from '../node/internal/Snapshot.js'
 import { createUnplugin } from 'unplugin'
 import type { UnpluginBuildContext } from 'unplugin'
 import * as Graph from '../compiler/Graph.js'
+import * as Inset from './internal/Inset.js'
 import * as AtRules from '../compiler/internal/AtRules.js'
 import * as Catalogs from '../compiler/internal/Catalogs.js'
 import * as ClassName from '../web/internal/ClassName.js'
@@ -20,6 +21,12 @@ import * as ThemeRules from '../web/internal/Themes.js'
 export type Options = {
   /** Rewrite authoring calls. Defaults to true. */
   readonly compiler?: boolean | undefined
+  /**
+   * Composition mode for definitions whose config sets none. `'independent'` shares one rule
+   * for a declaration across every style that repeats it and keeps conflict order only inside
+   * `cx` calls and each style. Defaults to the compiler's `'ordered'`.
+   */
+  readonly composition?: 'independent' | 'ordered' | undefined
   /** Include the CSS reset. Defaults to false. */
   readonly reset?: boolean | undefined
   /** Source directory scanned for modules and global contributions. Defaults to the working directory. */
@@ -316,6 +323,7 @@ const portable = createUnplugin<Options | undefined, false>(
             [ClassName.references]: true,
             [ThemeRules.shared]: 'all',
             compiler: options.compiler,
+            composition: options.composition,
             reset: options.reset ? Reset.read() : undefined,
             contracts,
             imports,
@@ -425,7 +433,7 @@ const portable = createUnplugin<Options | undefined, false>(
                   (target ?? url).slice(raw.length),
               )
             }
-            return AtRules.transform({
+            const processed = AtRules.transform({
               code: Buffer.from(source),
               filename: file,
               ...(map === undefined
@@ -455,6 +463,15 @@ const portable = createUnplugin<Options | undefined, false>(
                 },
               },
             })
+            if (options.target !== 'lynx') return processed
+
+            // Lightning CSS merges four line longhands into `inset`, which the Lynx encoder drops.
+            return {
+              ...processed,
+              code: Buffer.from(
+                Inset.expand(Buffer.from(processed.code).toString()),
+              ),
+            }
           }
 
           const shared = await stylesheet(

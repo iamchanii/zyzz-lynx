@@ -30,6 +30,7 @@ use crate::error::{Error, Result};
 use crate::internal::binding;
 use crate::internal::identity;
 use crate::internal::rule_reference;
+use crate::internal::scheme;
 use crate::internal::theme::{self, Definition};
 use crate::internal::token::{self, Contract, Mappings, Metadata};
 use crate::internal::variable_sets::{self, BuildOptions};
@@ -390,11 +391,25 @@ pub struct Options {
     pub static_bindings: FxHashSet<u32>,
 }
 
+/// The set and scheme a scope application selects with literal arguments, so the transform
+/// replaces the call with the constant props the runtime selector would return.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Fold {
+    /// Scope key of the selected variable set.
+    pub name: Arc<str>,
+    /// Selected color scheme, one of the [`scheme::CLASSES`] names.
+    pub scheme: Option<&'static str>,
+}
+
 /// Selection scope applied by a compiled configuration call.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ScopeApplication {
+    /// Exclusive offset of the callee, whose import read a fold consumes.
+    pub callee_end: u32,
     /// Exclusive offset of the application.
     pub end: u32,
+    /// The constant selection, when the arguments are literal.
+    pub fold: Option<Fold>,
     /// `html` when the configuration emits HTML attributes.
     pub output: Option<Output>,
 }
@@ -789,10 +804,6 @@ impl<'a> Themes<'a> {
 
             if key == "themes" && !option_truthy(&config.call, "themes") {
                 return Ok(None);
-            }
-
-            if key == "themes" || key == "vars" {
-                self.selections.insert(Arc::clone(&config.call.name));
             }
 
             if key == "script" && !config.call.script {
@@ -1688,10 +1699,6 @@ impl<'a> Themes<'a> {
 
                 if key == "appearance" {
                     self.appearances.insert(Arc::clone(&link.call.name));
-                }
-
-                if key == "themes" || key == "vars" {
-                    self.selections.insert(Arc::clone(&link.call.name));
                 }
 
                 let mut members: Record<Link> = Record::new();
@@ -2710,6 +2717,31 @@ impl<'a> Themes<'a> {
         self.theme_reference(node, parent, &ancestors, &theme)
     }
 
+    /// Records a scope application. A selection with literal arguments folds to constant props,
+    /// so only the other selections keep the configuration's runtime selector.
+    fn scope_application(&mut self, call: &Call, application: &CallExpression<'a>) {
+        let fold = if self.options.native {
+            None
+        } else {
+            scope_fold(call, application)
+        };
+
+        if fold.is_none() {
+            self.selections.insert(Arc::clone(&call.name));
+        }
+
+        self.selection_uses.insert(Arc::clone(&call.name));
+        self.scope_applications.insert(
+            application.span.start,
+            ScopeApplication {
+                callee_end: application.callee.span().end,
+                end: application.span.end,
+                fold,
+                output: html(call),
+            },
+        );
+    }
+
     /// Resolves a read of a configuration binding.
     fn config_reference(
         &mut self,
@@ -2776,15 +2808,7 @@ impl<'a> Themes<'a> {
             }
 
             if call.selection {
-                self.selections.insert(Arc::clone(&call.name));
-                self.selection_uses.insert(Arc::clone(&call.name));
-                self.scope_applications.insert(
-                    application.span.start,
-                    ScopeApplication {
-                        end: application.span.end,
-                        output: html(call),
-                    },
-                );
+                self.scope_application(call, application);
             }
 
             if call.initialization {
@@ -2901,15 +2925,7 @@ impl<'a> Themes<'a> {
                 }
 
                 if matches!(first, Some("themes" | "vars")) {
-                    self.selections.insert(Arc::clone(&call.name));
-                    self.selection_uses.insert(Arc::clone(&call.name));
-                    self.scope_applications.insert(
-                        application.span.start,
-                        ScopeApplication {
-                            end: application.span.end,
-                            output: html(call),
-                        },
-                    );
+                    self.scope_application(call, application);
                 }
 
                 return Ok(true);
@@ -3550,6 +3566,94 @@ fn html(call: &Call) -> Option<Output> {
         .and_then(Data::as_str)
         .filter(|output| *output == "html")
         .map(|_| Output::Html)
+}
+
+/// The set and scheme a variable selection names with literal arguments: no argument, or one
+/// object literal whose `set` and `colorScheme` are string literals. Other arguments, unknown
+/// sets, and unknown schemes keep the runtime selector, which validates them as before.
+fn scope_fold(call: &Call, application: &CallExpression<'_>) -> Option<Fold> {
+    if !call.variable_config {
+        return None;
+    }
+
+    let mut set: Option<&str> = None;
+    let mut scheme: Option<&str> = None;
+
+    match application.arguments.as_slice() {
+        [] => {}
+        [argument] => {
+            let Expression::ObjectExpression(object) =
+                expression::unwrap(argument.as_expression()?)
+            else {
+                return None;
+            };
+
+            for property in &object.properties {
+                let ObjectPropertyKind::ObjectProperty(property) = property else {
+                    return None;
+                };
+
+                if property.computed || property.method || property.kind != PropertyKind::Init {
+                    return None;
+                }
+
+                let key = match &property.key {
+                    PropertyKey::StaticIdentifier(key) => key.name.as_str(),
+                    PropertyKey::StringLiteral(key) => key.value.as_str(),
+                    _ => return None,
+                };
+                let Expression::StringLiteral(value) = expression::unwrap(&property.value) else {
+                    return None;
+                };
+                let slot = match key {
+                    "set" => &mut set,
+                    "colorScheme" => &mut scheme,
+                    _ => return None,
+                };
+
+                if slot.replace(value.value.as_str()).is_some() {
+                    return None;
+                }
+            }
+        }
+        _ => return None,
+    }
+
+    // The selector falls back to `defaultTheme`, or to the unnamed set called `default`.
+    let fallback = match call
+        .options
+        .as_ref()
+        .and_then(|options| options.get("defaultTheme"))
+    {
+        None | Some(Data::Undefined | Data::Null) => "default",
+        Some(value) => value.as_str()?,
+    };
+    let selected = set.unwrap_or(fallback);
+    let name = if option_truthy(call, "themes") {
+        let members = call.members.as_ref()?;
+
+        members
+            .get(&member_key(&["themes", selected]))
+            .or_else(|| members.get(&member_key(&[selected])))?
+    } else if selected == "default" {
+        &call.name
+    } else {
+        return None;
+    };
+    let scheme = match scheme {
+        Some(scheme) => Some(
+            scheme::CLASSES
+                .iter()
+                .map(|(name, _)| *name)
+                .find(|name| *name == scheme)?,
+        ),
+        None => None,
+    };
+
+    Some(Fold {
+        name: Arc::clone(name),
+        scheme,
+    })
 }
 
 /// Spells an option like `String(value)`.

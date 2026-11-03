@@ -1584,10 +1584,7 @@ ${configuration ? "zyzz.style({'@layer components':{color:'brand'}});\n// @ts-ex
           .join('')
 
         expect(entryCss.trim()).toMatchInlineSnapshot(`
-          ".z_scheme-dark{color-scheme:dark;}
-          .z_scheme-light{color-scheme:light;}
-          .z_scheme-light-dark{color-scheme:light dark;}
-          .z-theme-app-base{--z-app-color-brand:#06c;}
+          ".z-theme-app-base{--z-app-color-brand:#06c;}
           .z-theme-app-mint{--z-app-color-brand:#175;}"
         `)
         expect(entries['lazy.ts']?.isDynamicEntry).toMatchInlineSnapshot('true')
@@ -1981,7 +1978,7 @@ ${configuration ? "zyzz.style({'@layer components':{color:'brand'}});\n// @ts-ex
               [...document.styleSheets].flatMap((sheet) => [...sheet.cssRules])
                 .length,
           ),
-        ).toMatchInlineSnapshot(`5`)
+        ).toMatchInlineSnapshot(`2`)
         expect(
           await page.locator('#card').getAttribute('class'),
         ).toMatchInlineSnapshot('null')
@@ -2064,10 +2061,7 @@ ${configuration ? "zyzz.style({'@layer components':{color:'brand'}});\n// @ts-ex
         throw new Error('No stylesheet emitted')
 
       expect(String(sheet.source)).toMatchInlineSnapshot(`
-        ".z_scheme-dark{color-scheme:dark;}
-        .z_scheme-light{color-scheme:light;}
-        .z_scheme-light-dark{color-scheme:light dark;}
-        .z-theme-app-base{--z-app-color-brand:#06c;}
+        ".z-theme-app-base{--z-app-color-brand:#06c;}
         .z-theme-app-mint{--z-app-color-brand:#175;}.z_app-rnRBDm0{color:var(--z-app-color-brand,#06c);}
         .z_app-rnRBDm1{padding:8px;}"
       `)

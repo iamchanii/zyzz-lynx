@@ -5,6 +5,8 @@ import type { Config } from '@lynx-js/rspeedy'
 import type { RsbuildPlugin, Rspack } from '@rsbuild/core'
 import * as Fs from 'node:fs/promises'
 import * as Path from 'node:path'
+import { chromium } from 'playwright'
+import type { Page } from 'playwright'
 import { describe, expect, test } from 'vite-plus/test'
 import { zyzz } from 'zyzz/rspeedy'
 
@@ -28,6 +30,7 @@ type Template = {
     readonly cssMap: Readonly<Record<string, readonly Rule[]>>
   }
   readonly lepusCode: { readonly root: string }
+  readonly manifest: Readonly<Record<string, string>>
 }
 
 async function fixture() {
@@ -87,9 +90,92 @@ async function template(root: string, entry = 'main') {
       : `${rule.selectorText.value} { ${rule.style.map((declaration) => `${declaration.name}: ${declaration.value}`).join('; ')} }`
 
   return {
+    background: Object.values(template.manifest).join('\n'),
     css: Object.values(template.css.cssMap).flat().map(print),
     mainThread: template.lepusCode.root,
   }
+}
+
+/**
+ * Builds in production mode and reads the encoded template. The template plugin writes
+ * `tasm.json` and the thread scripts beside the bundle when DEBUG names rspeedy.
+ */
+async function production(
+  root: string,
+  options: zyzz.Options = {},
+  config: Config = {},
+) {
+  const debug = process.env.DEBUG
+  process.env.DEBUG = 'rspeedy'
+  try {
+    const result = await (
+      await create(root, { mode: 'production', ...config }, options)
+    ).build()
+    await result.close()
+  } finally {
+    if (debug === undefined) delete process.env.DEBUG
+    else process.env.DEBUG = debug
+  }
+  return template(root)
+}
+
+/** The generated class lists a thread script names, with the leading space of a conditional piece. */
+function lists(source: string): readonly string[] {
+  return (source.match(/"( ?z[0-9a-zA-Z]+)+"/g) ?? []).map((list) =>
+    list.slice(1, -1),
+  )
+}
+
+/**
+ * Computed styles in Chromium of one element per class list of the main thread and per full
+ * list extended with each conditional piece, under the template's rules.
+ */
+async function computed(
+  page: Page,
+  template: { readonly css: readonly string[]; readonly mainThread: string },
+  properties: readonly string[],
+) {
+  const classLists = lists(template.mainThread)
+  const full = classLists.filter((list) => !list.startsWith(' '))
+  const pieces = classLists.filter((list) => list.startsWith(' '))
+  const cases = [
+    ...classLists,
+    ...full.flatMap((list) => pieces.map((piece) => list + piece)),
+  ]
+
+  await page.setContent(
+    `<style>${template.css.join('\n')}</style>${cases.map((list) => `<div class="${list.trim()}"></div>`).join('')}`,
+  )
+  return page.evaluate(
+    (names) =>
+      [...document.querySelectorAll('div')].map((element) =>
+        names.map((name) => getComputedStyle(element).getPropertyValue(name)),
+      ),
+    [...properties],
+  )
+}
+
+/**
+ * The per-thread scripts of a production build that loaded the selection runtime, by the chunk
+ * name with its content hash elided. The runtime's helper import and its validation message
+ * mark the chunk.
+ */
+async function selecting(root: string, entry = 'main') {
+  const directory = Path.join(root, 'dist/.lynx', entry)
+  const chunks: string[] = []
+
+  for (const file of await files(directory)) {
+    if (!file.endsWith('.js')) continue
+    const source = await Fs.readFile(Path.join(directory, file), 'utf8')
+
+    if (
+      source.includes('__zyzzSelection') ||
+      source.includes('Invalid variable selection.')
+    )
+      chunks.push(file.replace(/\.[0-9a-f]+\.js$/, '.[hash].js'))
+  }
+
+  return chunks
 }
 
 describe('zyzz', () => {
@@ -102,16 +188,17 @@ describe('zyzz', () => {
       const { css, mainThread } = await template(root)
       expect(css).toMatchInlineSnapshot(`
         [
-          ".z_i6Fywm0 { background-color: #06c }",
-          ".z_i6Fywm1 { padding: 8px }",
-          ".z_i6Fywm2 { color: #fff }",
-          ".z_i6Fywm3 { font-size: 20px }",
+          ".z0 { background-color: #06c }",
+          ".z1 { padding: 8px }",
+          ".z2 { color: #fff }",
+          ".z3 { font-size: 20px }",
         ]
       `)
-      expect(mainThread.match(/"z_[\w-]+ z_[\w-]+"/g)).toMatchInlineSnapshot(`
+      // The main thread adds the dense names the template's rules carry.
+      expect(mainThread.match(/"z\w+ z\w+"/g)).toMatchInlineSnapshot(`
         [
-          ""z_i6Fywm0 z_i6Fywm1"",
-          ""z_i6Fywm2 z_i6Fywm3"",
+          ""z0 z1"",
+          ""z2 z3"",
         ]
       `)
       expect(mainThread.includes('style({')).toMatchInlineSnapshot(`false`)
@@ -177,19 +264,19 @@ describe('zyzz', () => {
       // The injected stylesheet precedes the entry's own imports once.
       expect((await template(root)).css).toMatchInlineSnapshot(`
         [
-          ".z_i6Fywm0 { background-color: #06c }",
-          ".z_i6Fywm1 { padding: 8px }",
-          ".z_i6Fywm2 { color: #fff }",
-          ".z_i6Fywm3 { font-size: 20px }",
+          ".z0 { background-color: #06c }",
+          ".z1 { padding: 8px }",
+          ".z2 { color: #fff }",
+          ".z3 { font-size: 20px }",
           ".app { margin: 4px }",
         ]
       `)
       expect((await template(root, 'other')).css).toMatchInlineSnapshot(`
         [
-          ".z_i6Fywm0 { background-color: #06c }",
-          ".z_i6Fywm1 { padding: 8px }",
-          ".z_i6Fywm2 { color: #fff }",
-          ".z_i6Fywm3 { font-size: 20px }",
+          ".z0 { background-color: #06c }",
+          ".z1 { padding: 8px }",
+          ".z2 { color: #fff }",
+          ".z3 { font-size: 20px }",
         ]
       `)
     } finally {
@@ -215,10 +302,10 @@ describe('zyzz', () => {
       ).toMatchInlineSnapshot(`[]`)
       expect((await template(root)).css).toMatchInlineSnapshot(`
         [
-          ".z_i6Fywm0 { background-color: #06c }",
-          ".z_i6Fywm1 { padding: 8px }",
-          ".z_i6Fywm2 { color: #fff }",
-          ".z_i6Fywm3 { font-size: 20px }",
+          ".z0 { background-color: #06c }",
+          ".z1 { padding: 8px }",
+          ".z2 { color: #fff }",
+          ".z3 { font-size: 20px }",
         ]
       `)
     } finally {
@@ -295,8 +382,8 @@ describe('zyzz', () => {
 
       expect((await template(root)).css).toMatchInlineSnapshot(`
         [
-          ".z_i6Fywm0 { background-color: {{--seed-color-bg-layer-default}} }",
-          ".z_i6Fywm1 { border-color: {{--seed-color-bg-layer-floating}} }",
+          ".z0 { background-color: {{--seed-color-bg-layer-default}} }",
+          ".z1 { border-color: {{--seed-color-bg-layer-floating}} }",
         ]
       `)
     } finally {
@@ -326,6 +413,359 @@ describe('zyzz', () => {
       )
       expect(source.includes('Object.hasOwn(')).toMatchInlineSnapshot(`false`)
       expect(source.includes('z-theme-large')).toMatchInlineSnapshot(`true`)
+    } finally {
+      await Fs.rm(root, { force: true, recursive: true })
+    }
+  }, 60_000)
+
+  test('folds literal scope selections so no thread loads the composition runtime', async () => {
+    const root = await fixture()
+    try {
+      await Fs.writeFile(
+        Path.join(root, 'src/config.ts'),
+        `import { defineConfig, defineVars } from 'zyzz'\n\nconst theme = defineVars({ color: { brand: '#0066cc' } })\n\nexport const { style, variants, vars } = defineConfig({ vars: theme })\n`,
+      )
+      await Fs.writeFile(
+        Path.join(root, 'src/App.tsx'),
+        `import { cx } from 'zyzz'\nimport { style, vars } from './config'\n\nexport function App() {\n  return <view {...cx(vars({}), styles.page())}><text {...vars({ colorScheme: 'dark' })}>Hello</text></view>\n}\n\nnamespace styles {\n  export const page = style({ color: vars.color.brand })\n}\n`,
+      )
+
+      const result = await (await create(root)).build()
+      await result.close()
+
+      const { css, mainThread } = await template(root)
+      expect(css).toMatchInlineSnapshot(`
+        [
+          ".z_scheme-dark { color-scheme: dark }",
+          ".z_scheme-light { color-scheme: light }",
+          ".z_scheme-light-dark { color-scheme: light dark }",
+          ".z-theme-theme {  }",
+          ".z0 { color: {{--z0}} }",
+        ]
+      `)
+      expect(mainThread.match(/"z-theme-theme[^"]*"/g)).toMatchInlineSnapshot(`
+        [
+          ""z-theme-theme z0"",
+          ""z-theme-theme z_scheme-dark"",
+        ]
+      `)
+      expect(
+        mainThread.includes('zyzz.composition.input.v1'),
+      ).toMatchInlineSnapshot(`false`)
+
+      // The composition runtime marks its module with this protocol key.
+      const chunks = (await files(Path.join(root, 'dist'))).filter((file) =>
+        file.endsWith('.js'),
+      )
+      const composed: string[] = []
+
+      for (const chunk of chunks) {
+        const source = await Fs.readFile(Path.join(root, 'dist', chunk), 'utf8')
+
+        if (source.includes('zyzz.composition.input.v1')) composed.push(chunk)
+      }
+
+      expect(chunks).toMatchInlineSnapshot(`
+        [
+          ".lynx/main/background.js",
+          ".lynx/main/main-thread.js",
+        ]
+      `)
+      expect(composed).toMatchInlineSnapshot(`[]`)
+    } finally {
+      await Fs.rm(root, { force: true, recursive: true })
+    }
+  }, 60_000)
+
+  test('leaves the selection runtime out of production chunks when every selection folds', async () => {
+    const root = await fixture()
+    const debug = process.env.DEBUG
+    try {
+      // Rspack reads the nearest package.json for side effects. Without one, the fixture inherits
+      // this repository's `sideEffects` list and drops the configuration module whole.
+      await Fs.writeFile(
+        Path.join(root, 'package.json'),
+        '{ "name": "fixture", "private": true, "type": "module" }\n',
+      )
+      await Fs.writeFile(
+        Path.join(root, 'src/config.ts'),
+        `import { defineConfig, defineVars } from 'zyzz'\n\nconst theme = defineVars({ color: { brand: '#0066cc' }, spacing: { page: '16px' } })\n\nexport const { style, variants, vars } = defineConfig({ vars: theme })\n`,
+      )
+      await Fs.writeFile(
+        Path.join(root, 'src/App.tsx'),
+        `import { style, variants, vars } from './config'\n\nexport function App() {\n  return <view {...vars({})}><text {...styles.title()}>Hello</text><text {...styles.tone({ tone: 'quiet' })}>World</text></view>\n}\n\nnamespace styles {\n  export const title = style({ color: vars.color.brand, padding: vars.spacing.page })\n  export const tone = variants({ variants: { tone: { quiet: { color: 'brand' }, loud: { padding: 'page' } } } })\n}\n`,
+      )
+
+      // The template plugin keeps the per-thread scripts beside the bundle when DEBUG names
+      // rspeedy. Unminified output leaves tree shaking as the only reason a module disappears.
+      process.env.DEBUG = 'rspeedy'
+      const result = await (
+        await create(root, { mode: 'production', output: { minify: false } })
+      ).build()
+      await result.close()
+
+      expect(
+        (await files(Path.join(root, 'dist/.lynx/main')))
+          .filter((file) => file.endsWith('.js'))
+          .map((file) => file.replace(/\.[0-9a-f]+\.js$/, '.[hash].js')),
+      ).toMatchInlineSnapshot(`
+        [
+          "background.[hash].js",
+          "main-thread.js",
+        ]
+      `)
+      // The configuration module emits no selector, so neither thread loads the runtime.
+      expect(await selecting(root)).toMatchInlineSnapshot(`[]`)
+
+      // A selection with a dynamic argument keeps the selector on both threads.
+      await Fs.writeFile(
+        Path.join(root, 'src/config.ts'),
+        `import { defineConfig } from 'zyzz'\n\nexport const { style, vars } = defineConfig({ defaultVars: 'base', vars: { base: { color: { brand: '#0066cc' } }, mint: { color: { brand: '#117755' } } } })\n`,
+      )
+      await Fs.writeFile(
+        Path.join(root, 'src/App.tsx'),
+        `import { style, vars } from './config'\n\nexport function App(props: { theme: 'base' | 'mint' }) {\n  return <view {...vars({ set: props.theme })}><text {...styles.title()}>Hello</text></view>\n}\n\nnamespace styles {\n  export const title = style({ color: vars.color.brand })\n}\n`,
+      )
+
+      const dynamic = await (
+        await create(root, { mode: 'production', output: { minify: false } })
+      ).build()
+      await dynamic.close()
+
+      expect(await selecting(root)).toMatchInlineSnapshot(`
+        [
+          "background.[hash].js",
+          "main-thread.js",
+        ]
+      `)
+    } finally {
+      if (debug === undefined) delete process.env.DEBUG
+      else process.env.DEBUG = debug
+      await Fs.rm(root, { force: true, recursive: true })
+    }
+  }, 120_000)
+
+  test('concatenates recipe and conditional style compositions so no thread holds class tables or the composition runtime', async () => {
+    const root = await fixture()
+    try {
+      // The calendar of a job post: a recipe cell with conditional edge and selection styles,
+      // and a day number with conditional colors.
+      await Fs.writeFile(
+        Path.join(root, 'src/App.tsx'),
+        `import { cx, style, variants } from 'zyzz'
+
+type Day = { day: number; holiday: boolean; past: boolean; segment: 'none' | 'start' | 'middle' | 'end' | 'single'; selected: boolean }
+
+export function App(props: { week?: readonly Day[] }) {
+  return (
+    <view>
+      {(props.week ?? []).map((day, dayIndex) => {
+        const middle = day.segment === 'middle'
+        return (
+          <view key={day.day} {...styles.day()}>
+            <view
+              {...cx(
+                styles.calendarCell({ segment: day.segment }),
+                middle && dayIndex === 0 && styles.weekStart(),
+                middle && dayIndex === 6 && styles.weekEnd(),
+                day.selected && day.past && styles.pastSelectedDay(),
+                day.selected && !day.past && styles.selectedDay(),
+              )}
+            >
+              <text
+                {...cx(
+                  styles.dayNumber(),
+                  day.selected && styles.selectedDayNumber(),
+                  !day.selected && day.past && styles.pastDayNumber(),
+                  !day.selected && !day.past && day.holiday && styles.holidayNumber(),
+                )}
+              >
+                {String(day.day)}
+              </text>
+            </view>
+          </view>
+        )
+      })}
+    </view>
+  )
+}
+
+namespace styles {
+  export const calendarCell = variants({
+    base: { alignItems: 'center', bottom: '4px', display: 'flex', flexDirection: 'row', justifyContent: 'center', left: 0, position: 'absolute', right: 0, top: '4px' },
+    variants: {
+      segment: {
+        end: { borderBottomRightRadius: '999px', borderTopRightRadius: '999px', paddingLeft: '4px', right: '4px' },
+        middle: {},
+        none: { left: '4px', right: '4px' },
+        single: { borderRadius: '50%', left: '4px', right: '4px' },
+        start: { borderBottomLeftRadius: '999px', borderTopLeftRadius: '999px', left: '4px', paddingRight: '4px' },
+      },
+    },
+  })
+
+  export const day = style({ aspectRatio: '1', position: 'relative', width: '14.285714285714286%' })
+
+  export const dayNumber = style({ color: 'rgb(26, 26, 26)', fontSize: '14px', whiteSpace: 'nowrap' })
+
+  export const holidayNumber = style({ color: 'rgb(255, 111, 15)' })
+
+  export const pastDayNumber = style({ color: 'rgb(134, 142, 150)' })
+
+  export const pastSelectedDay = style({ backgroundColor: 'rgb(233, 236, 239)' })
+
+  export const selectedDay = style({ backgroundColor: 'rgb(33, 37, 41)' })
+
+  export const selectedDayNumber = style({ color: 'rgb(255, 255, 255)' })
+
+  export const weekEnd = style({ left: 0, right: '4px' })
+
+  export const weekStart = style({ left: '4px', right: 0 })
+}
+`,
+      )
+
+      const result = await (await create(root)).build()
+      await result.close()
+
+      // Each argument prints its rules once. A declaration that conflicts with an earlier
+      // argument's, such as the edges' offsets against the cell and its choices, or the day
+      // number's colors, gets one copy after every shared unit, so later arguments win.
+      const { css, mainThread } = await template(root)
+      expect(css).toMatchInlineSnapshot(`
+        [
+          ".z2 { align-items: center }",
+          ".z3 { top: 4px; right: 0; bottom: 4px; left: 0 }",
+          ".z4 { display: flex }",
+          ".z5 { flex-direction: row }",
+          ".z6 { justify-content: center }",
+          ".z7 { position: absolute }",
+          ".zA00 { border-top-right-radius: 999px; border-bottom-right-radius: 999px; padding-left: 4px; right: 4px }",
+          ".zA02 { left: 4px; right: 4px }",
+          ".zA03 { border-radius: 50%; left: 4px; right: 4px }",
+          ".zA04 { border-top-left-radius: 999px; border-bottom-left-radius: 999px; padding-right: 4px; left: 4px }",
+          ".z8 { aspect-ratio: 1 }",
+          ".z9 { position: relative }",
+          ".za { width: 14.2857% }",
+          ".zb { color: #1a1a1a }",
+          ".zc { font-size: 14px }",
+          ".zd { white-space: nowrap }",
+          ".ze { color: #ff6f0f }",
+          ".zf { color: #868e96 }",
+          ".zg { background-color: #e9ecef }",
+          ".zh { background-color: #212529 }",
+          ".zi { color: #fff }",
+          ".zj { left: 0; right: 4px }",
+          ".zk { left: 4px; right: 0 }",
+          ".zA10 { left: 4px }",
+          ".zA11 { right: 0 }",
+          ".zA12 { left: 0 }",
+          ".zA13 { right: 4px }",
+          ".zA14 { background-color: #212529 }",
+          ".zA15 { color: #fff }",
+          ".zA16 { color: #868e96 }",
+          ".zA17 { color: #ff6f0f }",
+        ]
+      `)
+
+      // Only the override copies repeat a declaration body.
+      const bodies = css.map((rule) => rule.slice(rule.indexOf('{')))
+      const repeated = css
+        .filter((_, index) => bodies.indexOf(bodies[index]!) !== index)
+        .map((rule) => rule.slice(0, rule.indexOf(' {')))
+      expect(repeated).toMatchInlineSnapshot(`
+        [
+          ".zA14",
+          ".zA15",
+          ".zA16",
+          ".zA17",
+        ]
+      `)
+
+      // Every class the main thread concatenates selects a rule of the template. A constant
+      // list holds two or more classes, and a conditional list starts with a space.
+      const selectors = new Set(
+        css.flatMap((rule) => rule.match(/\.z[0-9A-Za-z]+/g) ?? []),
+      )
+      const token = /(?:z[0-9a-z]+|zA[0-9a-z]{2})/
+      const lists = mainThread.match(
+        new RegExp(
+          `"(?:${token.source}(?: ${token.source})+|(?: ${token.source})+)"`,
+          'g',
+        ),
+      )
+      const classes = [
+        ...new Set(
+          lists?.flatMap((list) => list.replaceAll('"', '').trim().split(' ')),
+        ),
+      ].sort()
+
+      expect(classes).toMatchInlineSnapshot(`
+        [
+          "z2",
+          "z3",
+          "z4",
+          "z5",
+          "z6",
+          "z7",
+          "z8",
+          "z9",
+          "zA00",
+          "zA02",
+          "zA03",
+          "zA04",
+          "zA10",
+          "zA11",
+          "zA12",
+          "zA13",
+          "zA14",
+          "zA15",
+          "zA16",
+          "zA17",
+          "za",
+          "zb",
+          "zc",
+          "zd",
+          "ze",
+          "zf",
+          "zg",
+          "zh",
+          "zi",
+          "zj",
+          "zk",
+        ]
+      `)
+      expect(classes.filter((name) => !selectors.has(`.${name}`))).toEqual([])
+
+      // The only class table is the cell recipe's own selector over its four classed choices
+      // and none, not one entry per presence alternative and choice.
+      const tables = mainThread.match(/__zyzzClasses\d+ ?= ?\[[^\]]*\]/g) ?? []
+      expect(tables.map((table) => table.match(/"[^"]*"/g)?.length))
+        .toMatchInlineSnapshot(`
+        [
+          5,
+        ]
+      `)
+
+      // The composition runtime marks its module with this protocol key.
+      const chunks = (await files(Path.join(root, 'dist'))).filter((file) =>
+        file.endsWith('.js'),
+      )
+      const composed: string[] = []
+
+      for (const chunk of chunks) {
+        const source = await Fs.readFile(Path.join(root, 'dist', chunk), 'utf8')
+
+        if (source.includes('zyzz.composition.input.v1')) composed.push(chunk)
+      }
+
+      expect(chunks).toMatchInlineSnapshot(`
+        [
+          ".lynx/main/background.js",
+          ".lynx/main/main-thread.js",
+        ]
+      `)
+      expect(composed).toMatchInlineSnapshot(`[]`)
     } finally {
       await Fs.rm(root, { force: true, recursive: true })
     }
@@ -404,10 +844,10 @@ describe('zyzz', () => {
       const { css, mainThread } = await template(root)
       expect(css).toMatchInlineSnapshot(`
         [
-          ".z_i6Fywm0 { background-color: #06c }",
-          ".z_i6Fywm1 { padding: 8px }",
-          ".z_i6Fywm2 { color: #fff }",
-          ".z_i6Fywm3 { font-size: 20px }",
+          ".z0 { background-color: #06c }",
+          ".z1 { padding: 8px }",
+          ".z2 { color: #fff }",
+          ".z3 { font-size: 20px }",
         ]
       `)
       expect(mainThread.includes('globalThis.preLoaded')).toMatchInlineSnapshot(
@@ -427,12 +867,14 @@ describe('zyzz', () => {
       await Fs.writeFile(
         Path.join(root, 'src/App.tsx'),
         `import { cx, style, variants } from 'zyzz'
+import { Note } from './Note'
 
 export function App(props: { tone?: 'neutral' | 'success' }) {
   return (
     <view {...styles.card({ size: 'large', tone: props.tone })}>
       <text className={styles.badge({ tone: props.tone, className: 'extra' })}>Hello</text>
       <text {...cx(styles.card({ size: 'small', tone: 'success' }), styles.quiet())}>Quiet</text>
+      <Note />
     </view>
   )
 }
@@ -459,6 +901,20 @@ namespace styles {
 }
 `,
       )
+      // A second module declares a body the first also declares, and keeps its own rule.
+      await Fs.writeFile(
+        Path.join(root, 'src/Note.tsx'),
+        `import { style } from 'zyzz'
+
+export function Note() {
+  return <text {...styles.note()}>Note</text>
+}
+
+namespace styles {
+  export const note = style({ opacity: 1 })
+}
+`,
+      )
 
       // The composition reads the runtime helper, which the fixture resolves from the repository.
       const result = await (
@@ -476,27 +932,27 @@ namespace styles {
 
       // Every rule reaches the template with its declarations: one class per choice and
       // compound, at-rules outside the class, and composition copies under their own prefix.
+      // Production names come from one dense table across both modules.
       const { css, mainThread } = await template(root)
       expect(css).toMatchInlineSnapshot(`
         [
-          ".z_i6Fywm0 { padding: 2px }",
-          ".zvet-RFk250 { height: 40px }",
-          "@media (width>=1px) { .zvet-RFk250 { width: 40px } }",
-          ".zvet-RFk251 { height: 20px }",
-          ".zvet-RFk252 { color: #000 }",
-          ".zvet-RFk253 { color: #0a0 }",
-          ".zvet-RFk254 { opacity: .5 }",
-          ".z_i6Fywm1 { font-size: 12px }",
-          ".zv7eXG394G1 { color: #0a0 }",
-          ".zv7eXG394G2 { font-weight: 700 }",
-          ".z_i6Fywm2 { padding: 2px }",
-          ".zv27DIkWrC0 { height: 40px }",
-          "@media (width>=1px) { .zv27DIkWrC0 { width: 40px } }",
-          ".zv27DIkWrC1 { height: 20px }",
-          ".zv27DIkWrC2 { color: #000 }",
-          ".zv27DIkWrC3 { color: #0a0 }",
-          ".zv27DIkWrC4 { opacity: .5 }",
-          ".z_i6Fywm3 { opacity: 1 }",
+          ".z0 { opacity: 1 }",
+          ".z4 { padding: 2px }",
+          ".zA10 { height: 40px }",
+          "@media (width>=1px) { .zA10 { width: 40px } }",
+          ".zA11 { height: 20px }",
+          ".zA12 { color: #000 }",
+          ".zA13 { color: #0a0 }",
+          ".zA14 { opacity: .5 }",
+          ".z5 { font-size: 12px }",
+          ".zA21 { color: #0a0 }",
+          ".zA22 { font-weight: 700 }",
+          ".zA30 { height: 40px }",
+          "@media (width>=1px) { .zA30 { width: 40px } }",
+          ".zA31 { height: 20px }",
+          ".zA32 { color: #000 }",
+          ".zA33 { color: #0a0 }",
+          ".zA34 { opacity: .5 }",
         ]
       `)
       // The composition renames the recipe's choice classes to its own copies.
@@ -506,20 +962,39 @@ namespace styles {
           .match(/"renames":\[\[\["[\w-]+","[\w-]+"\]\]\]/g),
       ).toMatchInlineSnapshot(`
         [
-          ""renames":[[["zvet-RFk25","zv27DIkWrC"]]]",
+          ""renames":[[["zA1","zA3"]]]",
         ]
       `)
-      expect(mainThread.match(/" zv[\w-]+"/g)).toMatchInlineSnapshot(`
+      // Every generated class the main thread adds, a unit or a choice class under a recipe
+      // prefix, selects a rule of the template.
+      const selectors = new Set(
+        css.flatMap((rule) => rule.match(/\.z[0-9A-Za-z]+/g) ?? []),
+      )
+      const token = /z[0-9a-z]+|zA[0-9a-z]{2}/
+      const lists = mainThread.match(
+        new RegExp(`" ?${token.source}(?: ${token.source})*"`, 'g'),
+      )
+      const classes = [
+        ...new Set(
+          lists?.flatMap((list) => list.replaceAll('"', '').trim().split(' ')),
+        ),
+      ].sort()
+
+      expect(classes).toMatchInlineSnapshot(`
         [
-          "" zvet-RFk250"",
-          "" zvet-RFk251"",
-          "" zvet-RFk252"",
-          "" zvet-RFk253"",
-          "" zvet-RFk254"",
-          "" zv7eXG394G1"",
-          "" zv7eXG394G2"",
+          "z0",
+          "z4",
+          "z5",
+          "zA10",
+          "zA11",
+          "zA12",
+          "zA13",
+          "zA14",
+          "zA21",
+          "zA22",
         ]
       `)
+      expect(classes.filter((name) => !selectors.has(`.${name}`))).toEqual([])
     } finally {
       await Fs.rm(root, { force: true, recursive: true })
     }
@@ -554,16 +1029,429 @@ namespace styles {
       const { css } = await template(root)
       expect(css).toMatchInlineSnapshot(`
         [
-          ".z_i6Fywm0 { opacity: 1 }",
-          ".z_i6Fywm1:active { opacity: .4 }",
-          "@media (width>=1px) { .z_i6Fywm2:focus { opacity: .6 } }",
-          ".list>.z_i6Fywm3 { margin-top: 1px }",
+          ".z0 { opacity: 1 }",
+          ".z1:active { opacity: .4 }",
+          "@media (width>=1px) { .z2:focus { opacity: .6 } }",
+          ".list>.z3 { margin-top: 1px }",
         ]
       `)
     } finally {
       await Fs.rm(root, { force: true, recursive: true })
     }
   }, 60_000)
+
+  test('composes independently by default so repeated declarations share rules', async () => {
+    const root = await fixture()
+    try {
+      await Fs.writeFile(
+        Path.join(root, 'src/App.tsx'),
+        `import { cx, style } from 'zyzz'
+import { Note } from './Note'
+
+export function App(props: { tight: boolean }) {
+  return <view {...cx(styles.card(), props.tight && styles.tight())}><Note muted /></view>
+}
+
+namespace styles {
+  export const card = style({ display: 'flex', padding: '8px' })
+
+  export const tight = style({ padding: '4px' })
+}
+`,
+      )
+      await Fs.writeFile(
+        Path.join(root, 'src/Note.tsx'),
+        `import { cx, style } from 'zyzz'
+
+export function Note(props: { muted: boolean }) {
+  return <text {...cx(styles.note(), props.muted && styles.muted())} />
+}
+
+namespace styles {
+  export const note = style({ color: '#333', display: 'flex' })
+
+  export const muted = style({ color: '#999' })
+}
+`,
+      )
+
+      const result = await (await create(root)).build()
+      await result.close()
+
+      // Both compositions read one \`display: flex\` rule, and each conditional argument's
+      // conflicting declaration gets one copy after the shared rules.
+      expect((await template(root)).css).toMatchInlineSnapshot(`
+        [
+          ".z1 { color: #333 }",
+          ".z2 { display: flex }",
+          ".z3,.zA00 { color: #999 }",
+          ".z5 { padding: 8px }",
+          ".z6,.zA40 { padding: 4px }",
+        ]
+      `)
+
+      // Ordered composition keeps each composition's rules at its own position.
+      const ordered = await (
+        await create(root, {}, { composition: 'ordered' })
+      ).build()
+      await ordered.close()
+
+      expect((await template(root)).css).toMatchInlineSnapshot(`
+        [
+          ".z0 { color: #333 }",
+          ".z1 { display: flex }",
+          ".z2 { color: #333 }",
+          ".z3 { color: #999 }",
+          ".z4 { display: flex }",
+          ".z5,.z6 { padding: 8px }",
+          ".z7 { padding: 4px }",
+        ]
+      `)
+    } finally {
+      await Fs.rm(root, { force: true, recursive: true })
+    }
+  }, 120_000)
+
+  test('shares recipe base declarations with the units of plain styles', async () => {
+    const root = await fixture()
+    try {
+      await Fs.writeFile(
+        Path.join(root, 'src/App.tsx'),
+        `import { style } from 'zyzz'
+import { Badge } from './Badge'
+
+export function App(props: { tone: 'brand' | 'neutral' }) {
+  return <view {...styles.row()}><Badge tone={props.tone} /></view>
+}
+
+namespace styles {
+  export const row = style({ alignItems: 'center', display: 'flex' })
+}
+`,
+      )
+      await Fs.writeFile(
+        Path.join(root, 'src/Badge.tsx'),
+        `import { variants } from 'zyzz'
+
+export function Badge(props: { className?: string | undefined; tone: 'brand' | 'neutral' }) {
+  return <text className={styles.badge({ className: props.className, tone: props.tone })} />
+}
+
+namespace styles {
+  export const badge = variants({
+    base: { alignItems: 'center', display: 'flex', height: '20px' },
+    selection: 'className',
+    variants: { tone: { brand: { color: '#f60' }, neutral: { color: '#333' } } },
+  })
+}
+`,
+      )
+
+      const result = await (await create(root)).build()
+      await result.close()
+
+      const { css, mainThread } = await template(root)
+
+      // The recipe base reads the \`row\` units, so no declaration body repeats.
+      expect(css).toMatchInlineSnapshot(`
+        [
+          ".z1 { align-items: center }",
+          ".z2 { display: flex }",
+          ".z3 { height: 20px }",
+          ".zA00 { color: #f60 }",
+          ".zA01 { color: #333 }",
+        ]
+      `)
+      expect(
+        new Set(css.map((rule) => rule.slice(rule.indexOf('{')))).size,
+      ).toBe(css.length)
+
+      // The recipe stays callable for its dynamic tone and lists the shared units as its base.
+      expect(mainThread.match(/"z[0-9a-z]+(?: z[0-9a-z]+)+"/g))
+        .toMatchInlineSnapshot(`
+        [
+          ""z1 z2"",
+          ""z1 z2 z3"",
+        ]
+      `)
+    } finally {
+      await Fs.rm(root, { force: true, recursive: true })
+    }
+  }, 120_000)
+
+  test('keeps line longhands apart from the inset shorthand', async () => {
+    const root = await fixture()
+    try {
+      await Fs.writeFile(
+        Path.join(root, 'src/App.tsx'),
+        `import { style } from 'zyzz'
+
+export function App() {
+  return <view {...styles.backdrop()}><view {...styles.edge()} /></view>
+}
+
+namespace styles {
+  export const backdrop = style({
+    bottom: 0,
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+  })
+
+  export const edge = style({
+    bottom: 'auto',
+    left: 'calc(100% - 8px)',
+    right: '4px !important',
+    top: 0,
+  })
+}
+`,
+      )
+
+      const result = await (await create(root)).build()
+      await result.close()
+
+      // Lightning CSS merges four equal-importance sides into \`inset\`, which Lynx drops,
+      // so the host restores the longhands in the encoded stylesheet.
+      expect((await template(root)).css).toMatchInlineSnapshot(`
+        [
+          ".z0 { top: 0; right: 0; bottom: 0; left: 0 }",
+          ".z1 { position: absolute }",
+          ".z2 { top: 0; bottom: auto; left: calc(100% - 8px); right: 4px !important }",
+        ]
+      `)
+    } finally {
+      await Fs.rm(root, { force: true, recursive: true })
+    }
+  }, 60_000)
+
+  test('merges the units that every class list applies together in production builds', async () => {
+    const root = await fixture()
+    try {
+      // Two components whose rows share three units in the same combination, a conditional
+      // style whose two units always appear together, two text styles that repeat one pair,
+      // and a spacer with one unit of its own.
+      await Fs.writeFile(
+        Path.join(root, 'src/App.tsx'),
+        `import { cx, style } from 'zyzz'
+import { Card } from './Card'
+
+export function App(props: { active: boolean }) {
+  return (
+    <view {...cx(styles.row(), props.active && styles.active())}>
+      <text {...styles.label()}>Hello</text>
+      <Card />
+      <view {...styles.spacer()} />
+    </view>
+  )
+}
+
+namespace styles {
+  export const row = style({ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '4px' })
+
+  export const active = style({ backgroundColor: 'rgb(0, 102, 204)', borderRadius: '8px' })
+
+  export const label = style({ color: 'rgb(26, 26, 26)', fontSize: '14px' })
+
+  export const spacer = style({ height: '8px' })
+}
+`,
+      )
+      await Fs.writeFile(
+        Path.join(root, 'src/Card.tsx'),
+        `import { style } from 'zyzz'
+
+export function Card() {
+  return <view {...styles.card()}><text {...styles.title()}>Card</text></view>
+}
+
+namespace styles {
+  export const card = style({ display: 'flex', flexDirection: 'row', alignItems: 'center', padding: '8px' })
+
+  export const title = style({ color: 'rgb(26, 26, 26)', fontSize: '14px' })
+}
+`,
+      )
+
+      // The CSS minimizer would order each rule's declarations by name.
+      const unminified = { output: { minify: { css: false } } }
+      const merged = await production(root, {}, unminified)
+
+      // The three row units, the two conditional units, and the two text units each print as
+      // one rule under the first unit's name with the declarations in stylesheet order. The
+      // gap, padding, and height units keep their own rules.
+      expect(merged.css).toMatchInlineSnapshot(`
+        [
+          ".z0 { display: flex; flex-direction: row; align-items: center }",
+          ".z3 { padding: 8px }",
+          ".z4 { color: #1a1a1a; font-size: 14px }",
+          ".z6 { gap: 4px }",
+          ".z7 { background-color: #06c; border-radius: 8px }",
+          ".z9 { height: 8px }",
+        ]
+      `)
+      // Both threads name the merged unit once where the lists named every member.
+      expect(lists(merged.mainThread)).toMatchInlineSnapshot(`
+        [
+          "z0 z3",
+          "z4",
+          "z4",
+          "z9",
+          "z0 z6",
+          " z7",
+        ]
+      `)
+      expect(lists(merged.background)).toMatchInlineSnapshot(`
+        [
+          "z0 z6",
+          " z7",
+        ]
+      `)
+
+      // The option keeps one rule per unit.
+      const atomic = await production(root, { units: 'atomic' }, unminified)
+      expect(atomic.css).toMatchInlineSnapshot(`
+        [
+          ".z0 { display: flex }",
+          ".z1 { flex-direction: row }",
+          ".z2 { align-items: center }",
+          ".z3 { padding: 8px }",
+          ".z4 { color: #1a1a1a }",
+          ".z5 { font-size: 14px }",
+          ".z6 { gap: 4px }",
+          ".z7 { background-color: #06c }",
+          ".z8 { border-radius: 8px }",
+          ".z9 { height: 8px }",
+        ]
+      `)
+      expect(lists(atomic.mainThread)).toMatchInlineSnapshot(`
+        [
+          "z0 z1 z2 z3",
+          "z4 z5",
+          "z4 z5",
+          "z9",
+          "z0 z1 z2 z6",
+          " z7 z8",
+        ]
+      `)
+      expect(merged.css.length).toBe(atomic.css.length - 4)
+
+      // Every class list, alone and with each conditional piece, computes the same styles
+      // under the merged rules as under the atomic rules.
+      const properties = [
+        'align-items',
+        'background-color',
+        'border-radius',
+        'color',
+        'display',
+        'flex-direction',
+        'font-size',
+        'gap',
+        'height',
+        'padding',
+      ]
+      const browser = await chromium.launch()
+      try {
+        const page = await browser.newPage()
+        const styles = await computed(page, merged, properties)
+        expect(styles).toEqual(await computed(page, atomic, properties))
+        // Six lists, and five full lists extended with the one conditional piece.
+        expect(styles.length).toBe(11)
+        expect(styles[0]).toMatchInlineSnapshot(`
+          [
+            "center",
+            "rgba(0, 0, 0, 0)",
+            "0px",
+            "rgb(0, 0, 0)",
+            "flex",
+            "row",
+            "16px",
+            "normal",
+            "0px",
+            "8px",
+          ]
+        `)
+        expect(styles[10]).toMatchInlineSnapshot(`
+          [
+            "center",
+            "rgb(0, 102, 204)",
+            "8px",
+            "rgb(0, 0, 0)",
+            "flex",
+            "row",
+            "16px",
+            "4px",
+            "0px",
+            "0px",
+          ]
+        `)
+      } finally {
+        await browser.close()
+      }
+    } finally {
+      await Fs.rm(root, { force: true, recursive: true })
+    }
+  }, 180_000)
+
+  test('keeps co-used units apart when a rule between them declares a moved property', async () => {
+    const root = await fixture()
+    try {
+      // A style's nested rule prints between its own units in authored order. The heading's
+      // text rule declares opacity, the property of the unit that would move up past it, and
+      // the note's text rule declares nothing of its padding unit.
+      await Fs.writeFile(
+        Path.join(root, 'src/App.tsx'),
+        `import { style } from 'zyzz'
+
+export function App() {
+  return (
+    <view>
+      <view {...styles.heading()}><text>Heading</text></view>
+      <view {...styles.note()}><text>Note</text></view>
+    </view>
+  )
+}
+
+namespace styles {
+  export const heading = style({
+    color: 'rgb(26, 26, 26)',
+    selectors: { '& text': { color: 'rgb(0, 0, 0)', opacity: 1 } },
+    opacity: 0.5,
+  })
+
+  export const note = style({
+    color: 'rgb(0, 102, 204)',
+    selectors: { '& text': { color: 'rgb(0, 0, 0)' } },
+    padding: '4px',
+  })
+}
+`,
+      )
+
+      const merged = await production(root)
+
+      // The heading keeps three rules, and the note's color and padding share one.
+      expect(merged.css).toMatchInlineSnapshot(`
+        [
+          ".z0 { color: #1a1a1a }",
+          ".z1 text { color: #000 }",
+          ".z2 text { opacity: 1 }",
+          ".z3 { opacity: .5 }",
+          ".z4 { color: #06c; padding: 4px }",
+          ".z5 text { color: #000 }",
+        ]
+      `)
+      expect(lists(merged.mainThread)).toMatchInlineSnapshot(`
+        [
+          "z0 z1 z2 z3",
+          "z4 z5",
+        ]
+      `)
+    } finally {
+      await Fs.rm(root, { force: true, recursive: true })
+    }
+  }, 120_000)
 
   test('rebuilds the zyzz.css module after a style edit in watch mode', async () => {
     const root = await fixture()
@@ -600,10 +1488,10 @@ namespace styles {
 
       expect((await template(root)).css).toMatchInlineSnapshot(`
         [
-          ".z_i6Fywm0 { background-color: red }",
-          ".z_i6Fywm1 { padding: 8px }",
-          ".z_i6Fywm2 { color: #fff }",
-          ".z_i6Fywm3 { font-size: 20px }",
+          ".z0 { background-color: red }",
+          ".z1 { padding: 8px }",
+          ".z2 { color: #fff }",
+          ".z3 { font-size: 20px }",
         ]
       `)
     } finally {
@@ -654,10 +1542,10 @@ namespace styles {
       expect(await rebuilt).toMatchInlineSnapshot(`[]`)
       expect((await template(root)).css).toMatchInlineSnapshot(`
         [
-          ".z_i6Fywm0 { background-color: #06c }",
-          ".z_i6Fywm1 { padding: 8px }",
-          ".z_i6Fywm2 { color: #fff }",
-          ".z_i6Fywm3 { font-size: 20px }",
+          ".z0 { background-color: #06c }",
+          ".z1 { padding: 8px }",
+          ".z2 { color: #fff }",
+          ".z3 { font-size: 20px }",
         ]
       `)
     } finally {

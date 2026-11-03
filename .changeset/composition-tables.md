@@ -1,0 +1,5 @@
+---
+'zyzz-lynx': minor
+---
+
+`cx` calls that combined class-selection recipe applications with plain style applications, such as `cx(styles.cell({ segment }), today && styles.today())`, kept `runtime/Composition.js` in every module that used them, since only compositions of plain styles folded. Such a composition now selects its class list from a compile-time table indexed by the recipes' choices and the presence bits of its conditional arguments, so the module imports no composition helper. Recipe values stayed in place as the arguments of one module-scope selector, literal values folded into the index, omitted axes took their defaults, `null` selected nothing, later arguments won conflicts, and a Lynx build kept the renamed choice classes of each presence alternative. A recipe applied only inside such tables emits no rules of its own. Compositions whose table would exceed 256 entries, or that repeat one recipe, use compounds, conditions, payloads, imported styles, or HTML output, keep the runtime helper.

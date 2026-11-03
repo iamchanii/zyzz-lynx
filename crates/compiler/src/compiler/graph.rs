@@ -27,10 +27,11 @@ use crate::compiler::internal::stylesheets::{self, Rendered, Section};
 use crate::compiler::internal::syntax::{self, Parsed};
 use crate::compiler::internal::themes::{self, Link, LinkKind, Owner, VarsRead};
 use crate::compiler::internal::{
-    compositions, identifiers, literals, native_vars, relative, statics, unapplied, vars, wrappers,
+    compositions, dense, identifiers, literals, native_vars, relative, statics, unapplied, vars,
+    wrappers,
 };
 use crate::compiler::native;
-use crate::compiler::source::{self, Code, Diagnostic, ExtractError, Extracted, Target};
+use crate::compiler::source::{self, Call, Code, Diagnostic, ExtractError, Extracted, Target};
 use crate::compiler::transform::{self, Owners};
 use crate::data::Data;
 use crate::error::{Error, Result};
@@ -254,6 +255,8 @@ struct Module {
     calls: Vec<CallSummary>,
     contribution_starts: Vec<u32>,
     contributions: Vec<Contribution>,
+    /// Starts of scope selections folded to constant props.
+    folded: FxHashSet<u32>,
     /// Identities of imported styles whose applications fold to their class lists.
     imported: Vec<Arc<str>>,
     literals: Record<Arc<str>>,
@@ -263,6 +266,8 @@ struct Module {
     opaque: bool,
     /// Starts of applications whose class lists compositions replace.
     replaced: FxHashSet<u32>,
+    /// Whether a folded scope application selects a color scheme.
+    scope_schemes: bool,
     styles: style::Definition,
     theme_appearances: Vec<Arc<str>>,
     theme_calls: Vec<themes::Call>,
@@ -286,7 +291,10 @@ struct CallSummary {
 }
 
 impl Module {
-    fn detach(extracted: &Extracted<'_>) -> Self {
+    fn detach(extracted: &Extracted<'_>, options: &Options) -> Self {
+        let flat =
+            |call: &Call<'_>| compositions::flat(call, options.composition, options.development);
+
         Self {
             calls: extracted
                 .calls
@@ -309,6 +317,11 @@ impl Module {
                 .collect(),
             contribution_starts: extracted.contribution_starts.clone(),
             contributions: extracted.contributions.clone(),
+            folded: extracted
+                .scope_folds
+                .iter()
+                .map(|fold| fold.start)
+                .collect(),
             imported: extracted
                 .imported_applications
                 .iter()
@@ -318,7 +331,11 @@ impl Module {
             namespaces: extracted.namespaces.clone(),
             native_vars: extracted.native_vars.clone(),
             opaque: false,
-            replaced: compositions::replaced(&extracted.calls),
+            replaced: compositions::replaced(&extracted.calls, flat),
+            scope_schemes: extracted
+                .scope_folds
+                .iter()
+                .any(|fold| fold.fold.scheme.is_some()),
             styles: extracted.styles.clone(),
             theme_appearances: extracted.theme_appearances.clone(),
             theme_calls: extracted.theme_calls.clone(),
@@ -367,6 +384,8 @@ struct Transformed {
     /// The wrapper folds of each import the transform read, by specifier.
     components: Vec<(Arc<str>, Option<Arc<wrappers::Exports>>)>,
     extracted: Arc<Module>,
+    /// The dense keyframe names the transform printed, when the graph allocated them.
+    keyframes: Option<Arc<dense::Keyframes>>,
     /// The identity classes of this module's calls that selectors reference, when known.
     markers: Option<Box<[Arc<str>]>>,
     output: Arc<transform::Output>,
@@ -375,8 +394,8 @@ struct Transformed {
     /// The settled import names the transform read.
     settled: Option<FxHashSet<Arc<str>>>,
     themes: Record<Arc<Definition>>,
-    /// The exported definitions the transform left without rules.
-    unapplied: Option<FxHashSet<Arc<str>>>,
+    /// The exported definitions and selectors the transform left without their runtime.
+    unapplied: Option<unapplied::Unused>,
 }
 
 /// Token resources a lean graph emitted once for the references of its deferred modules.
@@ -399,6 +418,8 @@ struct Cache {
     development: bool,
     entry: Option<Arc<str>>,
     extracted: Map<Arc<Module>>,
+    /// Dense keyframe names of a Lynx production graph.
+    keyframes: Option<Arc<dense::Keyframes>>,
     lean: bool,
     libraries: Map<Arc<Library>>,
     lynx: bool,
@@ -418,7 +439,7 @@ struct Cache {
     sources: Map<Arc<str>>,
     themes: Record<Arc<Definition>>,
     transformed: Map<Transformed>,
-    unapplied: Option<Arc<unapplied::Definitions>>,
+    unapplied: Option<Arc<unapplied::Exports>>,
 }
 
 /// The bound on cached extractions and transforms, evicting the earliest cached module. A recompile
@@ -2114,7 +2135,7 @@ impl<'p, 'a> Build<'p, 'a> {
         let module = Arc::new(Module {
             literals: linked.literals,
             opaque: linked.opaque,
-            ..Module::detach(&linked.extracted)
+            ..Module::detach(&linked.extracted, self.options)
         });
         // A module re-extracted only because a dependency changed usually extracts as before.
         // Keeping the previous identity then lets the modules that read it reuse their own
@@ -2684,6 +2705,7 @@ impl Build<'_, '_> {
         modules: &Map<Arc<transform::Output>>,
         scopes: &[(Arc<str>, Scope)],
         schemes: bool,
+        naming: theme_rules::Options,
         previous: Option<&Cache>,
     ) -> Result<Arc<Scoped>> {
         let mut seen: FxHashSet<usize> = FxHashSet::default();
@@ -2719,7 +2741,7 @@ impl Build<'_, '_> {
             return Ok(Arc::clone(cached));
         }
 
-        let mut collector = Themes::new();
+        let mut collector = Themes::create(naming);
 
         for reference in &references {
             collector.serialize(reference);
@@ -3338,6 +3360,7 @@ impl Build<'_, '_> {
             development: options.development,
             entry: options.entry.clone(),
             extracted: self.extracted,
+            keyframes: None,
             lean: options.lean,
             libraries: self.libraries,
             lynx: options.lynx,
@@ -3372,14 +3395,15 @@ impl Build<'_, '_> {
     }
 
     /// Exported definitions that no module applies outside the compositions replacing their
-    /// class lists, by module identity.
-    fn unapplied(&self) -> unapplied::Definitions {
+    /// class lists, and exported variable configurations whose selector no module calls with
+    /// other than folded literal arguments, by module identity.
+    fn unapplied(&self) -> unapplied::Exports {
         let none = FxHashSet::default();
         let mut modules = Vec::with_capacity(self.options.modules.len());
 
-        // Every supplied module may read a definition, extracted or not.
+        // Every supplied module may read a definition or selector, extracted or not.
         for id in self.options.modules.keys() {
-            // An unparsed module could read any definition.
+            // An unparsed module could read any export.
             let Some(parsed) = self.parse(id) else {
                 return FxHashMap::default();
             };
@@ -3394,9 +3418,16 @@ impl Build<'_, '_> {
                     })
                     .map(|call| (call.start, &call.name))
                     .collect(),
+                folded: module.map_or(&none, |module| &module.folded),
                 id,
                 parsed,
                 replaced: module.map_or(&none, |module| &module.replaced),
+                selectors: module
+                    .iter()
+                    .flat_map(|module| &module.theme_calls)
+                    .filter(|call| call.variable_config)
+                    .map(|call| (call.start, &call.name))
+                    .collect(),
             });
         }
 
@@ -3764,6 +3795,28 @@ impl Build<'_, '_> {
             .iter()
             .map(|(name, theme)| (Arc::clone(name), Scope::Definition(theme.metadata.clone())))
             .collect();
+        // A Lynx production build that rewrites every module of the application names classes,
+        // token custom properties, and keyframes from dense tables, since nothing outside the
+        // bundle reads the names. Development and partial graphs keep readable names, which
+        // stay stable module by module.
+        let dense_names = options.lynx && rewrite && !options.development && options.complete;
+        // Every cache of a transform compares the theme table, which alone determines these
+        // names, so a cached module never prints a stale name.
+        let variables: Option<Arc<theme_rules::Names>> = dense_names.then(|| {
+            Arc::new(theme_rules::dense_names(scopes.iter().filter_map(
+                |(_, scope)| match scope {
+                    Scope::Definition(data) => Some(data),
+                    Scope::Invalid | Scope::Nullish => None,
+                },
+            )))
+        });
+        let keyframes: Option<Arc<dense::Keyframes>> = dense_names.then(|| {
+            Arc::new(dense::keyframes(
+                ids.iter()
+                    .filter_map(|id| self.extracted.get(id))
+                    .flat_map(|module| module.contributions.iter()),
+            ))
+        });
         let mut sections: Map<Vec<Section>> = Map::default();
 
         for id in ids {
@@ -3779,6 +3832,10 @@ impl Build<'_, '_> {
             let mut list = Vec::with_capacity(module.contributions.len());
 
             for (index, contribution) in module.contributions.iter().enumerate() {
+                let renamed = keyframes
+                    .as_ref()
+                    .and_then(|renamed| dense::rename_contribution(contribution, renamed));
+                let contribution = renamed.as_ref().unwrap_or(contribution);
                 let (css, layers) = if let ContributionKind::Layers { names } = &contribution.kind {
                     (Arc::from(""), vec![names.clone()])
                 } else {
@@ -3787,6 +3844,7 @@ impl Build<'_, '_> {
                             contributions: std::slice::from_ref(contribution),
                             contributions_only: true,
                             lynx: options.lynx,
+                            variables: variables.as_ref(),
                             vars: Some(&scopes),
                             ..css::Options::default()
                         },
@@ -4053,6 +4111,7 @@ impl Build<'_, '_> {
             !module.theme_appearances.is_empty()
                 || !module.theme_scripts.is_empty()
                 || !module.theme_selections.is_empty()
+                || module.scope_schemes
         });
         let owner_signature: Arc<[(Arc<str>, usize)]> = self
             .owners
@@ -4066,7 +4125,11 @@ impl Build<'_, '_> {
                 (Arc::clone(key), module)
             })
             .collect();
-        let mut registry = Registry::new();
+        let mut registry = if dense_names {
+            Registry::dense()
+        } else {
+            Registry::new()
+        };
         let mut closures: FxHashMap<Arc<str>, Arc<FxHashSet<Arc<str>>>> = FxHashMap::default();
         let mut modules: Map<Arc<transform::Output>> = Map::default();
         let mut transformed = previous
@@ -4098,6 +4161,7 @@ impl Build<'_, '_> {
         let unapplied = (rewrite && !options.development && options.complete && options.references)
             .then(|| Arc::new(self.unapplied()));
         let same_unapplied = previous.is_some_and(|previous| previous.unapplied == unapplied);
+        let same_keyframes = previous.is_some_and(|previous| previous.keyframes == keyframes);
 
         // Extraction visits dependencies first, and their emitted classes must precede consumers.
         for module_id in &order {
@@ -4152,6 +4216,7 @@ impl Build<'_, '_> {
                     && cached.owners == owner_signature
                     && cached.markers == markers
                     && cached.unapplied.as_ref() == module_unapplied
+                    && cached.keyframes == keyframes
             });
             // A module that re-extracts equal after a dependency edit keeps its identity, so an
             // evicted transform is checked against the classes and owners it read.
@@ -4182,6 +4247,7 @@ impl Build<'_, '_> {
                         same_themes
                             && same_references
                             && same_unapplied
+                            && same_keyframes
                             && previous.schemes == schemes
                             && previous
                                 .extracted
@@ -4213,6 +4279,17 @@ impl Build<'_, '_> {
                     .get(compact.len().saturating_sub(6)..)
                     .unwrap_or_default();
                 let mut units = registry.scope(module_id, qualifier, visible);
+
+                if dense_names {
+                    dense::rename(&mut extracted, &mut units, |call| {
+                        compositions::flat(call, options.composition, options.development)
+                    });
+                }
+
+                if let Some(renamed) = &keyframes {
+                    dense::rename_keyframes(&mut extracted, renamed);
+                }
+
                 let imported: wrappers::Imports = read
                     .iter()
                     .filter_map(|(specifier, exports)| {
@@ -4242,6 +4319,7 @@ impl Build<'_, '_> {
                         source: parsed.source,
                         style_classes: Some(&style_classes),
                         unapplied: module_unapplied,
+                        variables: variables.as_ref(),
                         wrappers: (!imported.is_empty()).then_some(&imported),
                     },
                     &extracted,
@@ -4283,6 +4361,7 @@ impl Build<'_, '_> {
                     classes,
                     components: read,
                     extracted: Arc::clone(&module),
+                    keyframes: keyframes.clone(),
                     markers,
                     output: Arc::clone(&output),
                     owners: Arc::clone(&owner_signature),
@@ -4340,6 +4419,10 @@ impl Build<'_, '_> {
                 &modules,
                 &scopes,
                 schemes,
+                theme_rules::Options {
+                    lynx: options.lynx,
+                    names: variables.clone(),
+                },
                 previous.filter(|previous| same_themes && previous.schemes == schemes),
             )?)
         } else {
@@ -4552,6 +4635,7 @@ impl Build<'_, '_> {
             development: options.development,
             entry: options.entry.clone(),
             extracted: self.extracted,
+            keyframes,
             lean: options.lean,
             libraries: self.libraries,
             lynx: options.lynx,

@@ -23,9 +23,6 @@ mod compile {
         insta::assert_snapshot!(output["error"], @"null");
         insta::assert_snapshot!(output["modules"]["select.ts"]["css"].as_str().unwrap_or_default(), @"
         .z-theme-theme{--z-color-brand:red;}
-        .z_scheme-dark{color-scheme:dark;}
-        .z_scheme-light{color-scheme:light;}
-        .z_scheme-light-dark{color-scheme:light dark;}
         .z_PAxzm40{&[data-highlighted]{color:var(--z-color-brand,red);}}
         ");
 
@@ -317,6 +314,69 @@ mod create {
         insta::assert_snapshot!((output == &fresh["modules"]["card.ts"]).to_string(), @"true");
     }
 
+    /// A complete Lynx graph of two independent modules. The first declares `declarations`, and
+    /// the second repeats one body twice and selects a recipe choice with a class.
+    fn dense(declarations: &str) -> String {
+        let first = json(&format!("import {{style}} from 'zyzz';{declarations}"));
+        let second = json(
+            "import {style,variants} from 'zyzz';export const one=style({color:'red'});export const two=style({color:'red'});export const badge=variants({variants:{size:{large:{height:'40px'}}}});",
+        );
+
+        format!(
+            r#"{{"complete":true,"imports":{{"a.ts":{{"zyzz":null}},"b.ts":{{"zyzz":null}}}},"modules":{{"a.ts":{first},"b.ts":{second}}},"target":"lynx"}}"#
+        )
+    }
+
+    #[test]
+    fn dense_names_follow_earlier_edits() {
+        let mut compiler = Compiler::default();
+        let parse =
+            |text: String| -> serde_json::Value { serde_json::from_str(&text).unwrap_or_default() };
+        let css = |output: &serde_json::Value, id: &str| {
+            output["modules"][id]["css"]
+                .as_str()
+                .unwrap_or_default()
+                .to_owned()
+        };
+        let before = parse(compiler.compile(&dense("export const base=style({color:'red'});")));
+
+        // The second module's names continue the table after the first module's: its recipe
+        // prefix first, then one unit for both equal bodies. Each module keeps its own rule for
+        // a body another module also declares, as on the web.
+        insta::assert_snapshot!(css(&before, "a.ts"), @".z0{color:red;}");
+        insta::assert_snapshot!(css(&before, "b.ts"), @"
+        .z2{color:red;}
+        .zA10{height:40px;}
+        ");
+        insta::assert_snapshot!(
+            before["modules"]["b.ts"]["classes"].to_string(),
+            @r#"{"style-11y9gbo1jwwb9w-53":"z2 z-style-hYrPIe-one","style-11y9gbo1jwwb9w-91":"z2 z-style-hYrPIe-two","style-11y9gbo1jwwb9w-131":"z-style-hYrPIe-badge"}"#
+        );
+
+        let edited = parse(compiler.compile(&dense(
+            "export const base=style({color:'red'});export const added=style({padding:'2px'});",
+        )));
+        let fresh = parse(Compiler::default().compile(&dense(
+            "export const base=style({color:'red'});export const added=style({padding:'2px'});",
+        )));
+
+        insta::assert_snapshot!(edited["error"], @"null");
+        // The first module's new name shifts the table, so the cached second module recompiles
+        // to the names a fresh compilation chooses instead of keeping names the first now holds.
+        insta::assert_snapshot!(css(&edited, "a.ts"), @"
+        .z0{color:red;}
+        .z1{padding:2px;}
+        ");
+        insta::assert_snapshot!(css(&edited, "b.ts"), @"
+        .z3{color:red;}
+        .zA20{height:40px;}
+        ");
+        insta::assert_snapshot!(
+            (edited["modules"]["b.ts"] == fresh["modules"]["b.ts"]).to_string(),
+            @"true"
+        );
+    }
+
     fn themed(note: &str) -> String {
         let theme = json(&format!(
             "import {{Vars}} from 'zyzz';export const theme=Vars.define({{color:{{brand:'#06c'}}}});export const note='{note}';"
@@ -516,9 +576,6 @@ mod transform {
         insta::assert_snapshot!(output["error"], @"null");
         insta::assert_snapshot!(output["css"].as_str().unwrap_or_default(), @"
         .z-theme-theme{--z-color-brand:red;}
-        .z_scheme-dark{color-scheme:dark;}
-        .z_scheme-light{color-scheme:light;}
-        .z_scheme-light-dark{color-scheme:light dark;}
         .z_PAxzm40{&[data-highlighted]{color:var(--z-color-brand,red);}}
         ");
     }

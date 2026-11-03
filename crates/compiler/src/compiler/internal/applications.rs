@@ -1,8 +1,8 @@
 //! Finds direct applications of local style definitions so the transform can fold or erase them.
 //!
 //! A candidate is a top-level `const` bound to a definition call, a top-level object of such
-//! calls, or a non-exported namespace of `const` calls. Applications are no-argument calls of a
-//! candidate or one of its exported members, or calls whose only argument overrides
+//! calls, or a non-exported namespace of `const` calls and records. Applications are no-argument
+//! calls of a candidate or one of its exported members, or calls whose only argument overrides
 //! `className`. Reads that escape keep the runtime callable. Exported top-level definitions are
 //! candidates only on request, and other modules can read them, so they never fold or erase.
 
@@ -156,11 +156,17 @@ struct Candidate<'c, 'a> {
     exported: bool,
     /// Object or exported namespace members in authored order, by member name.
     members: Members<'c, 'a>,
+    /// Whether evaluating the namespace's records calls no function, so the namespace statement
+    /// counts as inert.
+    inert: bool,
     name: Arc<str>,
     namespace: Option<Namespace>,
     /// Non-exported namespace members, which only sibling definitions can read.
     private: Members<'c, 'a>,
     ready: u32,
+    /// Namespace members bound to values other than definition calls, such as `const` records
+    /// that definitions spread. A read of one keeps the namespace object.
+    records: FxHashSet<Arc<str>>,
     /// Start of the top-level statement that declares the candidate.
     statement: u32,
 }
@@ -271,10 +277,12 @@ pub fn create<'c, 'a>(
         {
             let mut members = Members::with_capacity_and_hasher(block.body.len(), FxBuildHasher);
             let mut private = Members::default();
+            let mut records: FxHashSet<Arc<str>> = FxHashSet::default();
             let mut declarations = crate::js::Record::new();
             let mut ends = crate::js::Record::new();
             let mut bindings = Vec::with_capacity(block.body.len());
             let mut valid = true;
+            let mut inert_records = true;
 
             names.reserve(block.body.len());
 
@@ -300,16 +308,25 @@ pub fn create<'c, 'a>(
                         valid = false;
                         break 'members;
                     };
-                    let call = declarator
-                        .init
-                        .as_ref()
-                        .and_then(|init| is_call_of(&definitions, init));
-                    let Some(call) = call.filter(|_| {
-                        !members.contains_key(identifier.name.as_str())
-                            && !private.contains_key(identifier.name.as_str())
-                    }) else {
+                    let Some(init) = &declarator.init else {
                         valid = false;
                         break 'members;
+                    };
+
+                    if members.contains_key(identifier.name.as_str())
+                        || private.contains_key(identifier.name.as_str())
+                        || records.contains(identifier.name.as_str())
+                    {
+                        valid = false;
+                        break 'members;
+                    }
+
+                    // A member bound to another value is a record that sibling definitions may
+                    // spread. It stays authored code, so it never folds.
+                    let Some(call) = is_call_of(&definitions, init) else {
+                        inert_records &= inert_expression(init, semantic, &definitions);
+                        records.insert(Arc::from(identifier.name.as_str()));
+                        continue;
                     };
                     // ESTree identifier ranges include their type annotation.
                     let end = declarator
@@ -343,6 +360,7 @@ pub fn create<'c, 'a>(
                     binding: namespace.id.span,
                     direct: None,
                     exported: false,
+                    inert: inert_records,
                     members,
                     name: Arc::from(namespace.id.name.as_str()),
                     namespace: Some(Namespace {
@@ -354,6 +372,7 @@ pub fn create<'c, 'a>(
                     }),
                     private,
                     ready: namespace.span.end,
+                    records,
                     statement: namespace.span.start,
                 });
             }
@@ -437,11 +456,13 @@ pub fn create<'c, 'a>(
                 binding: identifier.span,
                 direct,
                 exported,
+                inert: true,
                 members,
                 name: Arc::from(identifier.name.as_str()),
                 namespace: None,
                 private: Members::default(),
                 ready: declarator.span.end,
+                records: FxHashSet::default(),
                 statement: variable.span.start,
             });
         }
@@ -494,6 +515,7 @@ pub fn create<'c, 'a>(
 
     let namespaces: FxHashSet<u32> = candidates
         .iter()
+        .filter(|candidate| candidate.inert)
         .filter_map(|candidate| {
             candidate
                 .namespace
@@ -1120,6 +1142,12 @@ impl<'c, 'a> Applications<'c, 'a> {
                     return Err(reference.span);
                 };
 
+                // A record stays authored code, so any read of it only keeps the namespace.
+                if let Some(record) = candidate.records.get(name) {
+                    called.insert(Arc::clone(record));
+                    continue;
+                }
+
                 (
                     candidate.members.get(name).copied(),
                     member,
@@ -1292,7 +1320,16 @@ impl<'c, 'a> Applications<'c, 'a> {
             let Ok((applications, called)) = collected else {
                 continue;
             };
-            let mut erased = candidate.namespace.is_some();
+            // An erased namespace takes its records with it, so one a type names or another
+            // read reaches keeps its object. Ambient records could not keep their initializers.
+            let mut erased = candidate.namespace.as_ref().is_some_and(|namespace| {
+                candidate.records.is_empty()
+                    || (!namespace.typed
+                        && !candidate
+                            .records
+                            .iter()
+                            .any(|record| called.contains(record)))
+            });
             let uninitialized: FxHashSet<&str> = applications
                 .iter()
                 .filter(|application| !application.initialized)
@@ -1342,8 +1379,9 @@ impl<'c, 'a> Applications<'c, 'a> {
     }
 
     /// Applications of each dynamic or recipe definition that bind an object literal on a DOM
-    /// element alone, by definition name, in candidate order.
-    pub fn bound(&self) -> Bounds<'a> {
+    /// element alone, by definition name, in candidate order. `excluded` holds the starts of
+    /// applications a composition table replaces, which count as neither bound nor partial.
+    pub fn bound(&self, excluded: &FxHashSet<u32>) -> Bounds<'a> {
         let mut output = Bounds::default();
 
         if self.evaluation {
@@ -1423,6 +1461,13 @@ impl<'c, 'a> Applications<'c, 'a> {
 
                     (candidate, call, span, reference.grandparent)
                 };
+
+                if call_of(application, callee)
+                    .is_some_and(|node| excluded.contains(&node.span.start))
+                {
+                    continue;
+                }
+
                 let span = reference
                     .bound
                     .filter(|_| {

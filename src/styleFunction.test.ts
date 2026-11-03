@@ -2409,7 +2409,8 @@ namespace styles {
   export const parent=style();
   const shared={selectors:{[\`\${parent}:hover &\`]:{color:'red'}}};
   export const child=style(shared);
-}`,
+}
+export const props=styles.child();`,
         },
       })
       expect(output.modules['static.ts']!.css).toMatchInlineSnapshot(

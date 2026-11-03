@@ -1739,9 +1739,6 @@ describe('compile', () => {
 
     expect(output.css).toMatchInlineSnapshot(`
       ".z-theme-theme{--z-spacing-space:12px;}
-      .z_scheme-dark{color-scheme:dark;}
-      .z_scheme-light{color-scheme:light;}
-      .z_scheme-light-dark{color-scheme:light dark;}
       .z_i9aFWE0{width:60px;}
       .z_i9aFWE1{inline-size:70px;inline-size:80px!important;}
       .z_i9aFWE2{block-size:40px;}
@@ -2056,9 +2053,6 @@ describe('compile', () => {
 
     expect(output.css).toMatchInlineSnapshot(`
       ".z-theme-theme{--z-spacing-2-5:10px;--z-spacing-0-5:2px;--z-spacing-0:0px;}
-      .z_scheme-dark{color-scheme:dark;}
-      .z_scheme-light{color-scheme:light;}
-      .z_scheme-light-dark{color-scheme:light dark;}
       .z_OyLMsc0{gap:var(--z-spacing-2-5,10px);}
       .z_OyLMsc1{margin:var(--z-spacing-0-5,2px);}
       .z_OyLMsc2{padding:var(--z-spacing-0,0px);}"
@@ -2103,9 +2097,6 @@ describe('compile', () => {
 
     expect(output.css).toMatchInlineSnapshot(`
       ".z-theme-theme{--z-color-brand:#06c;}
-      .z_scheme-dark{color-scheme:dark;}
-      .z_scheme-light{color-scheme:light;}
-      .z_scheme-light-dark{color-scheme:light dark;}
       .z_wjwnAQ0{color:#000;color:var(--z-color-brand,#06c);color:var(--z-color-brand,#06c)!important;}
       .z_wjwnAQ1{display:block;display:flex;}
       .z_wjwnAQ2{opacity:0.25!important;opacity:0.75;}
@@ -2191,21 +2182,16 @@ describe('compile', () => {
 
     expect(result.code).toMatchInlineSnapshot(`
       "
-      import { Selection as __zyzzSelection } from 'zyzz/runtime';
-
 
       const theme = ({} as import('zyzz').Vars.Definition<{readonly "color":{readonly "transparent":"#06c";readonly "palette":{readonly 500:"#123"}};readonly "spacing":{readonly 0:"8px";readonly 4:"16px"}}>); const themeConfig=({} as import('zyzz').Config.VariableConfig<{readonly "vars":{readonly "color":{readonly "transparent":"#06c";readonly "palette":{readonly "500":"#123"}};readonly "spacing":{readonly "0":"8px";readonly "4":"16px"}}}>);
-      const alternate = ({} as import('zyzz').Vars.Definition<{readonly "color":{readonly "transparent":"#06c";readonly "palette":{readonly 500:"#123"}};readonly "spacing":{readonly 0:"8px";readonly 4:"16px"}}>); const alternateConfig=({vars:__zyzzSelection.create([["default","z-theme-theme"]],false,'set',"default")} as import('zyzz').Config.VariableConfig<{readonly "vars":{readonly "color":{readonly "transparent":"#175";readonly "palette":{readonly "500":"#456"}};readonly "spacing":{readonly "0":"8px";readonly "4":"16px"}}}>);
+      const alternate = ({} as import('zyzz').Vars.Definition<{readonly "color":{readonly "transparent":"#06c";readonly "palette":{readonly 500:"#123"}};readonly "spacing":{readonly 0:"8px";readonly 4:"16px"}}>); const alternateConfig=({} as import('zyzz').Config.VariableConfig<{readonly "vars":{readonly "color":{readonly "transparent":"#175";readonly "palette":{readonly "500":"#456"}};readonly "spacing":{readonly "0":"8px";readonly "4":"16px"}}}>);
       const { style } = (themeConfig as import('zyzz').Config.VariableConfig<{readonly "vars":{readonly "color":{readonly "transparent":"#06c";readonly "palette":{readonly "500":"#123"}};readonly "spacing":{readonly "0":"8px";readonly "4":"16px"}}}>);
-      export const scope = alternateConfig.vars().className;
+      export const scope = ({className:"z-theme-theme"}).className;
       export const props = ({className:"z_tVIWWz0 z_tVIWWz1 z_tVIWWz2"});
       "
     `)
     expect(result.css).toMatchInlineSnapshot(`
       ".z-theme-theme{--z-color-transparent:#06c;--z-color-palette-500:#123;--z-spacing-0:8px;}
-      .z_scheme-dark{color-scheme:dark;}
-      .z_scheme-light{color-scheme:light;}
-      .z_scheme-light-dark{color-scheme:light dark;}
       .z_tVIWWz0{color:var(--z-color-transparent,#06c);}
       .z_tVIWWz1{border-color:var(--z-color-palette-500,#123);}
       .z_tVIWWz2{padding:var(--z-spacing-0,8px);}"
@@ -2389,20 +2375,15 @@ describe('compile', () => {
 
     expect(result.code).toMatchInlineSnapshot(`
       "
-      import { Selection as __zyzzSelection } from 'zyzz/runtime';
-
 
       const theme = ({} as import('zyzz').Vars.Definition<{readonly "color":{readonly "brand":{readonly "dark":"#fff";readonly "light":"#000"}};readonly "spacing":{readonly 1:"4px";readonly "md":"8px"}}>); const themeConfig=({} as import('zyzz').Config.VariableConfig<{readonly "vars":{readonly "color":{readonly "brand":{readonly "light":"#000";readonly "dark":"#fff"}};readonly "spacing":{readonly "1":"4px";readonly "md":"8px"}}}>);
-      const alternate = ({} as import('zyzz').Vars.Definition<{readonly "color":{readonly "brand":{readonly "dark":"#fff";readonly "light":"#000"}};readonly "spacing":{readonly 1:"4px";readonly "md":"8px"}}>); const alternateConfig=({vars:__zyzzSelection.create([["default","z-theme-theme"]],false,'set',"default")} as import('zyzz').Config.VariableConfig<{readonly "vars":{readonly "color":{readonly "brand":"#f00"};readonly "spacing":{readonly "1":"4px";readonly "md":"8px"}}}>);
+      const alternate = ({} as import('zyzz').Vars.Definition<{readonly "color":{readonly "brand":{readonly "dark":"#fff";readonly "light":"#000"}};readonly "spacing":{readonly 1:"4px";readonly "md":"8px"}}>); const alternateConfig=({} as import('zyzz').Config.VariableConfig<{readonly "vars":{readonly "color":{readonly "brand":"#f00"};readonly "spacing":{readonly "1":"4px";readonly "md":"8px"}}}>);
       export type Brand = typeof theme.color.brand;
-      export const scope = alternateConfig.vars().className;
+      export const scope = ({className:"z-theme-theme"}).className;
       export const props = ({className:"z_pXWEgW0 z_pXWEgW1"});"
     `)
     expect(result.css).toMatchInlineSnapshot(`
       ".z-theme-theme{--z-color-brand:light-dark(#000,#fff);--z-spacing-md:8px;}
-      .z_scheme-dark{color-scheme:dark;}
-      .z_scheme-light{color-scheme:light;}
-      .z_scheme-light-dark{color-scheme:light dark;}
       .z_pXWEgW0{color:var(--z-color-brand,light-dark(#000,#fff));}
       .z_pXWEgW1{padding:var(--z-spacing-md,8px);}"
     `)
@@ -3492,7 +3473,7 @@ export const button=variants({base:{display:'flex'},variants:{active:{false:{opa
         export const base=(1 as unknown as import('zyzz').style.ReturnType)
         export const outer=(1 as unknown as import('zyzz').style.ReturnType)
         export const inline=/*#__PURE__*/__zyzzProps.create({className:"z_l0kPgl2"})
-        export const button=(((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className,style=input.style,vars=input.vars,inline=vars?{...vars,...style}:style,className=external?"z_l0kPgl3 z_l0kPgl4 z_l0kPgl5 z_l0kPgl6"+" "+external:"z_l0kPgl3 z_l0kPgl4 z_l0kPgl5 z_l0kPgl6",result:Record<string,unknown>=inline?{className,style:inline}:{className};let value;value=Object.prototype.hasOwnProperty.call(input,"active")?input["active"]:void 0;if(value!==null&&value!==void 0)result["data-active"]=String(value);value=Object.prototype.hasOwnProperty.call(input,"tone")?input["tone"]:void 0;if(value===void 0)value="quiet";if(value!==null&&value!==void 0)result["data-tone"]=String(value);return result}) as unknown as import('zyzz').variants.ReturnType<{variants:{"active":{"false":{};"true":{}};"tone":{"loud":{};"quiet":{}}}}>)
+        export const button=(((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className,style=input.style,vars=input.vars,inline=vars?{...vars,...style}:style,className=external?"z_l0kPgl3 z_l0kPgl4 z_l0kPgl5 z_l0kPgl6"+" "+external:"z_l0kPgl3 z_l0kPgl4 z_l0kPgl5 z_l0kPgl6",result:Record<string,unknown>=inline?{className,style:inline}:{className};let value;value=input["active"];if(value!==null&&value!==void 0)result["data-active"]=String(value);value=input["tone"];if(value===void 0)value="quiet";if(value!==null&&value!==void 0)result["data-tone"]=String(value);return result}) as unknown as import('zyzz').variants.ReturnType<{variants:{"active":{"false":{};"true":{}};"tone":{"loud":{};"quiet":{}}}}>)
         }"
       `)
 
@@ -3654,9 +3635,9 @@ export const bar=style((values:{width:\`\${number}px\`})=>({width:values.width})
           source: source.replace('active, tone })', `active, ${value} })`),
         })
 
-        expect(
-          kept.code.includes('Object.prototype.hasOwnProperty.call(input'),
-        ).toMatchInlineSnapshot(`true`)
+        expect(kept.code.includes('value=input["tone"]')).toMatchInlineSnapshot(
+          `true`,
+        )
       }
     })
 
@@ -3775,6 +3756,183 @@ export const button = variants({ base: { display: 'flex' }, defaultVariants: { t
         await browser.close()
       }
     })
+
+    test('selects class-selection recipe and conditional style compositions from class tables', async () => {
+      const output = Transform.compile({
+        moduleId: 'App.tsx',
+        source: `import { cx, style, variants } from 'zyzz'
+type P = { middle?: boolean; segment?: 'none' | 'start' | 'middle' | 'end' | null; today?: boolean; tone?: 'loud' | 'quiet' | null }
+export const App = (props: P) => <main>
+<span {...cx(styles.cell({ segment: props.segment }), props.middle && props.today === false && styles.weekStart(), props.middle && props.today && styles.weekEnd(), props.today && styles.today())}>calendar</span>
+<span {...cx(styles.badge({ tone: props.tone }), props.today && styles.today())}>badge</span>
+<span {...cx(styles.badge({ tone: 'loud' }), styles.cell({ segment: 'end' }))}>both</span>
+<span {...cx(styles.badge(), styles.today())}>default</span>
+<span {...cx(styles.badge({ tone: null }), props.today && styles.today())}>null</span>
+</main>
+namespace styles {
+  export const cell = variants({ base: { color: 'rgb(0, 0, 0)', paddingLeft: '1px' }, selection: 'class', variants: { segment: { none: {}, start: { paddingLeft: '2px' }, middle: { color: 'rgb(0, 0, 255)' }, end: { paddingLeft: '3px' } } } })
+  export const badge = variants({ base: { borderLeft: '1px solid' }, defaultVariants: { tone: 'quiet' }, selection: 'class', variants: { tone: { loud: { color: 'rgb(255, 0, 0)' }, quiet: { color: 'rgb(128, 128, 128)' } } } })
+  export const weekStart = style({ paddingLeft: '4px' })
+  export const weekEnd = style({ paddingLeft: '5px' })
+  export const today = style({ color: 'rgb(0, 128, 0)' })
+}`,
+      })
+
+      // The web target copies no choice rules, so every entry keeps the recipe's own choice
+      // class, which the alternative's nested rules select.
+      expect(output.code.includes('zyzz/runtime')).toMatchInlineSnapshot(
+        `false`,
+      )
+      expect(output.code).toMatchInlineSnapshot(`
+        "
+        const __zyzzClasses0=["z_l0kPgl0 z_l0kPgl1 z_l0kPgl2 z_l0kPgl3 z_l0kPgl4","z_l0kPgl0 z_l0kPgl3 z_l0kPgl5 z_l0kPgl6 z_l0kPgl7 z_l0kPgl8","z_l0kPgl0 z_l0kPgl3 z_l0kPgl9 z_l0kPgla z_l0kPglb z_l0kPglc","z_l0kPgl0 z_l0kPgl3 z_l0kPgld z_l0kPgle z_l0kPglf z_l0kPglg z_l0kPglh","z_l0kPgli z_l0kPglj z_l0kPglk z_l0kPgll z_l0kPglm z_l0kPgln","z_l0kPgli z_l0kPgll z_l0kPgln z_l0kPglo z_l0kPglp z_l0kPglq z_l0kPglr","z_l0kPgli z_l0kPgll z_l0kPgln z_l0kPgls z_l0kPglt z_l0kPglu z_l0kPglv","z_l0kPgli z_l0kPgll z_l0kPgln z_l0kPglw z_l0kPglx z_l0kPgly z_l0kPglz z_l0kPgl10","z_l0kPgl0 z_l0kPgl1 z_l0kPgl2 z_l0kPgl3 z_l0kPgl4 zv6gXUp5h61","z_l0kPgl0 z_l0kPgl3 z_l0kPgl5 z_l0kPgl6 z_l0kPgl7 z_l0kPgl8 zv6gXUp5h61","z_l0kPgl0 z_l0kPgl3 z_l0kPgl9 z_l0kPgla z_l0kPglb z_l0kPglc zv6gXUp5h61","z_l0kPgl0 z_l0kPgl3 z_l0kPgld z_l0kPgle z_l0kPglf z_l0kPglg z_l0kPglh zv6gXUp5h61","z_l0kPgli z_l0kPglj z_l0kPglk z_l0kPgll z_l0kPglm z_l0kPgln zv6gXUp5h61","z_l0kPgli z_l0kPgll z_l0kPgln z_l0kPglo z_l0kPglp z_l0kPglq z_l0kPglr zv6gXUp5h61","z_l0kPgli z_l0kPgll z_l0kPgln z_l0kPgls z_l0kPglt z_l0kPglu z_l0kPglv zv6gXUp5h61","z_l0kPgli z_l0kPgll z_l0kPgln z_l0kPglw z_l0kPglx z_l0kPgly z_l0kPglz z_l0kPgl10 zv6gXUp5h61","z_l0kPgl0 z_l0kPgl1 z_l0kPgl2 z_l0kPgl3 z_l0kPgl4 zv6gXUp5h62","z_l0kPgl0 z_l0kPgl3 z_l0kPgl5 z_l0kPgl6 z_l0kPgl7 z_l0kPgl8 zv6gXUp5h62","z_l0kPgl0 z_l0kPgl3 z_l0kPgl9 z_l0kPgla z_l0kPglb z_l0kPglc zv6gXUp5h62","z_l0kPgl0 z_l0kPgl3 z_l0kPgld z_l0kPgle z_l0kPglf z_l0kPglg z_l0kPglh zv6gXUp5h62","z_l0kPgli z_l0kPglj z_l0kPglk z_l0kPgll z_l0kPglm z_l0kPgln zv6gXUp5h62","z_l0kPgli z_l0kPgll z_l0kPgln z_l0kPglo z_l0kPglp z_l0kPglq z_l0kPglr zv6gXUp5h62","z_l0kPgli z_l0kPgll z_l0kPgln z_l0kPgls z_l0kPglt z_l0kPglu z_l0kPglv zv6gXUp5h62","z_l0kPgli z_l0kPgll z_l0kPgln z_l0kPglw z_l0kPglx z_l0kPgly z_l0kPglz z_l0kPgl10 zv6gXUp5h62","z_l0kPgl0 z_l0kPgl1 z_l0kPgl2 z_l0kPgl3 z_l0kPgl4 zv6gXUp5h63","z_l0kPgl0 z_l0kPgl3 z_l0kPgl5 z_l0kPgl6 z_l0kPgl7 z_l0kPgl8 zv6gXUp5h63","z_l0kPgl0 z_l0kPgl3 z_l0kPgl9 z_l0kPgla z_l0kPglb z_l0kPglc zv6gXUp5h63","z_l0kPgl0 z_l0kPgl3 z_l0kPgld z_l0kPgle z_l0kPglf z_l0kPglg z_l0kPglh zv6gXUp5h63","z_l0kPgli z_l0kPglj z_l0kPglk z_l0kPgll z_l0kPglm z_l0kPgln zv6gXUp5h63","z_l0kPgli z_l0kPgll z_l0kPgln z_l0kPglo z_l0kPglp z_l0kPglq z_l0kPglr zv6gXUp5h63","z_l0kPgli z_l0kPgll z_l0kPgln z_l0kPgls z_l0kPglt z_l0kPglu z_l0kPglv zv6gXUp5h63","z_l0kPgli z_l0kPgll z_l0kPgln z_l0kPglw z_l0kPglx z_l0kPgly z_l0kPglz z_l0kPgl10 zv6gXUp5h63"];
+        function __zyzzSelect0(p0:unknown,p1:unknown){return __zyzzClasses0[p1+(p0==="start"?8:p0==="middle"?16:p0==="end"?24:0)]}
+        const __zyzzClasses1=["z_l0kPgl11 z_l0kPgl12 z_l0kPgl13","z_l0kPgl11 z_l0kPgl14 z_l0kPgl15 z_l0kPgl16","z_l0kPgl11 z_l0kPgl12 z_l0kPgl13 zv9WvyhNQ-0","z_l0kPgl11 z_l0kPgl14 z_l0kPgl15 z_l0kPgl16 zv9WvyhNQ-0","z_l0kPgl11 z_l0kPgl12 z_l0kPgl13 zv9WvyhNQ-1","z_l0kPgl11 z_l0kPgl14 z_l0kPgl15 z_l0kPgl16 zv9WvyhNQ-1"];
+        function __zyzzSelect1(p0:unknown,p1:unknown){return __zyzzClasses1[p1+(p0===void 0?4:p0==="loud"?2:p0==="quiet"?4:0)]}
+        const __zyzzClasses2=["z_l0kPgl11 z_l0kPgl1h z_l0kPgl1i","z_l0kPgl11 z_l0kPgl1j z_l0kPgl1k z_l0kPgl1l","z_l0kPgl11 z_l0kPgl1h z_l0kPgl1i zv9WvyhNQ-0","z_l0kPgl11 z_l0kPgl1j z_l0kPgl1k z_l0kPgl1l zv9WvyhNQ-0","z_l0kPgl11 z_l0kPgl1h z_l0kPgl1i zv9WvyhNQ-1","z_l0kPgl11 z_l0kPgl1j z_l0kPgl1k z_l0kPgl1l zv9WvyhNQ-1"];
+        function __zyzzSelect2(p0:unknown){return __zyzzClasses2[p0]}
+
+        type P = { middle?: boolean; segment?: 'none' | 'start' | 'middle' | 'end' | null; today?: boolean; tone?: 'loud' | 'quiet' | null }
+        export const App = (props: P) => <main>
+        <span className={__zyzzSelect0(props.segment,((props.middle && props.today === false)?1:0)|((props.middle && props.today)?2:0)|((props.today)?4:0))}>calendar</span>
+        <span className={__zyzzSelect1(props.tone,((props.today)?1:0))}>badge</span>
+        <span className={"z_l0kPgl11 z_l0kPgl17 z_l0kPgl18 z_l0kPgl19 z_l0kPgl1a z_l0kPgl1b z_l0kPgl1c z_l0kPgl1d zv9WvyhNQ-0 zv6gXUp5h63"}>both</span>
+        <span className={"z_l0kPgl11 z_l0kPgl1e z_l0kPgl1f z_l0kPgl1g zv9WvyhNQ-1"}>default</span>
+        <span className={__zyzzSelect2(((props.today)?1:0))}>null</span>
+        </main>
+        "
+      `)
+      expect(output.css).toMatchInlineSnapshot(`
+        ".z_l0kPgl0{color:rgb(0, 0, 0);}
+        .z_l0kPgl1{padding-left:1px;}
+        .z_l0kPgl2{&:where(.zv6gXUp5h61){padding-left:2px;}}
+        .z_l0kPgl3{&:where(.zv6gXUp5h62){color:rgb(0, 0, 255);}}
+        .z_l0kPgl4{&:where(.zv6gXUp5h63){padding-left:3px;}}
+        .z_l0kPgl5{padding-left:1px;}
+        .z_l0kPgl6{&:where(.zv6gXUp5h61){padding-left:2px;}}
+        .z_l0kPgl7{&:where(.zv6gXUp5h63){padding-left:3px;}}
+        .z_l0kPgl8{padding-left:4px;}
+        .z_l0kPgl9{padding-left:1px;}
+        .z_l0kPgla{&:where(.zv6gXUp5h61){padding-left:2px;}}
+        .z_l0kPglb{&:where(.zv6gXUp5h63){padding-left:3px;}}
+        .z_l0kPglc{padding-left:5px;}
+        .z_l0kPgld{padding-left:1px;}
+        .z_l0kPgle{&:where(.zv6gXUp5h61){padding-left:2px;}}
+        .z_l0kPglf{&:where(.zv6gXUp5h63){padding-left:3px;}}
+        .z_l0kPglg{padding-left:4px;}
+        .z_l0kPglh{padding-left:5px;}
+        .z_l0kPgli{color:rgb(0, 0, 0);}
+        .z_l0kPglj{padding-left:1px;}
+        .z_l0kPglk{&:where(.zv6gXUp5h61){padding-left:2px;}}
+        .z_l0kPgll{&:where(.zv6gXUp5h62){color:rgb(0, 0, 255);}}
+        .z_l0kPglm{&:where(.zv6gXUp5h63){padding-left:3px;}}
+        .z_l0kPgln{color:rgb(0, 128, 0);}
+        .z_l0kPglo{padding-left:1px;}
+        .z_l0kPglp{&:where(.zv6gXUp5h61){padding-left:2px;}}
+        .z_l0kPglq{&:where(.zv6gXUp5h63){padding-left:3px;}}
+        .z_l0kPglr{padding-left:4px;}
+        .z_l0kPgls{padding-left:1px;}
+        .z_l0kPglt{&:where(.zv6gXUp5h61){padding-left:2px;}}
+        .z_l0kPglu{&:where(.zv6gXUp5h63){padding-left:3px;}}
+        .z_l0kPglv{padding-left:5px;}
+        .z_l0kPglw{padding-left:1px;}
+        .z_l0kPglx{&:where(.zv6gXUp5h61){padding-left:2px;}}
+        .z_l0kPgly{&:where(.zv6gXUp5h63){padding-left:3px;}}
+        .z_l0kPglz{padding-left:4px;}
+        .z_l0kPgl10{padding-left:5px;}
+        .z_l0kPgl11{border-left:1px solid;}
+        .z_l0kPgl12{&:where(.zv9WvyhNQ-0){color:rgb(255, 0, 0);}}
+        .z_l0kPgl13{&:where(.zv9WvyhNQ-1){color:rgb(128, 128, 128);}}
+        .z_l0kPgl14{&:where(.zv9WvyhNQ-0){color:rgb(255, 0, 0);}}
+        .z_l0kPgl15{&:where(.zv9WvyhNQ-1){color:rgb(128, 128, 128);}}
+        .z_l0kPgl16{color:rgb(0, 128, 0);}
+        .z_l0kPgl17{&:where(.zv9WvyhNQ-0){color:rgb(255, 0, 0);}}
+        .z_l0kPgl18{&:where(.zv9WvyhNQ-1){color:rgb(128, 128, 128);}}
+        .z_l0kPgl19{color:rgb(0, 0, 0);}
+        .z_l0kPgl1a{padding-left:1px;}
+        .z_l0kPgl1b{&:where(.zv6gXUp5h61){padding-left:2px;}}
+        .z_l0kPgl1c{&:where(.zv6gXUp5h62){color:rgb(0, 0, 255);}}
+        .z_l0kPgl1d{&:where(.zv6gXUp5h63){padding-left:3px;}}
+        .z_l0kPgl1e{&:where(.zv9WvyhNQ-0){color:rgb(255, 0, 0);}}
+        .z_l0kPgl1f{&:where(.zv9WvyhNQ-1){color:rgb(128, 128, 128);}}
+        .z_l0kPgl1g{color:rgb(0, 128, 0);}
+        .z_l0kPgl1h{&:where(.zv9WvyhNQ-0){color:rgb(255, 0, 0);}}
+        .z_l0kPgl1i{&:where(.zv9WvyhNQ-1){color:rgb(128, 128, 128);}}
+        .z_l0kPgl1j{&:where(.zv9WvyhNQ-0){color:rgb(255, 0, 0);}}
+        .z_l0kPgl1k{&:where(.zv9WvyhNQ-1){color:rgb(128, 128, 128);}}
+        .z_l0kPgl1l{color:rgb(0, 128, 0);}"
+      `)
+
+      const rendered = await Wrappers.render({
+        css: output.css,
+        entry: 'App.tsx',
+        modules: { 'App.tsx': output.code },
+      })
+
+      expect(rendered.elements).toMatchInlineSnapshot(`
+        [
+          {
+            "borderLeftWidth": "0px",
+            "className": "z_l0kPgl0 z_l0kPgl1 z_l0kPgl2 z_l0kPgl3 z_l0kPgl4",
+            "color": "rgb(0, 0, 0)",
+            "paddingLeft": "1px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "1px",
+            "className": "z_l0kPgl11 z_l0kPgl12 z_l0kPgl13 zv9WvyhNQ-1",
+            "color": "rgb(128, 128, 128)",
+            "paddingLeft": "0px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "1px",
+            "className": "z_l0kPgl11 z_l0kPgl17 z_l0kPgl18 z_l0kPgl19 z_l0kPgl1a z_l0kPgl1b z_l0kPgl1c z_l0kPgl1d zv9WvyhNQ-0 zv6gXUp5h63",
+            "color": "rgb(0, 0, 0)",
+            "paddingLeft": "3px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "1px",
+            "className": "z_l0kPgl11 z_l0kPgl1e z_l0kPgl1f z_l0kPgl1g zv9WvyhNQ-1",
+            "color": "rgb(0, 128, 0)",
+            "paddingLeft": "0px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "1px",
+            "className": "z_l0kPgl11 z_l0kPgl1h z_l0kPgl1i",
+            "color": "rgb(0, 0, 0)",
+            "paddingLeft": "0px",
+            "tag": "span",
+          },
+        ]
+      `)
+    })
+
+    test.each(['lynx', 'web'] as const)(
+      'keeps the runtime helper for a %s composition above 256 table entries',
+      (target) => {
+        const output = Transform.compile({
+          moduleId: 'App.tsx',
+          source: `import { cx, style, variants } from 'zyzz'
+export const App = (p: { a: string; b: string; c: string; d: string; on: boolean }) => <span {...cx(styles.grid({ a: p.a, b: p.b, c: p.c, d: p.d }), p.on && styles.on())} />
+namespace styles {
+  export const grid = variants({ base: { color: 'black' }, selection: 'class', variants: { a: { x: { top: '1px' }, y: { top: '2px' }, z: { top: '3px' } }, b: { x: { left: '1px' }, y: { left: '2px' }, z: { left: '3px' } }, c: { x: { right: '1px' }, y: { right: '2px' }, z: { right: '3px' } }, d: { x: { bottom: '1px' }, y: { bottom: '2px' }, z: { bottom: '3px' } } } })
+  export const on = style({ opacity: 0.5 })
+}`,
+          target,
+        })
+
+        // Two presence alternatives times four axes of four slots make 512 entries.
+        expect(
+          output.code.includes('Composition as __zyzzComposition'),
+        ).toMatchInlineSnapshot(`true`)
+        expect(output.code.includes('__zyzzClasses')).toMatchInlineSnapshot(
+          `false`,
+        )
+      },
+    )
   })
 })
 
@@ -4400,9 +4558,9 @@ namespace styles {
         <p>{order.join(' ')}</p>
         </>
         namespace styles {
-          export const chip = (((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className,style=input.style,vars=input.vars,inline=vars?{...vars,...style}:style;let value,className="z_l0kPgl0";value=Object.prototype.hasOwnProperty.call(input,"on")?input["on"]:void 0;if(value!==null&&value!==void 0){value=String(value);className+=value==="true"?" zv4meQUdh61":""}value=Object.prototype.hasOwnProperty.call(input,"size")?input["size"]:void 0;if(value!==null&&value!==void 0){value=String(value);className+=value==="large"?" zv4meQUdh62":value==="small"?" zv4meQUdh63":""}value=Object.prototype.hasOwnProperty.call(input,"tone")?input["tone"]:void 0;if(value===void 0)value="red";if(value!==null&&value!==void 0){value=String(value);className+=value==="blue"?" zv4meQUdh64":value==="red"?" zv4meQUdh65":""}if(external)className+=" "+external;return inline?{className,style:inline}:{className}}) as unknown as import('zyzz').variants.ReturnType<{selection:'class';variants:{"on":{"false":{};"true":{}};"size":{"large":{};"small":{}};"tone":{"blue":{};"red":{}}}}>)
+          export const chip = (((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className,style=input.style,vars=input.vars,inline=vars?{...vars,...style}:style;let value,className="z_l0kPgl0";value=input["on"];if(value!==null&&value!==void 0){value=String(value);className+=value==="true"?" zv4meQUdh61":""}value=input["size"];if(value!==null&&value!==void 0){className+=value==="large"?" zv4meQUdh62":value==="small"?" zv4meQUdh63":""}value=input["tone"];if(value===void 0)value="red";if(value!==null&&value!==void 0){className+=value==="blue"?" zv4meQUdh64":value==="red"?" zv4meQUdh65":""}if(external)className+=" "+external;return inline?{className,style:inline}:{className}}) as unknown as import('zyzz').variants.ReturnType<{selection:'class';variants:{"on":{"false":{};"true":{}};"size":{"large":{};"small":{}};"tone":{"blue":{};"red":{}}}}>)
 
-          export const flag = (((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className,style=input.style,vars=input.vars,inline=vars?{...vars,...style}:style,className=external?"z_l0kPgl1"+" "+external:"z_l0kPgl1",result:Record<string,unknown>=inline?{className,style:inline}:{className};let value;value=Object.prototype.hasOwnProperty.call(input,"on")?input["on"]:void 0;if(value!==null&&value!==void 0)result["data-on"]=String(value);value=Object.prototype.hasOwnProperty.call(input,"tone")?input["tone"]:void 0;if(value===void 0)value="red";if(value!==null&&value!==void 0)result["data-tone"]=String(value);return result}) as unknown as import('zyzz').variants.ReturnType<{variants:{"on":{"false":{};"true":{}};"tone":{"blue":{};"false":{};"red":{}}}}>)
+          export const flag = (((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className,style=input.style,vars=input.vars,inline=vars?{...vars,...style}:style,className=external?"z_l0kPgl1"+" "+external:"z_l0kPgl1",result:Record<string,unknown>=inline?{className,style:inline}:{className};let value;value=input["on"];if(value!==null&&value!==void 0)result["data-on"]=String(value);value=input["tone"];if(value===void 0)value="red";if(value!==null&&value!==void 0)result["data-tone"]=String(value);return result}) as unknown as import('zyzz').variants.ReturnType<{variants:{"on":{"false":{};"true":{}};"tone":{"blue":{};"false":{};"red":{}}}}>)
 
           export declare const wide: import('zyzz').variants.ReturnType<{selection:'class';variants:{"a":{"w":{};"x":{};"y":{}};"b":{"w":{};"x":{};"z":{}};"c":{"w":{};"x":{};"y":{}};"d":{"w":{};"x":{};"y":{}}}}>
         }"
@@ -4676,7 +4834,7 @@ namespace styles {
           <Replaced tone="blue">let</Replaced>
           </main>
           namespace styles {
-            export const chip = (((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className,style=input.style,vars=input.vars,inline=vars?{...vars,...style}:style;let value,className="z_l0kPgl0 z_l0kPgl1 z_l0kPgl2";value=Object.prototype.hasOwnProperty.call(input,"tone")?input["tone"]:void 0;if(value!==null&&value!==void 0){value=String(value);className+=value==="blue"?" zv4meQUdh60":value==="red"?" zv4meQUdh61":""}if(external)className+=" "+external;return inline?{className,style:inline}:{className}}) as unknown as import('zyzz').variants.ReturnType<{selection:'class';variants:{"tone":{"blue":{};"red":{}}}}>)
+            export const chip = (((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className,style=input.style,vars=input.vars,inline=vars?{...vars,...style}:style;let value,className="z_l0kPgl0 z_l0kPgl1 z_l0kPgl2";value=input["tone"];if(value!==null&&value!==void 0){className+=value==="blue"?" zv4meQUdh60":value==="red"?" zv4meQUdh61":""}if(external)className+=" "+external;return inline?{className,style:inline}:{className}}) as unknown as import('zyzz').variants.ReturnType<{selection:'class';variants:{"tone":{"blue":{};"red":{}}}}>)
           }"
         `)
     })
@@ -4712,7 +4870,7 @@ namespace styles {
         const Late = (props: P) => <span {...styles.chip({ className: props.className, tone: props.tone })}>{props.children}</span>
         export const after = () => <span className={"z_mespvT0 z_mespvT1 z_mespvT2 zvajgFh3sB0"}>after</span>
         namespace styles {
-          export const chip = (((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className,style=input.style,vars=input.vars,inline=vars?{...vars,...style}:style;let value,className="z_mespvT0 z_mespvT1 z_mespvT2";value=Object.prototype.hasOwnProperty.call(input,"tone")?input["tone"]:void 0;if(value!==null&&value!==void 0){value=String(value);className+=value==="blue"?" zvajgFh3sB0":value==="red"?" zvajgFh3sB1":""}if(external)className+=" "+external;return inline?{className,style:inline}:{className}}) as unknown as import('zyzz').variants.ReturnType<{selection:'class';variants:{"tone":{"blue":{};"red":{}}}}>)
+          export const chip = (((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className,style=input.style,vars=input.vars,inline=vars?{...vars,...style}:style;let value,className="z_mespvT0 z_mespvT1 z_mespvT2";value=input["tone"];if(value!==null&&value!==void 0){className+=value==="blue"?" zvajgFh3sB0":value==="red"?" zvajgFh3sB1":""}if(external)className+=" "+external;return inline?{className,style:inline}:{className}}) as unknown as import('zyzz').variants.ReturnType<{selection:'class';variants:{"tone":{"blue":{};"red":{}}}}>)
         }"
       `)
     })
@@ -4744,7 +4902,7 @@ namespace styles {
         // A synchronous render before the namespace initializes still reaches the recipe.
         App()
         namespace styles {
-          export const chip = (((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className,style=input.style,vars=input.vars,inline=vars?{...vars,...style}:style;let value,className="z_Emit600 z_Emit601";value=Object.prototype.hasOwnProperty.call(input,"tone")?input["tone"]:void 0;if(value!==null&&value!==void 0){value=String(value);className+=value==="blue"?" zv4TfDB8ee0":""}if(external)className+=" "+external;return inline?{className,style:inline}:{className}}) as unknown as import('zyzz').variants.ReturnType<{selection:'class';variants:{"tone":{"blue":{}}}}>)
+          export const chip = (((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className,style=input.style,vars=input.vars,inline=vars?{...vars,...style}:style;let value,className="z_Emit600 z_Emit601";value=input["tone"];if(value!==null&&value!==void 0){className+=value==="blue"?" zv4TfDB8ee0":""}if(external)className+=" "+external;return inline?{className,style:inline}:{className}}) as unknown as import('zyzz').variants.ReturnType<{selection:'class';variants:{"tone":{"blue":{}}}}>)
         }"
       `)
     })
@@ -4815,67 +4973,67 @@ namespace styles {
 
       // Every rule is one class deep, in recipe order, with at-rules outside the class.
       expect(output.css).toMatchInlineSnapshot(`
-        ".z_l0kPgl0{color:rgb(0, 0, 0);}
-        .zv4meQUdh61{padding-left:2px;}
-        .zv4meQUdh62{padding-left:8px;}
-        .zv4meQUdh63{padding-left:4px;}
-        .zv4meQUdh64{color:rgb(0, 0, 255);}
-        .zv4meQUdh65{color:rgb(255, 0, 0);}
-        .zv4meQUdh66{border-left:4px solid;}
-        .z_l0kPgl1{padding-left:1px;}
-        .zv9WvyhNQ-0{padding-left:8px;}
-        @media (width >= 1px){.zv9WvyhNQ-0{border-left:2px solid;}}
-        .zv9WvyhNQ-1{padding-left:4px;}
-        .zv9WvyhNQ-2{color:rgb(0, 0, 255);}
-        .zv9WvyhNQ-4{color:rgb(0, 128, 0);}
-        .z_l0kPgl2{color:rgb(0, 0, 0);}
-        .zvbsqHUbNY1{padding-left:2px;}
-        .zvbsqHUbNY2{padding-left:8px;}
-        .zvbsqHUbNY3{padding-left:4px;}
-        .zvbsqHUbNY4{color:rgb(0, 0, 255);}
-        .zvbsqHUbNY5{color:rgb(255, 0, 0);}
-        .zvbsqHUbNY6{border-left:4px solid;}
-        .z_l0kPgl3{border-left:1px solid;}
-        .z_l0kPgl4{border-left:1px solid;}
-        .z_l0kPgl5{color:rgb(0, 0, 0);}
-        .zv14w9Ddz71{padding-left:2px;}
-        .zv14w9Ddz72{padding-left:8px;}
-        .zv14w9Ddz73{padding-left:4px;}
-        .zv14w9Ddz74{color:rgb(0, 0, 255);}
-        .zv14w9Ddz75{color:rgb(255, 0, 0);}
-        .zv14w9Ddz76{border-left:4px solid;}
-        .z_l0kPgl6{color:rgb(0, 0, 0);}
-        .zv6pa7USHW1{padding-left:2px;}
-        .zv6pa7USHW2{padding-left:8px;}
-        .zv6pa7USHW3{padding-left:4px;}
-        .zv6pa7USHW4{color:rgb(0, 0, 255);}
-        .zv6pa7USHW5{color:rgb(255, 0, 0);}
-        .zv6pa7USHW6{border-left:4px solid;}
-        .z_l0kPgl7{color:rgb(0, 0, 0);}
-        .zv5ZO1lHfQ1{padding-left:2px;}
-        .zv5ZO1lHfQ2{padding-left:8px;}
-        .zv5ZO1lHfQ3{padding-left:4px;}
-        .zv5ZO1lHfQ4{color:rgb(0, 0, 255);}
-        .zv5ZO1lHfQ5{color:rgb(255, 0, 0);}
-        .zv5ZO1lHfQ6{border-left:4px solid;}
-        .z_l0kPgl8{border-left:1px solid;}"
+        ".z6{color:rgb(0, 0, 0);}
+        .zA01{padding-left:2px;}
+        .zA02{padding-left:8px;}
+        .zA03{padding-left:4px;}
+        .zA04{color:rgb(0, 0, 255);}
+        .zA05{color:rgb(255, 0, 0);}
+        .zA06{border-left:4px solid;}
+        .z7{padding-left:1px;}
+        .zA10{padding-left:8px;}
+        @media (width >= 1px){.zA10{border-left:2px solid;}}
+        .zA11{padding-left:4px;}
+        .zA12{color:rgb(0, 0, 255);}
+        .zA14{color:rgb(0, 128, 0);}
+        .z8{color:rgb(0, 0, 0);}
+        .zA21{padding-left:2px;}
+        .zA22{padding-left:8px;}
+        .zA23{padding-left:4px;}
+        .zA24{color:rgb(0, 0, 255);}
+        .zA25{color:rgb(255, 0, 0);}
+        .zA26{border-left:4px solid;}
+        .z9{border-left:1px solid;}
+        .za{border-left:1px solid;}
+        .zb{color:rgb(0, 0, 0);}
+        .zA31{padding-left:2px;}
+        .zA32{padding-left:8px;}
+        .zA33{padding-left:4px;}
+        .zA34{color:rgb(0, 0, 255);}
+        .zA35{color:rgb(255, 0, 0);}
+        .zA36{border-left:4px solid;}
+        .zc{color:rgb(0, 0, 0);}
+        .zA41{padding-left:2px;}
+        .zA42{padding-left:8px;}
+        .zA43{padding-left:4px;}
+        .zA44{color:rgb(0, 0, 255);}
+        .zA45{color:rgb(255, 0, 0);}
+        .zA46{border-left:4px solid;}
+        .zd{color:rgb(0, 0, 0);}
+        .zA51{padding-left:2px;}
+        .zA52{padding-left:8px;}
+        .zA53{padding-left:4px;}
+        .zA54{color:rgb(0, 0, 255);}
+        .zA55{color:rgb(255, 0, 0);}
+        .zA56{border-left:4px solid;}
+        .ze{border-left:1px solid;}"
       `)
       expect(output.classes).toMatchInlineSnapshot(`
         {
-          "composition-1k0bfdx1r9hbnf-641": "z_l0kPgl2 z_l0kPgl3",
-          "composition-1k0bfdx1r9hbnf-731": "z_l0kPgl4 z_l0kPgl5",
-          "composition-1k0bfdx1r9hbnf-821": "z_l0kPgl7 z_l0kPgl8",
-          "composition-1k0bfdx1r9hbnf-821-0": "z_l0kPgl6",
-          "style-1k0bfdx1r9hbnf-1036": "z_l0kPgl0",
-          "style-1k0bfdx1r9hbnf-1490": "z_l0kPgl1",
+          "composition-1k0bfdx1r9hbnf-641": "z8 z9",
+          "composition-1k0bfdx1r9hbnf-731": "za zb",
+          "composition-1k0bfdx1r9hbnf-821": "zd ze",
+          "composition-1k0bfdx1r9hbnf-821-0": "zc",
+          "style-1k0bfdx1r9hbnf-1036": "z6",
+          "style-1k0bfdx1r9hbnf-1490": "z7",
           "style-1k0bfdx1r9hbnf-1924": "",
         }
       `)
       expect(output.code).toMatchInlineSnapshot(`
         "
-        const __zyzzComposition641=/*#__PURE__*/__zyzzComposition.create({"className":"z_l0kPgl2 z_l0kPgl3","inputs":[{"className":"z_l0kPgl0","renames":[[["zv4meQUdh6","zvbsqHUbNY"]]],"prefixes":["zv4meQUdh6"]},{}]});
-        const __zyzzComposition731=/*#__PURE__*/__zyzzComposition.create({"className":"z_l0kPgl4 z_l0kPgl5","inputs":[{},{"className":"z_l0kPgl0","renames":[[["zv4meQUdh6","zv14w9Ddz7"]]],"prefixes":["zv4meQUdh6"]}]});
-        const __zyzzComposition821=/*#__PURE__*/__zyzzComposition.create({"cases":["z_l0kPgl6","z_l0kPgl7 z_l0kPgl8"],"inputs":[{"className":"z_l0kPgl0","renames":[[["zv4meQUdh6","zv6pa7USHW"]],[["zv4meQUdh6","zv5ZO1lHfQ"]]],"prefixes":["zv4meQUdh6"]},{"condition":0}]});
+        const __zyzzComposition641=/*#__PURE__*/__zyzzComposition.create({"className":"z8 z9","inputs":[{"className":"z6","renames":[[["zA0","zA2"]]],"prefixes":["zA0"]},{}]});
+        const __zyzzComposition731=/*#__PURE__*/__zyzzComposition.create({"className":"za zb","inputs":[{},{"className":"z6","renames":[[["zA0","zA3"]]],"prefixes":["zA0"]}]});
+        const __zyzzComposition821=/*#__PURE__*/__zyzzComposition.create({"cases":["zc","zd ze"],"inputs":[{"className":"z6","renames":[[["zA0","zA4"]],[["zA0","zA5"]]],"prefixes":["zA0"]},{"condition":0}]});
 
         import { Composition as __zyzzComposition, Props as __zyzzProps } from 'zyzz/runtime';
 
@@ -4895,9 +5053,9 @@ namespace styles {
         </>
         const flag = Math.random() >= 0
         namespace styles {
-          export const chip = (((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className,style=input.style,vars=input.vars,inline=vars?{...vars,...style}:style;let value,className="z_l0kPgl0",s0,s1,s2;value=Object.prototype.hasOwnProperty.call(input,"on")?input["on"]:void 0;if(value!==null&&value!==void 0){value=String(value);s0=value;className+=value==="true"?" zv4meQUdh61":""}value=Object.prototype.hasOwnProperty.call(input,"size")?input["size"]:void 0;if(value!==null&&value!==void 0){value=String(value);s1=value;className+=value==="large"?" zv4meQUdh62":value==="small"?" zv4meQUdh63":""}value=Object.prototype.hasOwnProperty.call(input,"tone")?input["tone"]:void 0;if(value===void 0)value="red";if(value!==null&&value!==void 0){value=String(value);s2=value;className+=value==="blue"?" zv4meQUdh64":value==="red"?" zv4meQUdh65":""}if(s0==="true"&&s2==="blue")className+=" zv4meQUdh66";if(external)className+=" "+external;return inline?{className,style:inline}:{className}}) as unknown as import('zyzz').variants.ReturnType<{selection:'class';variants:{"on":{"false":{};"true":{}};"size":{"large":{};"small":{}};"tone":{"blue":{};"red":{}}}}>)
+          export const chip = (((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className,style=input.style,vars=input.vars,inline=vars?{...vars,...style}:style;let value,className="z6",s0,s1,s2;value=input["on"];if(value!==null&&value!==void 0){value=String(value);s0=value;className+=value==="true"?" zA01":""}value=input["size"];if(value!==null&&value!==void 0){s1=value;className+=value==="large"?" zA02":value==="small"?" zA03":""}value=input["tone"];if(value===void 0)value="red";if(value!==null&&value!==void 0){s2=value;className+=value==="blue"?" zA04":value==="red"?" zA05":""}if(s0==="true"&&s2==="blue")className+=" zA06";if(external)className+=" "+external;return inline?{className,style:inline}:{className}}) as unknown as import('zyzz').variants.ReturnType<{selection:'class';variants:{"on":{"false":{};"true":{}};"size":{"large":{};"small":{}};"tone":{"blue":{};"red":{}}}}>)
 
-          export const badge = (((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className;let value,className="z_l0kPgl1",s0,s1;value=Object.prototype.hasOwnProperty.call(input,"size")?input["size"]:void 0;if(value!==null&&value!==void 0){value=String(value);s0=value;className+=value==="large"?" zv9WvyhNQ-0":value==="small"?" zv9WvyhNQ-1":""}value=Object.prototype.hasOwnProperty.call(input,"tone")?input["tone"]:void 0;if(value!==null&&value!==void 0){value=String(value);s1=value;className+=value==="blue"?" zv9WvyhNQ-2":""}if((s0==="large"||s0==="small")&&s1==="blue")className+=" zv9WvyhNQ-4";if(external)className+=" "+external;return className}) as unknown as import('zyzz').variants.ReturnType<{selection:'className';variants:{"size":{"large":{};"small":{}};"tone":{"blue":{};"red":{}}}}>)
+          export const badge = (((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className;let value,className="z7",s0,s1;value=input["size"];if(value!==null&&value!==void 0){s0=value;className+=value==="large"?" zA10":value==="small"?" zA11":""}value=input["tone"];if(value!==null&&value!==void 0){s1=value;className+=value==="blue"?" zA12":""}if((s0==="large"||s0==="small")&&s1==="blue")className+=" zA14";if(external)className+=" "+external;return className}) as unknown as import('zyzz').variants.ReturnType<{selection:'className';variants:{"size":{"large":{};"small":{}};"tone":{"blue":{};"red":{}}}}>)
 
           export const override = /*#__PURE__*/__zyzzProps.create({className:""})
         }"
@@ -4914,56 +5072,56 @@ namespace styles {
         [
           {
             "borderLeftWidth": "0px",
-            "className": "z_l0kPgl0 zv4meQUdh65",
+            "className": "z6 zA05",
             "color": "rgb(255, 0, 0)",
             "paddingLeft": "0px",
             "tag": "span",
           },
           {
             "borderLeftWidth": "4px",
-            "className": "z_l0kPgl0 zv4meQUdh61 zv4meQUdh64 zv4meQUdh66",
+            "className": "z6 zA01 zA04 zA06",
             "color": "rgb(0, 0, 255)",
             "paddingLeft": "2px",
             "tag": "span",
           },
           {
             "borderLeftWidth": "2px",
-            "className": "z_l0kPgl1 zv9WvyhNQ-0 zv9WvyhNQ-2 zv9WvyhNQ-4",
+            "className": "z7 zA10 zA12 zA14",
             "color": "rgb(0, 128, 0)",
             "paddingLeft": "8px",
             "tag": "span",
           },
           {
             "borderLeftWidth": "0px",
-            "className": "z_l0kPgl1 zv9WvyhNQ-1 extra",
+            "className": "z7 zA11 extra",
             "color": "rgb(0, 0, 0)",
             "paddingLeft": "4px",
             "tag": "span",
           },
           {
             "borderLeftWidth": "1px",
-            "className": "z_l0kPgl2 z_l0kPgl3 zvbsqHUbNY1 zvbsqHUbNY4 zvbsqHUbNY6",
+            "className": "z8 z9 zA21 zA24 zA26",
             "color": "rgb(0, 0, 255)",
             "paddingLeft": "2px",
             "tag": "span",
           },
           {
             "borderLeftWidth": "4px",
-            "className": "z_l0kPgl4 z_l0kPgl5 zv14w9Ddz71 zv14w9Ddz74 zv14w9Ddz76",
+            "className": "za zb zA31 zA34 zA36",
             "color": "rgb(0, 0, 255)",
             "paddingLeft": "2px",
             "tag": "span",
           },
           {
             "borderLeftWidth": "1px",
-            "className": "z_l0kPgl7 z_l0kPgl8 zv5ZO1lHfQ1 zv5ZO1lHfQ4 zv5ZO1lHfQ6",
+            "className": "zd ze zA51 zA54 zA56",
             "color": "rgb(0, 0, 255)",
             "paddingLeft": "2px",
             "tag": "span",
           },
           {
             "borderLeftWidth": "0px",
-            "className": "z_l0kPgl0 zv4meQUdh61 zv4meQUdh63 zv4meQUdh65",
+            "className": "z6 zA01 zA03 zA05",
             "color": "rgb(255, 0, 0)",
             "paddingLeft": "4px",
             "tag": "span",
@@ -4981,50 +5139,50 @@ namespace styles {
       })
 
       expect(output.css).toMatchInlineSnapshot(`
-        ".z_l0kPgl0{color:rgb(0, 0, 0);}
-        .zv4meQUdh61{padding-left:2px;}
-        .zv4meQUdh62{padding-left:8px;}
-        .zv4meQUdh63{padding-left:4px;}
-        .zv4meQUdh64{color:rgb(0, 0, 255);}
-        .zv4meQUdh65{color:rgb(255, 0, 0);}
-        .zv4meQUdh66{border-left:4px solid;}
-        .z_l0kPgl1{padding-left:1px;}
-        .zv9WvyhNQ-0{padding-left:8px;}
-        @media (width >= 1px){.zv9WvyhNQ-0{border-left:2px solid;}}
-        .zv9WvyhNQ-1{padding-left:4px;}
-        .zv9WvyhNQ-2{color:rgb(0, 0, 255);}
-        .zv9WvyhNQ-4{color:rgb(0, 128, 0);}
-        .z_l0kPgl2{color:rgb(0, 0, 0);}
-        .zvbsqHUbNY1{padding-left:2px;}
-        .zvbsqHUbNY2{padding-left:8px;}
-        .zvbsqHUbNY3{padding-left:4px;}
-        .zvbsqHUbNY4{color:rgb(0, 0, 255);}
-        .zvbsqHUbNY5{color:rgb(255, 0, 0);}
-        .zvbsqHUbNY6{border-left:4px solid;}
-        .z_l0kPgl3{border-left:1px solid;}
-        .z_l0kPgl4{border-left:1px solid;}
-        .z_l0kPgl5{color:rgb(0, 0, 0);}
-        .zv14w9Ddz71{padding-left:2px;}
-        .zv14w9Ddz72{padding-left:8px;}
-        .zv14w9Ddz73{padding-left:4px;}
-        .zv14w9Ddz74{color:rgb(0, 0, 255);}
-        .zv14w9Ddz75{color:rgb(255, 0, 0);}
-        .zv14w9Ddz76{border-left:4px solid;}
-        .z_l0kPgl6{color:rgb(0, 0, 0);}
-        .zv6pa7USHW1{padding-left:2px;}
-        .zv6pa7USHW2{padding-left:8px;}
-        .zv6pa7USHW3{padding-left:4px;}
-        .zv6pa7USHW4{color:rgb(0, 0, 255);}
-        .zv6pa7USHW5{color:rgb(255, 0, 0);}
-        .zv6pa7USHW6{border-left:4px solid;}
-        .z_l0kPgl7{color:rgb(0, 0, 0);}
-        .zv5ZO1lHfQ1{padding-left:2px;}
-        .zv5ZO1lHfQ2{padding-left:8px;}
-        .zv5ZO1lHfQ3{padding-left:4px;}
-        .zv5ZO1lHfQ4{color:rgb(0, 0, 255);}
-        .zv5ZO1lHfQ5{color:rgb(255, 0, 0);}
-        .zv5ZO1lHfQ6{border-left:4px solid;}
-        .z_l0kPgl8{border-left:1px solid;}"
+        ".z6{color:rgb(0, 0, 0);}
+        .zA01{padding-left:2px;}
+        .zA02{padding-left:8px;}
+        .zA03{padding-left:4px;}
+        .zA04{color:rgb(0, 0, 255);}
+        .zA05{color:rgb(255, 0, 0);}
+        .zA06{border-left:4px solid;}
+        .z7{padding-left:1px;}
+        .zA10{padding-left:8px;}
+        @media (width >= 1px){.zA10{border-left:2px solid;}}
+        .zA11{padding-left:4px;}
+        .zA12{color:rgb(0, 0, 255);}
+        .zA14{color:rgb(0, 128, 0);}
+        .z8{color:rgb(0, 0, 0);}
+        .zA21{padding-left:2px;}
+        .zA22{padding-left:8px;}
+        .zA23{padding-left:4px;}
+        .zA24{color:rgb(0, 0, 255);}
+        .zA25{color:rgb(255, 0, 0);}
+        .zA26{border-left:4px solid;}
+        .z9{border-left:1px solid;}
+        .za{border-left:1px solid;}
+        .zb{color:rgb(0, 0, 0);}
+        .zA31{padding-left:2px;}
+        .zA32{padding-left:8px;}
+        .zA33{padding-left:4px;}
+        .zA34{color:rgb(0, 0, 255);}
+        .zA35{color:rgb(255, 0, 0);}
+        .zA36{border-left:4px solid;}
+        .zc{color:rgb(0, 0, 0);}
+        .zA41{padding-left:2px;}
+        .zA42{padding-left:8px;}
+        .zA43{padding-left:4px;}
+        .zA44{color:rgb(0, 0, 255);}
+        .zA45{color:rgb(255, 0, 0);}
+        .zA46{border-left:4px solid;}
+        .zd{color:rgb(0, 0, 0);}
+        .zA51{padding-left:2px;}
+        .zA52{padding-left:8px;}
+        .zA53{padding-left:4px;}
+        .zA54{color:rgb(0, 0, 255);}
+        .zA55{color:rgb(255, 0, 0);}
+        .zA56{border-left:4px solid;}
+        .ze{border-left:1px solid;}"
       `)
     })
 
@@ -5069,6 +5227,127 @@ namespace styles {
           "style-1k0bfdx1r9hbnf-1490": "z_l0kPgl7 z_l0kPgl8 z_l0kPgl9 z_l0kPgla z_l0kPglb z_l0kPglc",
           "style-1k0bfdx1r9hbnf-1924": "",
         }
+      `)
+    })
+
+    test('shares recipe base declarations with independent styles', async () => {
+      const source = `import { style, variants } from 'zyzz'
+type P = { className?: string | undefined; tone?: 'brand' | undefined }
+const Badge = (props: P) => <span className={styles.badge({ className: props.className, tone: props.tone })}>badge</span>
+export const App = () => <main>
+<span {...styles.row()}>row</span>
+<span {...styles.row({ className: 'external' })}>external</span>
+<Badge />
+<Badge tone="brand" />
+<span {...styles.later()}>later</span>
+</main>
+namespace styles {
+  export const row = style({ alignItems: 'center', color: 'rgb(0, 0, 0)' })
+
+  export const badge = variants({
+    base: { alignItems: 'center', color: 'rgb(0, 0, 0)', paddingLeft: '2px' },
+    selection: 'className',
+    variants: { tone: { brand: { color: 'rgb(255, 0, 0)' } } },
+  })
+
+  export const later = style({ paddingLeft: '2px' })
+}`
+      const output = Transform.compile({
+        composition: 'independent',
+        moduleId: 'App.tsx',
+        source,
+        target: 'lynx',
+      })
+
+      // The recipe base reads the units of `row`, `later` reads the unit the base introduced,
+      // and the choice rule prints after the base units it overrides.
+      expect(output.css).toMatchInlineSnapshot(`
+        ".z1{align-items:center;}
+        .z2{color:rgb(0, 0, 0);}
+        .z3{padding-left:2px;}
+        .zA00{color:rgb(255, 0, 0);}"
+      `)
+      expect(output.code).toMatchInlineSnapshot(`
+        "
+        import { Props as __zyzzProps } from 'zyzz/runtime';
+
+        type P = { className?: string | undefined; tone?: 'brand' | undefined }
+        const Badge = (props: P) => <span className={styles.badge({ className: props.className, tone: props.tone })}>badge</span>
+        export const App = () => <main>
+        <span className={"z1 z2"}>row</span>
+        <span className={__zyzzProps.merge("z1 z2",'external')}>external</span>
+        <Badge />
+        <Badge tone="brand" />
+        <span className={"z3"}>later</span>
+        </main>
+        namespace styles {
+          export declare const row: import('zyzz').style.ReturnType
+
+          export const badge = (((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className;let value,className="z1 z2 z3";value=input["tone"];if(value!==null&&value!==void 0){className+=value==="brand"?" zA00":""}if(external)className+=" "+external;return className}) as unknown as import('zyzz').variants.ReturnType<{selection:'className';variants:{"tone":{"brand":{}}}}>)
+
+          export declare const later: import('zyzz').style.ReturnType
+        }"
+      `)
+
+      const rendered = await Wrappers.render({
+        css: output.css,
+        entry: 'App.tsx',
+        modules: { 'App.tsx': output.code },
+      })
+
+      expect(rendered.elements).toMatchInlineSnapshot(`
+        [
+          {
+            "borderLeftWidth": "0px",
+            "className": "z1 z2",
+            "color": "rgb(0, 0, 0)",
+            "paddingLeft": "0px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "0px",
+            "className": "z1 z2 external",
+            "color": "rgb(0, 0, 0)",
+            "paddingLeft": "0px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "0px",
+            "className": "z1 z2 z3",
+            "color": "rgb(0, 0, 0)",
+            "paddingLeft": "2px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "0px",
+            "className": "z1 z2 z3 zA00",
+            "color": "rgb(255, 0, 0)",
+            "paddingLeft": "2px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "0px",
+            "className": "z3",
+            "color": "rgb(0, 0, 0)",
+            "paddingLeft": "2px",
+            "tag": "span",
+          },
+        ]
+      `)
+
+      // The web target nests choices under the base, so it keeps its own units.
+      expect(
+        Transform.compile({
+          composition: 'independent',
+          moduleId: 'App.tsx',
+          source,
+        }).css,
+      ).toMatchInlineSnapshot(`
+        ".z_l0kPgl0{align-items:center;}
+        .z_l0kPgl1{color:rgb(0, 0, 0);}
+        .z_l0kPgl2{color:rgb(0, 0, 0);}
+        .z_l0kPgl3{&:where(.zv9WvyhNQ-0){color:rgb(255, 0, 0);}}
+        .z_l0kPgl4{padding-left:2px;}"
       `)
     })
 
@@ -5146,13 +5425,704 @@ namespace styles {
         [
           {
             "borderLeftWidth": "0px",
-            "className": "zv9WvyhNQ-0 zv9WvyhNQ-1",
+            "className": "zA00 zA01",
             "color": "rgb(0, 0, 255)",
             "paddingLeft": "2px",
             "tag": "span",
           },
         ]
       `)
+    })
+
+    test('selects recipe and conditional style compositions from class tables', async () => {
+      const output = Transform.compile({
+        moduleId: 'App.tsx',
+        source: `import { cx, style, variants } from 'zyzz'
+type P = { middle?: boolean; segment?: 'none' | 'start' | 'middle' | 'end' | null; today?: boolean; tone?: 'loud' | 'quiet' | null }
+export const App = (props: P) => <main>
+<span {...cx(styles.cell({ segment: props.segment }), props.middle && props.today === false && styles.weekStart(), props.middle && props.today && styles.weekEnd(), props.today && styles.today())}>calendar</span>
+<span {...cx(styles.badge({ tone: props.tone }), props.today && styles.today())}>badge</span>
+<span {...cx(styles.badge({ tone: 'loud' }), styles.cell({ segment: 'end' }))}>both</span>
+<span {...cx(styles.badge(), styles.today())}>default</span>
+<span {...cx(styles.badge({ tone: null }), props.today && styles.today())}>null</span>
+</main>
+namespace styles {
+  export const cell = variants({ base: { color: 'rgb(0, 0, 0)', paddingLeft: '1px' }, variants: { segment: { none: {}, start: { paddingLeft: '2px' }, middle: { color: 'rgb(0, 0, 255)' }, end: { paddingLeft: '3px' } } } })
+  export const badge = variants({ base: { borderLeft: '1px solid' }, defaultVariants: { tone: 'quiet' }, variants: { tone: { loud: { color: 'rgb(255, 0, 0)' }, quiet: { color: 'rgb(128, 128, 128)' } } } })
+  export const weekStart = style({ paddingLeft: '4px' })
+  export const weekEnd = style({ paddingLeft: '5px' })
+  export const today = style({ color: 'rgb(0, 128, 0)' })
+}`,
+        target: 'lynx',
+      })
+
+      // Each table entry is one presence alternative's classes with the recipe's choice class
+      // under that alternative's prefix, so no module imports the composition runtime.
+      expect(output.code.includes('zyzz/runtime')).toMatchInlineSnapshot(
+        `false`,
+      )
+      expect(output.code).toMatchInlineSnapshot(`
+        "
+        const __zyzzClasses0=["zh zi","zj zk zl","zm zn zo","zp zq zr zs","zt zu zv","zw zx zy zz","z10 z11 z12 z13","z14 z15 z16 z17 z18","zh zi zA21","zj zk zl zA31","zm zn zo zA41","zp zq zr zs zA51","zt zu zv zA61","zw zx zy zz zA71","z10 z11 z12 z13 zA81","z14 z15 z16 z17 z18 zA91","zh zi zA22","zj zk zl zA32","zm zn zo zA42","zp zq zr zs zA52","zt zu zv zA62","zw zx zy zz zA72","z10 z11 z12 z13 zA82","z14 z15 z16 z17 z18 zA92","zh zi zA23","zj zk zl zA33","zm zn zo zA43","zp zq zr zs zA53","zt zu zv zA63","zw zx zy zz zA73","z10 z11 z12 z13 zA83","z14 z15 z16 z17 z18 zA93"];
+        function __zyzzSelect0(p0:unknown,p1:unknown){return __zyzzClasses0[p1+(p0==="start"?8:p0==="middle"?16:p0==="end"?24:0)]}
+        const __zyzzClasses1=["z19","z1a z1b","z19 zAa0","z1a z1b zAb0","z19 zAa1","z1a z1b zAb1"];
+        function __zyzzSelect1(p0:unknown,p1:unknown){return __zyzzClasses1[p1+(p0===void 0?4:p0==="loud"?2:p0==="quiet"?4:0)]}
+        const __zyzzClasses2=["z1h","z1i z1j","z1h zAf0","z1i z1j zAg0","z1h zAf1","z1i z1j zAg1"];
+        function __zyzzSelect2(p0:unknown){return __zyzzClasses2[p0]}
+
+        type P = { middle?: boolean; segment?: 'none' | 'start' | 'middle' | 'end' | null; today?: boolean; tone?: 'loud' | 'quiet' | null }
+        export const App = (props: P) => <main>
+        <span className={__zyzzSelect0(props.segment,((props.middle && props.today === false)?1:0)|((props.middle && props.today)?2:0)|((props.today)?4:0))}>calendar</span>
+        <span className={__zyzzSelect1(props.tone,((props.today)?1:0))}>badge</span>
+        <span className={"z1c z1d z1e zAc0 zAd3"}>both</span>
+        <span className={"z1f z1g zAe1"}>default</span>
+        <span className={__zyzzSelect2(((props.today)?1:0))}>null</span>
+        </main>
+        "
+      `)
+      expect(output.css).toMatchInlineSnapshot(`
+        ".zh{color:rgb(0, 0, 0);}
+        .zi{padding-left:1px;}
+        .zA21{padding-left:2px;}
+        .zA22{color:rgb(0, 0, 255);}
+        .zA23{padding-left:3px;}
+        .zj{color:rgb(0, 0, 0);}
+        .zk{padding-left:1px;}
+        .zA31{padding-left:2px;}
+        .zA32{color:rgb(0, 0, 255);}
+        .zA33{padding-left:3px;}
+        .zl{padding-left:4px;}
+        .zm{color:rgb(0, 0, 0);}
+        .zn{padding-left:1px;}
+        .zA41{padding-left:2px;}
+        .zA42{color:rgb(0, 0, 255);}
+        .zA43{padding-left:3px;}
+        .zo{padding-left:5px;}
+        .zp{color:rgb(0, 0, 0);}
+        .zq{padding-left:1px;}
+        .zA51{padding-left:2px;}
+        .zA52{color:rgb(0, 0, 255);}
+        .zA53{padding-left:3px;}
+        .zr{padding-left:4px;}
+        .zs{padding-left:5px;}
+        .zt{color:rgb(0, 0, 0);}
+        .zu{padding-left:1px;}
+        .zA61{padding-left:2px;}
+        .zA62{color:rgb(0, 0, 255);}
+        .zA63{padding-left:3px;}
+        .zv{color:rgb(0, 128, 0);}
+        .zw{color:rgb(0, 0, 0);}
+        .zx{padding-left:1px;}
+        .zA71{padding-left:2px;}
+        .zA72{color:rgb(0, 0, 255);}
+        .zA73{padding-left:3px;}
+        .zy{padding-left:4px;}
+        .zz{color:rgb(0, 128, 0);}
+        .z10{color:rgb(0, 0, 0);}
+        .z11{padding-left:1px;}
+        .zA81{padding-left:2px;}
+        .zA82{color:rgb(0, 0, 255);}
+        .zA83{padding-left:3px;}
+        .z12{padding-left:5px;}
+        .z13{color:rgb(0, 128, 0);}
+        .z14{color:rgb(0, 0, 0);}
+        .z15{padding-left:1px;}
+        .zA91{padding-left:2px;}
+        .zA92{color:rgb(0, 0, 255);}
+        .zA93{padding-left:3px;}
+        .z16{padding-left:4px;}
+        .z17{padding-left:5px;}
+        .z18{color:rgb(0, 128, 0);}
+        .z19{border-left:1px solid;}
+        .zAa0{color:rgb(255, 0, 0);}
+        .zAa1{color:rgb(128, 128, 128);}
+        .z1a{border-left:1px solid;}
+        .zAb0{color:rgb(255, 0, 0);}
+        .zAb1{color:rgb(128, 128, 128);}
+        .z1b{color:rgb(0, 128, 0);}
+        .z1c{border-left:1px solid;}
+        .zAc0{color:rgb(255, 0, 0);}
+        .zAc1{color:rgb(128, 128, 128);}
+        .z1d{color:rgb(0, 0, 0);}
+        .z1e{padding-left:1px;}
+        .zAd1{padding-left:2px;}
+        .zAd2{color:rgb(0, 0, 255);}
+        .zAd3{padding-left:3px;}
+        .z1f{border-left:1px solid;}
+        .zAe0{color:rgb(255, 0, 0);}
+        .zAe1{color:rgb(128, 128, 128);}
+        .z1g{color:rgb(0, 128, 0);}
+        .z1h{border-left:1px solid;}
+        .zAf0{color:rgb(255, 0, 0);}
+        .zAf1{color:rgb(128, 128, 128);}
+        .z1i{border-left:1px solid;}
+        .zAg0{color:rgb(255, 0, 0);}
+        .zAg1{color:rgb(128, 128, 128);}
+        .z1j{color:rgb(0, 128, 0);}"
+      `)
+
+      const rendered = await Wrappers.render({
+        css: output.css,
+        entry: 'App.tsx',
+        modules: { 'App.tsx': output.code },
+      })
+
+      // An omitted value takes the default, `null` selects nothing, and later arguments win.
+      expect(rendered.elements).toMatchInlineSnapshot(`
+        [
+          {
+            "borderLeftWidth": "0px",
+            "className": "zh zi",
+            "color": "rgb(0, 0, 0)",
+            "paddingLeft": "1px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "1px",
+            "className": "z19 zAa1",
+            "color": "rgb(128, 128, 128)",
+            "paddingLeft": "0px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "1px",
+            "className": "z1c z1d z1e zAc0 zAd3",
+            "color": "rgb(0, 0, 0)",
+            "paddingLeft": "3px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "1px",
+            "className": "z1f z1g zAe1",
+            "color": "rgb(0, 128, 0)",
+            "paddingLeft": "0px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "1px",
+            "className": "z1h",
+            "color": "rgb(0, 0, 0)",
+            "paddingLeft": "0px",
+            "tag": "span",
+          },
+        ]
+      `)
+    })
+
+    test('concatenates independent compositions argument by argument with override copies', async () => {
+      // Conditions read component bindings, so no argument is a literal omission, and the
+      // module evaluates no call before the definitions, so no application needs a guard.
+      const source = `import { cx, style, variants } from 'zyzz'
+export const App = (props: { on?: boolean }) => {
+const on = props.on ?? true
+const off = !on
+const tone: 'loud' | 'quiet' = on ? 'loud' : 'quiet'
+return <main>
+<span {...cx(styles.base(), off && styles.mid(), styles.last())}>absent earlier argument</span>
+<span {...cx(styles.base(), on && styles.mid(), styles.last())}>present earlier argument</span>
+<span {...cx(styles.base(), on && styles.mid())}>conditional wins</span>
+<span {...cx(styles.badge({ tone: 'loud' }), styles.last())}>plain over choice</span>
+<span {...cx(styles.base(), styles.badge({ tone: 'loud' }))}>choice over plain</span>
+<span {...cx(styles.base(), styles.badge({ tone: null }))}>null choice</span>
+<span {...cx(styles.base(), styles.badge())}>default choice</span>
+<span {...cx(styles.base(), on && styles.badge({ tone }))}>conditional runtime choice</span>
+<span {...cx(styles.base(), on && styles.mid(), off && styles.last(), on && styles.badge({ tone: 'loud' }))}>three conditions</span>
+<span {...cx(styles.edge(), off && styles.edgeOn())}>pseudo-class without the conditional argument</span>
+<span {...cx(styles.edge(), on && styles.edgeOn())}>pseudo-class conflict</span>
+</main>
+}
+namespace styles {
+  export const base = style({ color: 'rgb(10, 10, 10)', paddingLeft: '1px' })
+  export const mid = style({ color: 'rgb(20, 20, 20)', paddingLeft: '2px' })
+  export const last = style({ color: 'rgb(30, 30, 30)' })
+  export const edge = style({ color: 'rgb(40, 40, 40)', ':not(.off)': { color: 'rgb(50, 50, 50)' } })
+  export const edgeOn = style({ ':not(.off)': { color: 'rgb(60, 60, 60)' } })
+  export const badge = variants({ base: { borderLeft: '1px solid' }, defaultVariants: { tone: 'quiet' }, variants: { tone: { loud: { color: 'rgb(255, 0, 0)' }, quiet: { color: 'rgb(128, 128, 128)' } } } })
+}`
+      const output = Transform.compile({
+        composition: 'independent',
+        moduleId: 'App.tsx',
+        source,
+        target: 'lynx',
+      })
+
+      // Each argument adds its own classes behind its condition, a recipe argument through
+      // its own selector, so no module imports the composition runtime or a combination
+      // table.
+      expect(output.code).toMatchInlineSnapshot(`
+        "
+        const __zyzzClasses0=["za","za zA00 zA13","za zA01 zA14"];
+        function __zyzzSelect0(p0:unknown){return __zyzzClasses0[(p0===void 0?2:p0==="loud"?1:p0==="quiet"?2:0)]}
+
+        export const App = (props: { on?: boolean }) => {
+        const on = props.on ?? true
+        const off = !on
+        const tone: 'loud' | 'quiet' = on ? 'loud' : 'quiet'
+        return <main>
+        <span className={"z2 z3"+((off)?" z4 z5 zA10 zA11":"")+" z6 zA12"}>absent earlier argument</span>
+        <span className={"z2 z3"+((on)?" z4 z5 zA10 zA11":"")+" z6 zA12"}>present earlier argument</span>
+        <span className={"z2 z3"+((on)?" z4 z5 zA10 zA11":"")}>conditional wins</span>
+        <span className={"za zA00 z6 zA12"}>plain over choice</span>
+        <span className={"z2 z3 za zA00 zA13"}>choice over plain</span>
+        <span className={"z2 z3 za"}>null choice</span>
+        <span className={"z2 z3 za zA01 zA14"}>default choice</span>
+        <span className={"z2 z3"+((on)?" "+__zyzzSelect0(tone):"")}>conditional runtime choice</span>
+        <span className={"z2 z3"+((on)?" z4 z5 zA10 zA11":"")+((off)?" z6 zA12":"")+((on)?" za zA00 zA13":"")}>three conditions</span>
+        <span className={"z7 z8"+((off)?" z9 zA15":"")}>pseudo-class without the conditional argument</span>
+        <span className={"z7 z8"+((on)?" z9 zA15":"")}>pseudo-class conflict</span>
+        </main>
+        }
+        namespace styles {
+          export declare const base: import('zyzz').style.ReturnType
+          export declare const mid: import('zyzz').style.ReturnType
+          export declare const last: import('zyzz').style.ReturnType
+          export declare const edge: import('zyzz').style.ReturnType
+          export declare const edgeOn: import('zyzz').style.ReturnType
+          export const badge = (((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className,style=input.style,vars=input.vars,inline=vars?{...vars,...style}:style;let value,className="za";value=input["tone"];if(value===void 0)value="quiet";if(value!==null&&value!==void 0){className+=value==="loud"?" zA00":value==="quiet"?" zA01":""}if(external)className+=" "+external;return inline?{className,style:inline}:{className}}) as unknown as import('zyzz').variants.ReturnType<{selection:'class';variants:{"tone":{"loud":{};"quiet":{}}}}>)
+        }"
+      `)
+      expect(output.code.includes('zyzz/runtime')).toMatchInlineSnapshot(
+        `false`,
+      )
+
+      // Each style prints its rules once. A declaration conflicting with an earlier argument's
+      // prints one more copy after every shared unit, in argument order.
+      expect(output.css).toMatchInlineSnapshot(`
+        ".z2{color:rgb(10, 10, 10);}
+        .z3{padding-left:1px;}
+        .z4{color:rgb(20, 20, 20);}
+        .z5{padding-left:2px;}
+        .z6{color:rgb(30, 30, 30);}
+        .z7{color:rgb(40, 40, 40);}
+        .z8:not(.off){color:rgb(50, 50, 50);}
+        .z9:not(.off){color:rgb(60, 60, 60);}
+        .za{border-left:1px solid;}
+        .zA00{color:rgb(255, 0, 0);}
+        .zA01{color:rgb(128, 128, 128);}
+        .zA10{color:rgb(20, 20, 20);}
+        .zA11{padding-left:2px;}
+        .zA12{color:rgb(30, 30, 30);}
+        .zA13{color:rgb(255, 0, 0);}
+        .zA14{color:rgb(128, 128, 128);}
+        .zA15:not(.off){color:rgb(60, 60, 60);}"
+      `)
+
+      const rendered = await Wrappers.render({
+        css: output.css,
+        entry: 'App.tsx',
+        modules: { 'App.tsx': output.code },
+      })
+
+      // Later arguments win whether or not an earlier conditional argument is present, under
+      // pseudo-classes as well, and `null` selects nothing while an omitted axis takes its
+      // default.
+      expect(rendered.elements).toMatchInlineSnapshot(`
+        [
+          {
+            "borderLeftWidth": "0px",
+            "className": "z2 z3 z6 zA12",
+            "color": "rgb(30, 30, 30)",
+            "paddingLeft": "1px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "0px",
+            "className": "z2 z3 z4 z5 zA10 zA11 z6 zA12",
+            "color": "rgb(30, 30, 30)",
+            "paddingLeft": "2px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "0px",
+            "className": "z2 z3 z4 z5 zA10 zA11",
+            "color": "rgb(20, 20, 20)",
+            "paddingLeft": "2px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "1px",
+            "className": "za zA00 z6 zA12",
+            "color": "rgb(30, 30, 30)",
+            "paddingLeft": "0px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "1px",
+            "className": "z2 z3 za zA00 zA13",
+            "color": "rgb(255, 0, 0)",
+            "paddingLeft": "1px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "1px",
+            "className": "z2 z3 za",
+            "color": "rgb(10, 10, 10)",
+            "paddingLeft": "1px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "1px",
+            "className": "z2 z3 za zA01 zA14",
+            "color": "rgb(128, 128, 128)",
+            "paddingLeft": "1px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "1px",
+            "className": "z2 z3 za zA00 zA13",
+            "color": "rgb(255, 0, 0)",
+            "paddingLeft": "1px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "1px",
+            "className": "z2 z3 z4 z5 zA10 zA11 za zA00 zA13",
+            "color": "rgb(255, 0, 0)",
+            "paddingLeft": "2px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "0px",
+            "className": "z7 z8",
+            "color": "rgb(50, 50, 50)",
+            "paddingLeft": "0px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "0px",
+            "className": "z7 z8 z9 zA15",
+            "color": "rgb(60, 60, 60)",
+            "paddingLeft": "0px",
+            "tag": "span",
+          },
+        ]
+      `)
+
+      // The same source composes the same way on the web target.
+      const web = Transform.compile({ moduleId: 'App.tsx', source })
+      const webRendered = await Wrappers.render({
+        css: web.css,
+        entry: 'App.tsx',
+        modules: { 'App.tsx': web.code },
+      })
+      const computed = (elements: readonly Wrappers.Element[]) =>
+        elements.map(({ className: _, ...styles }) => styles)
+
+      expect(computed(rendered.elements)).toEqual(
+        computed(webRendered.elements),
+      )
+    })
+
+    test('guards flat composition arguments read before initialization', async () => {
+      // A module-scope call may run the component before the definitions initialize, so each
+      // argument reads its callee first, and a conditional argument reads it only when present.
+      const output = Transform.compile({
+        composition: 'independent',
+        moduleId: 'App.tsx',
+        source: `import { cx, style, variants } from 'zyzz'
+const flag = Math.random() >= 0
+export const App = () => <main>
+<span {...cx(styles.base(), flag && styles.mid(), styles.badge({ tone: flag ? 'loud' : 'quiet' }))}>guarded</span>
+</main>
+namespace styles {
+  export const base = style({ color: 'rgb(10, 10, 10)' })
+  export const mid = style({ color: 'rgb(20, 20, 20)' })
+  export const badge = variants({ base: { borderLeft: '1px solid' }, variants: { tone: { loud: { color: 'rgb(255, 0, 0)' }, quiet: { color: 'rgb(128, 128, 128)' } } } })
+}`,
+        target: 'lynx',
+      })
+
+      expect(output.code).toMatchInlineSnapshot(`
+        "
+        const __zyzzClasses0=["z4","z4 zA00 zA11","z4 zA01 zA12"];
+        function __zyzzSelect0(p0:unknown){return __zyzzClasses0[(p0==="loud"?1:p0==="quiet"?2:0)]}
+
+        import { Props as __zyzzProps } from 'zyzz/runtime';
+
+        const flag = Math.random() >= 0
+        export const App = () => <main>
+        <span className={((styles.base as unknown)||styles.base(),"z2")+((flag)?((styles.mid as unknown)||styles.mid()," z3 zA10"):"")+((styles.badge as unknown)||styles.badge()," "+__zyzzSelect0(flag ? 'loud' : 'quiet'))}>guarded</span>
+        </main>
+        namespace styles {
+          export const base = /*#__PURE__*/__zyzzProps.create({className:"z2"})
+          export const mid = /*#__PURE__*/__zyzzProps.create({className:"z3"})
+          export const badge = (((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className,style=input.style,vars=input.vars,inline=vars?{...vars,...style}:style;let value,className="z4";value=input["tone"];if(value!==null&&value!==void 0){className+=value==="loud"?" zA00":value==="quiet"?" zA01":""}if(external)className+=" "+external;return inline?{className,style:inline}:{className}}) as unknown as import('zyzz').variants.ReturnType<{selection:'class';variants:{"tone":{"loud":{};"quiet":{}}}}>)
+        }"
+      `)
+      expect(output.css).toMatchInlineSnapshot(`
+        ".z2{color:rgb(10, 10, 10);}
+        .z3{color:rgb(20, 20, 20);}
+        .z4{border-left:1px solid;}
+        .zA00{color:rgb(255, 0, 0);}
+        .zA01{color:rgb(128, 128, 128);}
+        .zA10{color:rgb(20, 20, 20);}
+        .zA11{color:rgb(255, 0, 0);}
+        .zA12{color:rgb(128, 128, 128);}"
+      `)
+
+      const rendered = await Wrappers.render({
+        css: output.css,
+        entry: 'App.tsx',
+        modules: { 'App.tsx': output.code },
+      })
+
+      expect(rendered.elements).toMatchInlineSnapshot(`
+        [
+          {
+            "borderLeftWidth": "1px",
+            "className": "z2 z3 zA10 z4 zA00 zA11",
+            "color": "rgb(255, 0, 0)",
+            "paddingLeft": "0px",
+            "tag": "span",
+          },
+        ]
+      `)
+    })
+
+    test('shares identical override copies across arguments and sibling compositions', async () => {
+      // Every call composes the same four colors, so their copies print once per module
+      // wherever stylesheet order still lets a later argument win.
+      const source = `import { cx, style } from 'zyzz'
+export const App = (props: { on?: boolean }) => {
+const on = props.on ?? true
+const off = !on
+return <main>
+<span {...cx(styles.a(), on && styles.b(), on && styles.c(), on && styles.d())}>all present</span>
+<span {...cx(styles.a(), on && styles.b(), off && styles.c(), off && styles.d())}>b present</span>
+<span {...cx(styles.a(), off && styles.b(), on && styles.c(), off && styles.d())}>c present</span>
+<span {...cx(styles.a(), off && styles.b(), on && styles.c(), on && styles.d())}>c and d present</span>
+<span {...cx(styles.a(), on && styles.b(), on && styles.e())}>identical later declarations</span>
+<span {...cx(styles.a(), on && styles.f())}>sibling</span>
+</main>
+}
+namespace styles {
+  export const a = style({ color: 'rgb(0, 0, 255)' })
+  export const b = style({ color: 'rgb(255, 0, 0)' })
+  export const c = style({ color: 'rgb(0, 128, 0)' })
+  export const d = style({ color: 'rgb(255, 0, 0)' })
+  export const e = style({ color: 'rgb(255, 0, 0)' })
+  export const f = style({ color: 'rgb(255, 0, 0)' })
+}`
+      const output = Transform.compile({
+        composition: 'independent',
+        moduleId: 'App.tsx',
+        source,
+        target: 'lynx',
+      })
+
+      // The red of `d` cannot reuse the red copy of `b`, since the green copy of `c` prints
+      // between them. Identical declarations never conflict, so `e` reuses the copy of `b`, as
+      // do the sibling calls.
+      expect(output.code).toMatchInlineSnapshot(`
+        "
+        export const App = (props: { on?: boolean }) => {
+        const on = props.on ?? true
+        const off = !on
+        return <main>
+        <span className={"z1"+((on)?" z2 zA00":"")+((on)?" z3 zA01":"")+((on)?" z2 zA02":"")}>all present</span>
+        <span className={"z1"+((on)?" z2 zA00":"")+((off)?" z3 zA01":"")+((off)?" z2 zA02":"")}>b present</span>
+        <span className={"z1"+((off)?" z2 zA00":"")+((on)?" z3 zA01":"")+((off)?" z2 zA02":"")}>c present</span>
+        <span className={"z1"+((off)?" z2 zA00":"")+((on)?" z3 zA01":"")+((on)?" z2 zA02":"")}>c and d present</span>
+        <span className={"z1"+((on)?" z2 zA00":"")+((on)?" z2 zA00":"")}>identical later declarations</span>
+        <span className={"z1"+((on)?" z2 zA00":"")}>sibling</span>
+        </main>
+        }
+        "
+      `)
+      expect(output.css).toMatchInlineSnapshot(`
+        ".z1{color:rgb(0, 0, 255);}
+        .z2{color:rgb(255, 0, 0);}
+        .z3{color:rgb(0, 128, 0);}
+        .zA00{color:rgb(255, 0, 0);}
+        .zA01{color:rgb(0, 128, 0);}
+        .zA02{color:rgb(255, 0, 0);}"
+      `)
+
+      const rendered = await Wrappers.render({
+        css: output.css,
+        entry: 'App.tsx',
+        modules: { 'App.tsx': output.code },
+      })
+
+      expect(rendered.elements).toMatchInlineSnapshot(`
+        [
+          {
+            "borderLeftWidth": "0px",
+            "className": "z1 z2 zA00 z3 zA01 z2 zA02",
+            "color": "rgb(255, 0, 0)",
+            "paddingLeft": "0px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "0px",
+            "className": "z1 z2 zA00",
+            "color": "rgb(255, 0, 0)",
+            "paddingLeft": "0px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "0px",
+            "className": "z1 z3 zA01",
+            "color": "rgb(0, 128, 0)",
+            "paddingLeft": "0px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "0px",
+            "className": "z1 z3 zA01 z2 zA02",
+            "color": "rgb(255, 0, 0)",
+            "paddingLeft": "0px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "0px",
+            "className": "z1 z2 zA00 z2 zA00",
+            "color": "rgb(255, 0, 0)",
+            "paddingLeft": "0px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "0px",
+            "className": "z1 z2 zA00",
+            "color": "rgb(255, 0, 0)",
+            "paddingLeft": "0px",
+            "tag": "span",
+          },
+        ]
+      `)
+
+      const web = Transform.compile({ moduleId: 'App.tsx', source })
+      const webRendered = await Wrappers.render({
+        css: web.css,
+        entry: 'App.tsx',
+        modules: { 'App.tsx': web.code },
+      })
+      const computed = (elements: readonly Wrappers.Element[]) =>
+        elements.map(({ className: _, ...styles }) => styles)
+
+      expect(computed(rendered.elements)).toEqual(
+        computed(webRendered.elements),
+      )
+    })
+
+    test('copies only the selectable choices of a literally applied recipe', async () => {
+      const source = `import { cx, style, variants } from 'zyzz'
+export const App = (props: { tone?: 'loud' | 'quiet' }) => {
+const tone = props.tone ?? 'loud'
+return <main>
+<span {...cx(styles.base(), styles.badge({ tone: 'loud' }))}>literal choice</span>
+<span {...cx(styles.base(), styles.badge({ tone: null }))}>null choice</span>
+<span {...cx(styles.base(), styles.badge())}>default choice</span>
+<span {...cx(styles.badge({ tone: 'quiet' }), styles.last())}>later argument against the selected choice</span>
+<span {...cx(styles.base(), styles.badge({ tone }))}>runtime choice</span>
+</main>
+}
+namespace styles {
+  export const base = style({ color: 'rgb(10, 10, 10)' })
+  export const last = style({ color: 'rgb(30, 30, 30)', paddingLeft: '2px' })
+  export const badge = variants({ base: { borderLeft: '1px solid' }, defaultVariants: { tone: 'quiet' }, variants: { tone: { loud: { color: 'rgb(255, 0, 0)', paddingLeft: '1px' }, quiet: { color: 'rgb(128, 128, 128)' } } } })
+}`
+      const output = Transform.compile({
+        composition: 'independent',
+        moduleId: 'App.tsx',
+        source,
+        target: 'lynx',
+      })
+
+      // A literal choice copies that choice alone, `null` copies nothing, and an omitted axis
+      // copies its default. A later argument conflicts only with the selected choice, so the
+      // padding of `last` needs no copy after `quiet`. The runtime choice reuses both copies.
+      expect(output.code).toMatchInlineSnapshot(`
+        "
+        const __zyzzClasses0=["z5","z5 zA00 zA10","z5 zA01 zA11"];
+        function __zyzzSelect0(p0:unknown){return __zyzzClasses0[(p0===void 0?2:p0==="loud"?1:p0==="quiet"?2:0)]}
+
+        export const App = (props: { tone?: 'loud' | 'quiet' }) => {
+        const tone = props.tone ?? 'loud'
+        return <main>
+        <span className={"z2 z5 zA00 zA10"}>literal choice</span>
+        <span className={"z2 z5"}>null choice</span>
+        <span className={"z2 z5 zA01 zA11"}>default choice</span>
+        <span className={"z5 zA01 z3 z4 zA12"}>later argument against the selected choice</span>
+        <span className={"z2"+" "+__zyzzSelect0(tone)}>runtime choice</span>
+        </main>
+        }
+        namespace styles {
+          export declare const base: import('zyzz').style.ReturnType
+          export declare const last: import('zyzz').style.ReturnType
+          export const badge = (((input:Record<string,unknown>&import('zyzz').style.Options={})=>{const external=input.className,style=input.style,vars=input.vars,inline=vars?{...vars,...style}:style;let value,className="z5";value=input["tone"];if(value===void 0)value="quiet";if(value!==null&&value!==void 0){className+=value==="loud"?" zA00":value==="quiet"?" zA01":""}if(external)className+=" "+external;return inline?{className,style:inline}:{className}}) as unknown as import('zyzz').variants.ReturnType<{selection:'class';variants:{"tone":{"loud":{};"quiet":{}}}}>)
+        }"
+      `)
+      expect(output.css).toMatchInlineSnapshot(`
+        ".z2{color:rgb(10, 10, 10);}
+        .z3{color:rgb(30, 30, 30);}
+        .z4{padding-left:2px;}
+        .z5{border-left:1px solid;}
+        .zA00{color:rgb(255, 0, 0);padding-left:1px;}
+        .zA01{color:rgb(128, 128, 128);}
+        .zA10{color:rgb(255, 0, 0);}
+        .zA11{color:rgb(128, 128, 128);}
+        .zA12{color:rgb(30, 30, 30);}"
+      `)
+
+      const rendered = await Wrappers.render({
+        css: output.css,
+        entry: 'App.tsx',
+        modules: { 'App.tsx': output.code },
+      })
+
+      expect(rendered.elements).toMatchInlineSnapshot(`
+        [
+          {
+            "borderLeftWidth": "1px",
+            "className": "z2 z5 zA00 zA10",
+            "color": "rgb(255, 0, 0)",
+            "paddingLeft": "1px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "1px",
+            "className": "z2 z5",
+            "color": "rgb(10, 10, 10)",
+            "paddingLeft": "0px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "1px",
+            "className": "z2 z5 zA01 zA11",
+            "color": "rgb(128, 128, 128)",
+            "paddingLeft": "0px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "1px",
+            "className": "z5 zA01 z3 z4 zA12",
+            "color": "rgb(30, 30, 30)",
+            "paddingLeft": "2px",
+            "tag": "span",
+          },
+          {
+            "borderLeftWidth": "1px",
+            "className": "z2 z5 zA00 zA10",
+            "color": "rgb(255, 0, 0)",
+            "paddingLeft": "1px",
+            "tag": "span",
+          },
+        ]
+      `)
+
+      const web = Transform.compile({ moduleId: 'App.tsx', source })
+      const webRendered = await Wrappers.render({
+        css: web.css,
+        entry: 'App.tsx',
+        modules: { 'App.tsx': web.code },
+      })
+      const computed = (elements: readonly Wrappers.Element[]) =>
+        elements.map(({ className: _, ...styles }) => styles)
+
+      expect(computed(rendered.elements)).toEqual(
+        computed(webRendered.elements),
+      )
     })
 
     test('emits sp and rpx lengths and rejects them on the web target', () => {
@@ -5162,9 +6132,9 @@ export const props = style({ marginTop: '-6.4sp', paddingLeft: 'calc(10rpx + 1px
       expect(
         Transform.compile({ moduleId: 'App.tsx', source, target: 'lynx' }).css,
       ).toMatchInlineSnapshot(`
-        ".z_l0kPgl0{margin-top:-6.4sp;}
-        .z_l0kPgl1{padding-left:calc(10rpx + 1px);}
-        @media (width >= 1px){.z_l0kPgl2{font-size:14sp;}}"
+        ".z0{margin-top:-6.4sp;}
+        .z1{padding-left:calc(10rpx + 1px);}
+        @media (width >= 1px){.z2{font-size:14sp;}}"
       `)
 
       expect(() => Transform.compile({ moduleId: 'App.tsx', source }))
@@ -5224,13 +6194,13 @@ namespace styles {
           Transform.compile({ moduleId: 'App.tsx', source, target: 'lynx' })
             .css,
         ).toMatchInlineSnapshot(`
-          ".z_l0kPgl0{opacity:1;}
-          .z_l0kPgl1:active{opacity:0.4;}
-          @media (width >= 1px){.z_l0kPgl2{color:blue;}}
-          @media (width >= 1px){.z_l0kPgl3:focus,.z_l0kPgl3:hover{color:green;}}
-          .list > .z_l0kPgl4{margin-top:1px;}
-          .z_l0kPgl5{padding-left:2px;}
-          .zv24sXp5PK0:active{color:gray;}"
+          ".z1{opacity:1;}
+          .z2:active{opacity:0.4;}
+          @media (width >= 1px){.z3{color:blue;}}
+          @media (width >= 1px){.z4:focus,.z4:hover{color:green;}}
+          .list > .z5{margin-top:1px;}
+          .z6{padding-left:2px;}
+          .zA00:active{color:gray;}"
         `)
       })
 
@@ -5243,8 +6213,8 @@ namespace styles {
             target: 'lynx',
           }).css,
         ).toMatchInlineSnapshot(`
-          ".z_l0kPgl0{opacity:1;}.z_l0kPgl0:active{opacity:0.4;}@media (width >= 1px){.z_l0kPgl0{color:blue;}}@media (width >= 1px){.z_l0kPgl0:focus,.z_l0kPgl0:hover{color:green;}}.list > .z_l0kPgl0{margin-top:1px;}.z_l0kPgl0{padding-left:2px;}
-          .zv24sXp5PK0:active{color:gray;}"
+          ".z1{opacity:1;}.z1:active{opacity:0.4;}@media (width >= 1px){.z1{color:blue;}}@media (width >= 1px){.z1:focus,.z1:hover{color:green;}}.list > .z1{margin-top:1px;}.z1{padding-left:2px;}
+          .zA00:active{color:gray;}"
         `)
       })
 
@@ -5324,6 +6294,143 @@ namespace styles {
           `[Source.ExtractError: App.tsx:34: The lynx target does not support \`:first-child\`.]`,
         )
       })
+    })
+
+    test('folds literal scope selections to constant props on both targets', () => {
+      const source = `import { cx, defineConfig, defineVars } from 'zyzz'
+const theme = defineVars({ color: { brand: '#06c' } })
+const { style, vars } = defineConfig({ vars: theme })
+namespace styles {
+  export const page = style({ color: 'brand' })
+}
+export const page = <view {...cx(vars({}), styles.page())} />
+export const dark = <text {...vars({ colorScheme: 'dark' })} />
+export const plain = <text {...vars()} />
+export const light = <text {...cx(vars({ colorScheme: 'light' }), styles.page())} />`
+      const lynx = Transform.compile({
+        moduleId: 'App.tsx',
+        source,
+        target: 'lynx',
+      })
+
+      // Each selection becomes the props its runtime selector would return, so neither the
+      // module nor its configuration needs the selection runtime.
+      expect(lynx.code).toMatchInlineSnapshot(`
+        "
+        const theme = ({} as import('zyzz').Vars.Definition<{readonly "color":{readonly "brand":"#06c"}}>)
+        const { style, vars } = ({} as import('zyzz').Config.VariableConfig<{readonly "vars":{readonly "color":{readonly "brand":"#06c"}}}>)
+
+        export const page = <view className={"z-theme-theme z0"} />
+        export const dark = <text {...({className:"z-theme-theme z_scheme-dark",style:{colorScheme:"dark"}})} />
+        export const plain = <text {...({className:"z-theme-theme"})} />
+        export const light = <text {...({className:"z-theme-theme z_scheme-light z0",style:{colorScheme:"light"}})} />"
+      `)
+      expect(lynx.code.includes('zyzz/runtime')).toMatchInlineSnapshot(`false`)
+      // A production Lynx module names its token property densely and prints no fallback.
+      expect(lynx.css).toMatchInlineSnapshot(`
+        ".z-theme-theme{--z0:#06c;}
+        .z_scheme-dark{color-scheme:dark;}
+        .z_scheme-light{color-scheme:light;}
+        .z_scheme-light-dark{color-scheme:light dark;}
+        .z0{color:var(--z0);}"
+      `)
+
+      // The web target folds the same selections under its readable names.
+      const web = Transform.compile({ moduleId: 'App.tsx', source })
+
+      expect(web.code).toMatchInlineSnapshot(`
+        "
+        const theme = ({} as import('zyzz').Vars.Definition<{readonly "color":{readonly "brand":"#06c"}}>)
+        const { style, vars } = ({} as import('zyzz').Config.VariableConfig<{readonly "vars":{readonly "color":{readonly "brand":"#06c"}}}>)
+
+        export const page = <view className={"z-theme-theme z_l0kPgl0"} />
+        export const dark = <text {...({className:"z-theme-theme z_scheme-dark",style:{colorScheme:"dark"}})} />
+        export const plain = <text {...({className:"z-theme-theme"})} />
+        export const light = <text {...({className:"z-theme-theme z_scheme-light z_l0kPgl0",style:{colorScheme:"light"}})} />"
+      `)
+
+      // A selection with a dynamic argument keeps the runtime selector.
+      const dynamic = Transform.compile({
+        moduleId: 'App.tsx',
+        source: source.replace(
+          "vars({ colorScheme: 'dark' })",
+          "vars({ colorScheme: Math.random() > 0.5 ? 'dark' : 'light' })",
+        ),
+        target: 'lynx',
+      })
+
+      expect(
+        dynamic.code.includes(
+          '__zyzzSelection.create([["default","z-theme-theme"]],false,\'set\',"default")',
+        ),
+      ).toMatchInlineSnapshot(`true`)
+      expect(
+        dynamic.code.includes(
+          "<text {...vars({ colorScheme: Math.random() > 0.5 ? 'dark' : 'light' })} />",
+        ),
+      ).toMatchInlineSnapshot(`true`)
+    })
+
+    test('names token properties and keyframes densely and prints no fallbacks', () => {
+      const source = `import { defineConfig, defineVars } from 'zyzz'
+import { keyframes } from 'zyzz/web'
+const theme = defineVars({ color: { brand: '#06c', muted: '#555' } })
+const { style, vars } = defineConfig({ vars: theme })
+export const fade = keyframes({ from: { opacity: 0 }, to: { opacity: 1 } })
+export const toast = style({ animation: \`\${fade} 1s\`, animationName: fade, color: vars.color.muted })`
+      const lynx = Transform.compile({
+        moduleId: 'App.tsx',
+        source,
+        target: 'lynx',
+      })
+
+      // The keyframes rule, the binding constant, and both animation values share one dense
+      // name. The theme table names each token property in path order, so the referenced
+      // `muted` prints as `--z1` in the root rule and the declaration, without a fallback.
+      expect(lynx.css).toMatchInlineSnapshot(`
+        "@keyframes z0{from{opacity:0;}to{opacity:1;}}
+        .z-theme-theme{--z1:#555;}
+        .z0{animation:z0 1s;}
+        .z1{animation-name:z0;}
+        .z2{color:var(--z1);}"
+      `)
+      expect(lynx.code).toMatchInlineSnapshot(`
+        "
+        import { Props as __zyzzProps } from 'zyzz/runtime';
+
+
+        const theme = ({} as import('zyzz').Vars.Definition<{readonly "color":{readonly "brand":"#06c";readonly "muted":"#555"}}>)
+        const { style, vars } = ({} as import('zyzz').Config.VariableConfig<{readonly "vars":{readonly "color":{readonly "brand":"#06c";readonly "muted":"#555"}}}>)
+        export const fade = "z0"
+        export const toast = /*#__PURE__*/__zyzzProps.create({className:"z0 z1 z2 z-style-l0kPgl-toast"})"
+      `)
+
+      // A development build keeps readable names and still prints no fallback on Lynx.
+      const development = Transform.compile({
+        development: true,
+        moduleId: 'App.tsx',
+        source,
+        target: 'lynx',
+      })
+
+      expect(development.css).toMatchInlineSnapshot(`
+        "@keyframes z-k-l0kPgl-fade{from{opacity:0;}to{opacity:1;}}
+        .z-theme-theme{--z-color-muted:#555;}
+        .z-l0kPgl-toast-animation-0{animation:z-k-l0kPgl-fade 1s;}
+        .z-l0kPgl-toast-animation-name-1{animation-name:z-k-l0kPgl-fade;}
+        .z-l0kPgl-text-\\5b var\\28 --z-color-muted\\29 \\5d{color:var(--z-color-muted);}"
+      `)
+
+      // The web target keeps readable names and fallbacks.
+      const web = Transform.compile({ moduleId: 'App.tsx', source })
+
+      expect(web.css).toMatchInlineSnapshot(`
+        "@keyframes z-k-l0kPgl-fade{from{opacity:0;}to{opacity:1;}}
+        .z-theme-theme{--z-color-muted:#555;}
+        .z_l0kPgl0{animation:z-k-l0kPgl-fade 1s;}
+        .z_l0kPgl1{animation-name:z-k-l0kPgl-fade;}
+        .z_l0kPgl2{color:var(--z-color-muted,#555);}"
+      `)
     })
   })
 })
@@ -12678,13 +13785,18 @@ export const dynamic = styles.dynamic({ width: '20px' });`
         moduleId: 'scopes.ts',
         source: `import {style} from 'zyzz';
       namespace first { const base = {color:'red'} as const; export const card = style(base); }
-      namespace second { const base = {color:'blue'} as const; export const card = style(base); }`,
+      namespace second { const base = {color:'blue'} as const; export const card = style(base); }
+      export const cards = [first.card().className, second.card().className];`,
       })
 
       expect(output.css).toMatchInlineSnapshot(`
         ".z_dRwjil0{color:red;}
         .z_dRwjil1{color:blue;}"
       `)
+      // Both namespaces erase with their records once every application folds.
+      expect(output.code.trim()).toMatchInlineSnapshot(
+        `"export const cards = ["z_dRwjil0", "z_dRwjil1"];"`,
+      )
     })
 
     test('rejects mutation of reused namespace declarations', () => {
@@ -12728,9 +13840,6 @@ import { Css } from 'zyzz/web';export const { style, variants, vars:theme } = Co
           `)
           expect(app.css).toMatchInlineSnapshot(`
             ".z-theme-theme{--z-color-brand:red;}
-            .z_scheme-dark{color-scheme:dark;}
-            .z_scheme-light{color-scheme:light;}
-            .z_scheme-light-dark{color-scheme:light dark;}
             .z_Zf5JrJ0{color:var(--z-color-brand,red);}
             .z_Zf5JrJ1{padding:8px;}
             .z_Zf5JrJ2{padding:8px;}
@@ -12749,9 +13858,6 @@ import { Css } from 'zyzz/web';export const { style, variants, vars:theme } = Co
           `)
           expect(app.css).toMatchInlineSnapshot(`
             ".z-theme-theme{--z-color-brand:red;}
-            .z_scheme-dark{color-scheme:dark;}
-            .z_scheme-light{color-scheme:light;}
-            .z_scheme-light-dark{color-scheme:light dark;}
             .z_Zf5JrJ0{color:var(--z-color-brand,red);padding:8px;}
             .z_Zf5JrJ1{color:var(--z-color-brand,red);padding:8px;}
             .z_Zf5JrJ2{color:var(--z-color-brand,red);padding:8px;&:where([data-size="large"]){padding:12px;}}"
@@ -13643,6 +14749,145 @@ describe('performance', () => {
               declare namespace styles {export const card: import('zyzz').style.ReturnType}
               export type Card = typeof styles.card
               export const classes=["z_iFQJXQ0"]"
+      `)
+    })
+
+    test('composes members of namespaces that hold spread records', () => {
+      const source = `import { cx, style } from 'zyzz'
+
+export function Chip(props: { checked: boolean }) {
+  return <view {...cx(styles.root(), props.checked && styles.selected())} />
+}
+
+namespace styles {
+  const row = { alignItems: 'center', display: 'flex', flexDirection: 'row' } as const
+
+  export const root = style({ ...row, padding: '8px' })
+
+  export const selected = style({ backgroundColor: '#000' })
+}
+`
+      const output = Transform.compile({ moduleId: 'Chip.tsx', source })
+
+      // The hoisted component can run before the namespace, so its applications keep guards.
+      expect(output.code).toMatchInlineSnapshot(`
+        "
+        const __zyzzComposition105=["z_Ve3Ri60 z_Ve3Ri61 z_Ve3Ri62 z_Ve3Ri63","z_Ve3Ri60 z_Ve3Ri61 z_Ve3Ri62 z_Ve3Ri63 z_Ve3Ri64"];
+
+        import { Props as __zyzzProps } from 'zyzz/runtime';
+
+
+        export function Chip(props: { checked: boolean }) {
+          return <view className={__zyzzComposition105[((styles.root as unknown)||styles.root(),0)|((props.checked)?((styles.selected as unknown)||styles.selected(),1):0)]} />
+        }
+
+        namespace styles {
+          const row = { alignItems: 'center', display: 'flex', flexDirection: 'row' } as const
+
+          export const root = /*#__PURE__*/__zyzzProps.create({className:""})
+
+          export const selected = /*#__PURE__*/__zyzzProps.create({className:""})
+        }
+        "
+      `)
+      expect(output.css).toMatchInlineSnapshot(`
+        ".z_Ve3Ri60{align-items:center;}
+        .z_Ve3Ri61{display:flex;}
+        .z_Ve3Ri62{flex-direction:row;}
+        .z_Ve3Ri63{padding:8px;}
+        .z_Ve3Ri64{background-color:#000;}"
+      `)
+      // The lynx target composes the same members under its dense names.
+      expect(
+        Transform.compile({ moduleId: 'Chip.tsx', source, target: 'lynx' })
+          .code,
+      ).toMatchInlineSnapshot(`
+        "
+        const __zyzzComposition105=["z0 z1 z2 z3","z0 z1 z2 z3 z4"];
+
+        import { Props as __zyzzProps } from 'zyzz/runtime';
+
+
+        export function Chip(props: { checked: boolean }) {
+          return <view className={__zyzzComposition105[((styles.root as unknown)||styles.root(),0)|((props.checked)?((styles.selected as unknown)||styles.selected(),1):0)]} />
+        }
+
+        namespace styles {
+          const row = { alignItems: 'center', display: 'flex', flexDirection: 'row' } as const
+
+          export const root = /*#__PURE__*/__zyzzProps.create({className:""})
+
+          export const selected = /*#__PURE__*/__zyzzProps.create({className:""})
+        }
+        "
+      `)
+
+      const exported = Transform.compile({
+        moduleId: 'Chip.tsx',
+        source: source.replace('  const row', '  export const row'),
+      })
+
+      expect(exported.code).toBe(
+        output.code.replace('  const row', '  export const row'),
+      )
+
+      // Applications that follow initialization erase the namespace with its record.
+      const erased = Transform.compile({
+        moduleId: 'Chip.tsx',
+        source: `import { cx, style } from 'zyzz'
+
+namespace styles {
+  const row = { alignItems: 'center', display: 'flex', flexDirection: 'row' } as const
+
+  export const root = style({ ...row, padding: '8px' })
+
+  export const selected = style({ backgroundColor: '#000' })
+}
+
+export const Chip = (props: { checked: boolean }) => <view {...cx(styles.root(), props.checked && styles.selected())} />
+`,
+      })
+
+      expect(erased.code).toMatchInlineSnapshot(`
+        "
+
+
+
+        export const Chip = (props: { checked: boolean }) => <view className={(props.checked)?"z_Ve3Ri60 z_Ve3Ri61 z_Ve3Ri62 z_Ve3Ri63 z_Ve3Ri64":"z_Ve3Ri60 z_Ve3Ri61 z_Ve3Ri62 z_Ve3Ri63"} />
+        "
+      `)
+
+      // A record another read reaches keeps the namespace object beside the folded members.
+      const read = Transform.compile({
+        moduleId: 'Chip.tsx',
+        source: source
+          .replace('  const row', '  export const row')
+          .replace(
+            '\nnamespace styles',
+            '\nexport const layout = styles.row\nnamespace styles',
+          ),
+      })
+
+      expect(read.code).toMatchInlineSnapshot(`
+        "
+        const __zyzzComposition105=["z_Ve3Ri60 z_Ve3Ri61 z_Ve3Ri62 z_Ve3Ri63","z_Ve3Ri60 z_Ve3Ri61 z_Ve3Ri62 z_Ve3Ri63 z_Ve3Ri64"];
+
+        import { Props as __zyzzProps } from 'zyzz/runtime';
+
+
+        export function Chip(props: { checked: boolean }) {
+          return <view className={__zyzzComposition105[((styles.root as unknown)||styles.root(),0)|((props.checked)?((styles.selected as unknown)||styles.selected(),1):0)]} />
+        }
+
+        export const layout = styles.row
+        namespace styles {
+          export const row = { alignItems: 'center', display: 'flex', flexDirection: 'row' } as const
+
+          export const root = /*#__PURE__*/__zyzzProps.create({className:""})
+
+          export const selected = /*#__PURE__*/__zyzzProps.create({className:""})
+        }
+        "
       `)
     })
 
@@ -16932,17 +18177,10 @@ describe('variables', () => {
 
       expect(result.modules['app.ts']!.css).toMatchInlineSnapshot(`
         ".z-theme-theme{--z-spacing-md:8px;--z-color-brand:light-dark(red,blue);}
-        .z_scheme-dark{color-scheme:dark;}
-        .z_scheme-light{color-scheme:light;}
-        .z_scheme-light-dark{color-scheme:light dark;}
         .z_Zf5JrJ0{width:calc(100% - var(--z-spacing-md,8px));}
         .z_Zf5JrJ1{color:var(--z-color-brand,light-dark(red,blue));}"
       `)
-      expect(result.modules['theme.ts']!.css).toMatchInlineSnapshot(`
-        ".z_scheme-dark{color-scheme:dark;}
-        .z_scheme-light{color-scheme:light;}
-        .z_scheme-light-dark{color-scheme:light dark;}"
-      `)
+      expect(result.modules['theme.ts']!.css).toMatchInlineSnapshot(`""`)
     })
 
     test('compiles named configuration variables from packed contracts', () => {

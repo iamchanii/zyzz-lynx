@@ -1059,9 +1059,6 @@ describe('defineConfig', () => {
       expect(defineConfig === PublicConfig.create).toMatchInlineSnapshot(`true`)
       expect(result.modules['app.ts']!.css).toMatchInlineSnapshot(`
         ".z-theme-theme{--z-color-brand:#123456;}
-        .z_scheme-dark{color-scheme:dark;}
-        .z_scheme-light{color-scheme:light;}
-        .z_scheme-light-dark{color-scheme:light dark;}
         .z_Zf5JrJ0{color:var(--z-color-brand,#123456);}"
       `)
     },

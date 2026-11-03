@@ -1,18 +1,20 @@
-//! Proves which exported style definitions of a complete graph no module applies outside the
-//! compositions that replace their class lists, so their rules can be left out.
+//! Proves which exports of a complete graph no module reads in a way that needs their runtime
+//! value, so a style definition's rules or a configuration's selector can be left out.
 //!
 //! The proof reads bindings, not identifier text. Every value reference of an exported binding,
-//! in its own module and through each import of it, must be the callee of an application whose
-//! class list a composition replaces. A member of an exported namespace qualifies the same way
-//! through reads of the namespace. Any other read, re-export, default or dynamic import, or
-//! `require` call keeps the definition, as does a module that no graph module imports.
+//! in its own module and through each import of it, must be one the rewritten module no longer
+//! makes: an application whose class list a composition replaces for a style definition, and a
+//! selection folded to constant props or a token read for a variable selector. A member of an
+//! exported namespace, and the `vars` selector of an exported configuration, qualify the same way
+//! through reads of the namespace or configuration. Any other read, re-export, default or dynamic
+//! import, or `require` call keeps the export, as does a module that no graph module imports.
 
 use std::sync::Arc;
 
 use oxc_ast::AstKind;
 use oxc_ast::ast::{
     Argument, BindingPattern, Declaration, Expression, ImportDeclarationSpecifier,
-    ImportOrExportKind, Statement, TSModuleReference, TSNamespaceDeclarationBody,
+    ImportOrExportKind, PropertyKey, Statement, TSModuleReference, TSNamespaceDeclarationBody,
     VariableDeclarationKind,
 };
 use oxc_semantic::Semantic;
@@ -23,41 +25,80 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::compiler::internal::syntax::Parsed;
 
-/// Names of the definitions left without rules, by module identity.
-pub type Definitions = FxHashMap<Arc<str>, FxHashSet<Arc<str>>>;
+/// Exports left without their runtime value, by module identity.
+pub type Exports = FxHashMap<Arc<str>, Unused>;
+
+/// The exports of one module that no module of the graph reads at runtime.
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct Unused {
+    /// Names of the style definitions left without rules.
+    pub definitions: FxHashSet<Arc<str>>,
+    /// Scope keys of the variable configurations left without their runtime selector.
+    pub selectors: FxHashSet<Arc<str>>,
+}
 
 /// One parsed module of the graph.
 pub struct Module<'m, 'a> {
     /// Names of the module's plain style definitions, which hold no composition, by call start.
     pub definitions: FxHashMap<u32, &'m Arc<str>>,
+    /// Starts of scope selections folded to constant props.
+    pub folded: &'m FxHashSet<u32>,
     /// Stable module identity.
     pub id: &'m Arc<str>,
     /// The parsed module.
     pub parsed: &'m Parsed<'a>,
     /// Starts of applications whose class lists compositions replace.
     pub replaced: &'m FxHashSet<u32>,
+    /// Scope keys of the module's variable configurations, by call start.
+    pub selectors: FxHashMap<u32, &'m Arc<str>>,
 }
 
-/// Definition names by export path, such as `field` or `styles.field` for a namespace member.
-type Candidates = FxHashMap<String, Arc<str>>;
+/// What an export path holds.
+#[derive(Clone, Copy)]
+enum Kind {
+    /// A style definition, read only by replaced applications.
+    Definition,
+    /// A variable selector, read only by folded selections and token reads.
+    Selector,
+}
 
-/// How a binding reference reads a style definition.
+/// An export the graph may leave without its runtime value.
+struct Candidate {
+    kind: Kind,
+    /// The definition name or configuration scope key.
+    name: Arc<str>,
+}
+
+/// Candidates by export path, such as `field`, `styles.field` for a namespace member, or
+/// `config.vars` for the selector of a whole exported configuration.
+type Candidates = FxHashMap<String, Candidate>;
+
+/// What a binding holds.
+#[derive(Clone, Copy)]
+enum Binding {
+    /// A namespace, configuration, or module object whose members hold the exports.
+    Container,
+    /// One export.
+    Leaf(Kind),
+}
+
+/// How a binding reference reads an export.
 enum Read<'a> {
-    /// A read that may reach the definition's class list.
+    /// A read the rewritten module no longer makes.
+    Consumed,
+    /// A read that may reach the export's runtime value.
     Escaped,
-    /// Any read of the named namespace member other than a replaced application.
-    Member(&'a str),
-    /// An application a composition replaces.
-    Replaced,
+    /// A static member read of a container, with the member expression's node.
+    Member(&'a str, NodeId),
 }
 
-/// Names of exported definitions that no module applies outside replacing compositions, by module
-/// identity. `resolve` maps a specifier of a module to the identity of a graph module, and
-/// returns `Err(())` when it cannot tell, which proves nothing.
+/// Exports that no module reads at runtime, by module identity. `resolve` maps a specifier of a
+/// module to the identity of a graph module, and returns `Err(())` when it cannot tell, which
+/// proves nothing.
 pub fn collect(
     modules: &[Module<'_, '_>],
     resolve: impl Fn(&str, &str, Span) -> Result<Option<Arc<str>>, ()>,
-) -> Definitions {
+) -> Exports {
     let mut candidates: FxHashMap<Arc<str>, Candidates> = FxHashMap::default();
 
     for module in modules {
@@ -120,22 +161,27 @@ pub fn collect(
                         };
 
                         // A namespace import reads exports as members, and a named import of an
-                        // exported namespace reads that namespace's members.
-                        let prefix = name.map(|name| format!("{name}."));
-                        let namespace = match &prefix {
-                            Some(prefix) => names.keys().any(|key| key.starts_with(&**prefix)),
-                            None => true,
+                        // exported namespace or configuration reads that export's members.
+                        let prefix = name.map_or_else(String::new, |name| format!("{name}."));
+                        let binding = match name {
+                            Some(name) => match names.get(name) {
+                                Some(candidate) => Binding::Leaf(candidate.kind),
+                                None if names.keys().any(|key| key.starts_with(&*prefix)) => {
+                                    Binding::Container
+                                }
+                                None => continue,
+                            },
+                            None => Binding::Container,
                         };
 
-                        for read in reads(semantic, symbol, namespace, module.replaced) {
-                            match (read, &prefix, name) {
-                                (Read::Replaced, _, _) => {}
-                                (Read::Member(member), Some(prefix), _) => {
-                                    remove(names, &format!("{prefix}{member}"));
+                        for read in reads(semantic, symbol, binding, module) {
+                            match (read, name) {
+                                (Read::Consumed, _) => {}
+                                (Read::Member(member, node), _) => {
+                                    member_read(names, &format!("{prefix}{member}"), node, module);
                                 }
-                                (Read::Member(member), None, _) => remove(names, member),
-                                (Read::Escaped, _, Some(name)) => remove(names, name),
-                                (Read::Escaped, _, None) => names.clear(),
+                                (Read::Escaped, Some(name)) => remove(names, name),
+                                (Read::Escaped, None) => names.clear(),
                             }
                         }
                     }
@@ -226,8 +272,31 @@ pub fn collect(
     candidates
         .into_iter()
         .filter(|(id, names)| !names.is_empty() && imported.contains(id))
-        .map(|(id, names)| (id, names.into_values().collect()))
+        .map(|(id, names)| {
+            let mut unused = Unused::default();
+
+            for candidate in names.into_values() {
+                match candidate.kind {
+                    Kind::Definition => unused.definitions.insert(candidate.name),
+                    Kind::Selector => unused.selectors.insert(candidate.name),
+                };
+            }
+
+            (id, unused)
+        })
         .collect()
+}
+
+/// Keeps a member read of a container when it reaches a candidate the rewritten module no longer
+/// reads, and removes the path otherwise, since a read of an unlisted path may hold members.
+fn member_read(names: &mut Candidates, path: &str, node: NodeId, module: &Module<'_, '_>) {
+    let kept = names
+        .get(path)
+        .is_some_and(|candidate| consumed(&module.parsed.semantic, node, candidate.kind, module));
+
+    if !kept {
+        remove(names, path);
+    }
 }
 
 /// Removes an export path and every member path beneath it.
@@ -251,9 +320,8 @@ fn type_only(node: &oxc_ast::ast::ImportDeclaration<'_>) -> bool {
     })
 }
 
-/// Plain definitions bound by top-level `export const` declarations, and by `export const`
-/// members of top-level exported namespaces, whose own module reads them only through replaced
-/// applications.
+/// Exports bound by top-level `export const` declarations, and by `export const` members of
+/// top-level exported namespaces, whose own module reads them only in consumed ways.
 fn exported(module: &Module<'_, '_>) -> Candidates {
     let semantic = &module.parsed.semantic;
     let mut names = Candidates::default();
@@ -265,7 +333,7 @@ fn exported(module: &Module<'_, '_>) -> Candidates {
 
         match &node.declaration {
             Declaration::VariableDeclaration(declaration) => {
-                definitions(module, declaration, "", &mut names);
+                declared(module, declaration, "", &mut names);
             }
             Declaration::TSNamespaceDeclaration(namespace) => {
                 let TSNamespaceDeclarationBody::TSModuleBlock(block) = &namespace.body else {
@@ -281,15 +349,17 @@ fn exported(module: &Module<'_, '_>) -> Candidates {
                     if let Statement::ExportDeclaration(member) = member
                         && let Declaration::VariableDeclaration(declaration) = &member.declaration
                     {
-                        definitions(module, declaration, &prefix, &mut members);
+                        declared(module, declaration, &prefix, &mut members);
                     }
                 }
 
-                for read in reads(semantic, symbol, true, module.replaced) {
+                for read in reads(semantic, symbol, Binding::Container, module) {
                     match read {
+                        Read::Consumed => {}
                         Read::Escaped => members.clear(),
-                        Read::Member(member) => remove(&mut members, &format!("{prefix}{member}")),
-                        Read::Replaced => {}
+                        Read::Member(member, node) => {
+                            member_read(&mut members, &format!("{prefix}{member}"), node, module);
+                        }
                     }
                 }
 
@@ -302,32 +372,106 @@ fn exported(module: &Module<'_, '_>) -> Candidates {
     names
 }
 
-/// Adds the plain definitions a `const` declaration binds, under `prefix`, when every read of
-/// each binding is a replaced application.
-fn definitions(
+/// Adds the exports a `const` declaration binds, under `prefix`, when the module reads each
+/// binding only in consumed ways: a plain style definition, the `vars` selector destructured
+/// from a variable configuration, or the `vars` member of a whole variable configuration.
+fn declared(
     module: &Module<'_, '_>,
     declaration: &oxc_ast::ast::VariableDeclaration<'_>,
     prefix: &str,
     names: &mut Candidates,
 ) {
+    let semantic = &module.parsed.semantic;
+
     if declaration.kind != VariableDeclarationKind::Const {
         return;
     }
 
     for declarator in &declaration.declarations {
-        let BindingPattern::BindingIdentifier(identifier) = &declarator.id else {
+        let Some(init) = &declarator.init else {
             continue;
         };
-        let Some(symbol) = identifier.symbol_id.get() else {
-            continue;
-        };
+        let start = init.span().start;
 
-        if let Some(init) = &declarator.init
-            && let Some(name) = module.definitions.get(&init.span().start)
-            && reads(&module.parsed.semantic, symbol, false, module.replaced)
-                .all(|read| matches!(read, Read::Replaced))
-        {
-            names.insert(format!("{prefix}{}", identifier.name), Arc::clone(name));
+        match &declarator.id {
+            BindingPattern::BindingIdentifier(identifier) => {
+                let Some(symbol) = identifier.symbol_id.get() else {
+                    continue;
+                };
+
+                if let Some(name) = module.definitions.get(&start) {
+                    if reads(semantic, symbol, Binding::Leaf(Kind::Definition), module)
+                        .all(|read| matches!(read, Read::Consumed))
+                    {
+                        names.insert(
+                            format!("{prefix}{}", identifier.name),
+                            Candidate {
+                                kind: Kind::Definition,
+                                name: Arc::clone(name),
+                            },
+                        );
+                    }
+
+                    continue;
+                }
+
+                // A whole configuration escapes with its selector, and its other members hold no
+                // selector.
+                let Some(key) = module.selectors.get(&start) else {
+                    continue;
+                };
+                let consumed =
+                    reads(semantic, symbol, Binding::Container, module).all(|read| match read {
+                        Read::Escaped => false,
+                        Read::Member("vars", node) => {
+                            consumed(semantic, node, Kind::Selector, module)
+                        }
+                        Read::Consumed | Read::Member(_, _) => true,
+                    });
+
+                if consumed {
+                    names.insert(
+                        format!("{prefix}{}.vars", identifier.name),
+                        Candidate {
+                            kind: Kind::Selector,
+                            name: Arc::clone(key),
+                        },
+                    );
+                }
+            }
+            // A rest element would hold the selector.
+            BindingPattern::ObjectPattern(pattern) if pattern.rest.is_none() => {
+                let Some(key) = module.selectors.get(&start) else {
+                    continue;
+                };
+
+                for property in &pattern.properties {
+                    let (
+                        PropertyKey::StaticIdentifier(name),
+                        BindingPattern::BindingIdentifier(identifier),
+                    ) = (&property.key, &property.value)
+                    else {
+                        continue;
+                    };
+                    let Some(symbol) = identifier.symbol_id.get() else {
+                        continue;
+                    };
+
+                    if name.name == "vars"
+                        && reads(semantic, symbol, Binding::Leaf(Kind::Selector), module)
+                            .all(|read| matches!(read, Read::Consumed))
+                    {
+                        names.insert(
+                            format!("{prefix}{}", identifier.name),
+                            Candidate {
+                                kind: Kind::Selector,
+                                name: Arc::clone(key),
+                            },
+                        );
+                    }
+                }
+            }
+            _ => {}
         }
     }
 }
@@ -336,49 +480,68 @@ fn definitions(
 fn reads<'s, 'a>(
     semantic: &'s Semantic<'a>,
     symbol: SymbolId,
-    namespace: bool,
-    replaced: &'s FxHashSet<u32>,
+    binding: Binding,
+    module: &'s Module<'_, '_>,
 ) -> impl Iterator<Item = Read<'a>> + 's {
     semantic
         .symbol_references(symbol)
         .filter(|reference| reference.is_value())
-        .map(move |reference| read(semantic, reference.node_id(), namespace, replaced))
+        .map(move |reference| read(semantic, reference.node_id(), binding, module))
 }
 
-/// Classifies one reference: a replaced application of the binding, or of its static member when
-/// the binding is a namespace, or any other read.
+/// Classifies one reference: a consumed read of one export, a static member read of a container,
+/// or any other read.
 fn read<'a>(
     semantic: &Semantic<'a>,
     id: NodeId,
-    namespace: bool,
-    replaced: &FxHashSet<u32>,
+    binding: Binding,
+    module: &Module<'_, '_>,
 ) -> Read<'a> {
     let nodes = semantic.nodes();
-    let mut callee = nodes.kind(id).span();
-    let mut parent = nodes.parent_id(id);
-    let mut member = None;
 
-    if namespace {
-        match nodes.kind(parent) {
-            AstKind::StaticMemberExpression(expression)
-                if !expression.optional && expression.object.span() == callee =>
-            {
-                member = Some(expression.property.name.as_str());
-                callee = expression.span;
-                parent = nodes.parent_id(parent);
+    match binding {
+        Binding::Leaf(kind) => {
+            if consumed(semantic, id, kind, module) {
+                Read::Consumed
+            } else {
+                Read::Escaped
             }
-            _ => return Read::Escaped,
+        }
+        Binding::Container => {
+            let parent = nodes.parent_id(id);
+
+            match nodes.kind(parent) {
+                AstKind::StaticMemberExpression(expression)
+                    if !expression.optional
+                        && expression.object.span() == nodes.kind(id).span() =>
+                {
+                    Read::Member(expression.property.name.as_str(), parent)
+                }
+                _ => Read::Escaped,
+            }
         }
     }
+}
 
-    match nodes.kind(parent) {
-        AstKind::CallExpression(call)
-            if !call.optional
-                && call.callee.span() == callee
-                && replaced.contains(&call.span.start) =>
+/// Whether the rewritten module no longer reads the export at `id`: a style definition applied
+/// where a composition replaces the class list, or a variable selector called with folded
+/// literal arguments or read for a token, which extraction accepts only as a direct property
+/// value of a bound style call.
+fn consumed(semantic: &Semantic<'_>, id: NodeId, kind: Kind, module: &Module<'_, '_>) -> bool {
+    let nodes = semantic.nodes();
+    let span = nodes.kind(id).span();
+
+    match nodes.kind(nodes.parent_id(id)) {
+        AstKind::CallExpression(call) if !call.optional && call.callee.span() == span => match kind
         {
-            Read::Replaced
+            Kind::Definition => module.replaced.contains(&call.span.start),
+            Kind::Selector => module.folded.contains(&call.span.start),
+        },
+        AstKind::StaticMemberExpression(expression)
+            if !expression.optional && expression.object.span() == span =>
+        {
+            matches!(kind, Kind::Selector)
         }
-        _ => member.map_or(Read::Escaped, Read::Member),
+        _ => false,
     }
 }

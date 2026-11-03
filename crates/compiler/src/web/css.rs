@@ -67,6 +67,9 @@ pub struct Options<'a> {
     pub shared: Option<Shared>,
     /// Ordered definitions; no themes or source adapter is required.
     pub styles: &'a [Arc<NamedStyle>],
+    /// Dense custom property names of a Lynx production graph, which every token reference and
+    /// scope rule prints instead of the readable names.
+    pub variables: Option<&'a Arc<themes::Names>>,
     /// Named scopes; only variables referenced by these styles are emitted.
     pub vars: Option<&'a [(Arc<str>, Scope)]>,
 }
@@ -402,6 +405,8 @@ struct Compiler<'a> {
     runs: FxHashMap<usize, FxHashMap<u32, usize>>,
     selectors: FxHashMap<String, Arc<str>>,
     serialized: FxHashMap<usize, Rc<str>>,
+    /// How the lazily created collector prints references.
+    theme_options: themes::Options,
     themes: Option<Themes>,
     /// Reused buffer for the body of the unit being named.
     unit_body: String,
@@ -771,6 +776,14 @@ impl<'a> Compiler<'a> {
         id
     }
 
+    /// The reference collector, created on the first reference or scope.
+    fn themes(&mut self) -> &mut Themes {
+        let options = &self.theme_options;
+
+        self.themes
+            .get_or_insert_with(|| Themes::create(options.clone()))
+    }
+
     fn serialize_token(&mut self, reference: &Arc<Reference>) -> Rc<str> {
         let key = Arc::as_ptr(reference).addr();
 
@@ -778,11 +791,7 @@ impl<'a> Compiler<'a> {
             return Rc::clone(value);
         }
 
-        let value: Rc<str> = self
-            .themes
-            .get_or_insert_with(Themes::new)
-            .serialize(reference)
-            .into();
+        let value: Rc<str> = self.themes().serialize(reference).into();
 
         self.serialized.insert(key, Rc::clone(&value));
         self.references.push(Arc::clone(reference));
@@ -871,13 +880,15 @@ impl<'a> Compiler<'a> {
     }
 
     /// Lists declaration groups in authored order. `None` marks styles whose nested grouped
-    /// output or anonymous layers emit one opaque rule.
+    /// output or anonymous layers emit one opaque rule. Class rules make the style opaque as
+    /// well, unless `skip_classes` leaves them out for `class_rule` to print.
     /// `prepared` holds the serialized declarations of a top-level style.
     fn flatten(
         &mut self,
         style: &'a NamedStyle,
         conditions: &[Arc<str>],
         prepared: Option<&Prepared>,
+        skip_classes: bool,
     ) -> Option<Vec<Item<'a>>> {
         if style.css_output == Some(CssOutput::Grouped) {
             return None;
@@ -887,13 +898,17 @@ impl<'a> Compiler<'a> {
             let mut items = Vec::new();
 
             for rule in rules {
+                if rule.class.is_some() && skip_classes {
+                    continue;
+                }
+
                 if rule.class.is_some() || is_layer(rule.condition.as_ref()) {
                     return None;
                 }
 
                 let next = with(conditions, rule.condition.as_ref());
 
-                items.extend(self.flatten(&rule.style, &next, None)?);
+                items.extend(self.flatten(&rule.style, &next, None, skip_classes)?);
             }
 
             return Some(items);
@@ -950,6 +965,24 @@ impl<'a> Compiler<'a> {
         }
 
         result
+    }
+
+    /// Prints a class rule under its own class, which applications add, so it joins no class
+    /// list and shares no unit.
+    fn class_rule(
+        &mut self,
+        state: &mut Application<'a>,
+        class: &'a Arc<str>,
+        style: &'a NamedStyle,
+        conditions: &[Arc<str>],
+        units: &mut Units<'_>,
+    ) {
+        let explicit = state.explicit.replace(class);
+        let names = state.names.len();
+
+        self.atoms(state, style, conditions, None, units);
+        state.explicit = explicit;
+        state.names.truncate(names);
     }
 
     fn collision(&mut self, name: &Arc<str>) {
@@ -1129,15 +1162,8 @@ impl<'a> Compiler<'a> {
 
         if let Some(rules) = &style.rules {
             for rule in rules {
-                // A class rule prints under its own class, which applications add, so it joins
-                // no class list and shares no unit.
                 if let Some(class) = &rule.class {
-                    let explicit = state.explicit.replace(class);
-                    let names = state.names.len();
-
-                    self.atoms(state, &rule.style, conditions, None, units);
-                    state.explicit = explicit;
-                    state.names.truncate(names);
+                    self.class_rule(state, class, &rule.style, conditions, units);
                     continue;
                 }
 
@@ -1279,7 +1305,15 @@ impl<'a> Compiler<'a> {
             return;
         }
 
-        let Some(items) = self.flatten(style, &[], prepared) else {
+        // A Lynx recipe prints each choice under a class rule that applications add to its base.
+        // Under independent composition the base shares units like a plain style, and the class
+        // rules print after them, so a choice still overrides the base.
+        let classes = style
+            .rules
+            .iter()
+            .flatten()
+            .any(|rule| rule.class.is_some());
+        let Some(items) = self.flatten(style, &[], prepared, classes) else {
             self.atoms(state, style, &[], prepared, units);
             return;
         };
@@ -1318,6 +1352,12 @@ impl<'a> Compiler<'a> {
             }
 
             self.unit(state, &body, units);
+        }
+
+        for rule in style.rules.iter().flatten() {
+            if let Some(class) = &rule.class {
+                self.class_rule(state, class, &rule.style, &[], units);
+            }
         }
     }
 
@@ -1437,6 +1477,10 @@ fn compile_with(options: &Options<'_>, units: &mut Units<'_>) -> Result<Output> 
         runs: FxHashMap::default(),
         selectors: FxHashMap::default(),
         serialized: FxHashMap::default(),
+        theme_options: themes::Options {
+            lynx: options.lynx,
+            names: options.variables.cloned(),
+        },
         themes: None,
         unit_body: String::new(),
         unit_key: String::new(),
@@ -1664,7 +1708,7 @@ fn run<'a>(
             let items = if style.css_output.unwrap_or(default_mode) == CssOutput::Atomic
                 && explicit_name(style).is_none()
             {
-                compiler.flatten(style, &[], prepared.get(index))
+                compiler.flatten(style, &[], prepared.get(index), false)
             } else {
                 None
             };
@@ -1934,8 +1978,7 @@ fn run<'a>(
         }
     } else if compiler.themes.is_some() || options.vars.is_some() || options.schemes {
         compiler
-            .themes
-            .get_or_insert_with(Themes::new)
+            .themes()
             .emit(
                 options.vars.unwrap_or_default(),
                 options.schemes,

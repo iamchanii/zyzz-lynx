@@ -1753,18 +1753,6 @@ export const card = style({ display: 'flex', color: '#ff0000' });`
           --z-color-brand: #000;
         }
 
-        .z_scheme-dark {
-          color-scheme: dark;
-        }
-
-        .z_scheme-light {
-          color-scheme: light;
-        }
-
-        .z_scheme-light-dark {
-          color-scheme: light dark;
-        }
-
         .z_pXWEgW0 {
           color: var(--z-color-brand, #000);
         }
@@ -1794,18 +1782,6 @@ export const card = style({ display: 'flex', color: '#ff0000' });`
       expect(after).toMatchInlineSnapshot(`
         ".z-theme-theme {
           --z-color-brand: #fff;
-        }
-
-        .z_scheme-dark {
-          color-scheme: dark;
-        }
-
-        .z_scheme-light {
-          color-scheme: light;
-        }
-
-        .z_scheme-light-dark {
-          color-scheme: light dark;
         }
 
         .z_pXWEgW0 {

@@ -20,12 +20,13 @@ use std::sync::Arc;
 use oxc_ast::ast::{
     BinaryOperator, BindingPattern, CallExpression, Expression, FormalParameters,
     IdentifierReference, JSXAttributeItem, JSXAttributeName, JSXAttributeValue, JSXChild,
-    JSXElement, JSXElementName, JSXExpression, LogicalOperator, ObjectPropertyKind, PropertyKey,
-    PropertyKind, UnaryOperator,
+    JSXElement, JSXElementName, JSXExpression, LogicalOperator, ObjectExpression,
+    ObjectPropertyKind, PropertyKey, PropertyKind, UnaryOperator,
 };
 use oxc_semantic::{Semantic, SymbolId};
 use oxc_span::{GetSpan, Span};
 use rustc_hash::FxHashMap;
+use smallvec::SmallVec;
 
 use crate::compiler::internal::expression::unwrap;
 use crate::compiler::internal::recipes::Positions;
@@ -126,6 +127,14 @@ const DEPTH: usize = 32;
 
 /// The most class combinations a constant table holds. Larger recipes concatenate classes.
 const TABLE: usize = 64;
+
+/// The most class lists a composition table holds: the presence alternatives of its conditional
+/// arguments times the class combinations of its recipe applications. A larger composition
+/// keeps the runtime helper.
+pub const COMPOSITION_TABLE: usize = 256;
+
+/// Authored axes and values of a class-selection recipe application.
+pub type Fields<'a> = SmallVec<[(&'a str, &'a Expression<'a>); 4]>;
 
 /// How a component reads its props.
 pub enum Params<'a> {
@@ -456,6 +465,64 @@ fn pure(
     })
 }
 
+/// The axes a class-selection recipe application selects, with each value, in authored order,
+/// or `None` when its values object is not a plain literal of distinct axes. An application
+/// without values selects no axis. Choice names a non-string selection could stringify to also
+/// keep the call, as do compounds, which need the selector, and class lists, which are no props
+/// object to spread.
+pub fn fields<'a>(
+    values: Option<&'a ObjectExpression<'a>>,
+    recipe: &runtime::Definition,
+) -> Option<Fields<'a>> {
+    recipe.prefix.as_ref()?;
+
+    if recipe.class_list || recipe.compounds.is_some() {
+        return None;
+    }
+
+    let mut fields: Fields<'a> = SmallVec::new();
+
+    for property in values.iter().flat_map(|values| &values.properties) {
+        let ObjectPropertyKind::ObjectProperty(property) = property else {
+            return None;
+        };
+
+        if property.computed || property.method || property.kind != PropertyKind::Init {
+            return None;
+        }
+
+        let key = match &property.key {
+            PropertyKey::StaticIdentifier(identifier) => identifier.name.as_str(),
+            PropertyKey::StringLiteral(literal) => literal.value.as_str(),
+            _ => return None,
+        };
+
+        if !recipe.axes.contains_key(key) || fields.iter().any(|(seen, _)| *seen == key) {
+            return None;
+        }
+
+        fields.push((key, &property.value));
+    }
+
+    // A number or other value would stringify to a numeric choice name.
+    let numeric = recipe
+        .axes
+        .values()
+        .flatten()
+        .any(|name| name.parse::<f64>().is_ok() || name.trim() != &**name);
+
+    (!numeric).then_some(fields)
+}
+
+/// The class combinations of a class-selection recipe: each axis adds one of its distinct
+/// classes or none, as the table of [`composition`] indexes them.
+pub fn combinations(definition: &runtime::Definition) -> usize {
+    axes(definition)
+        .map(|axis| slots(&axis).len())
+        .try_fold(1usize, usize::checked_mul)
+        .unwrap_or(usize::MAX)
+}
+
 /// The primitive a literal expression evaluates to.
 pub fn literal(expression: &Expression<'_>) -> Option<Literal> {
     Some(match unwrap(expression) {
@@ -573,8 +640,9 @@ impl<'h> Helpers<'h> {
         name
     }
 
-    /// The name of a constant table of class lists.
-    fn table(&mut self, entries: &[String]) -> String {
+    /// The name of a constant table of class lists, or of frozen `className` props when `props`
+    /// is set.
+    fn table(&mut self, entries: &[String], props: bool) -> String {
         let mut contents = String::from("[");
 
         for (index, entry) in entries.iter().enumerate() {
@@ -582,7 +650,13 @@ impl<'h> Helpers<'h> {
                 contents.push(',');
             }
 
-            js::write_string(&mut contents, entry);
+            if props {
+                contents.push_str("{className:");
+                js::write_string(&mut contents, entry);
+                contents.push('}');
+            } else {
+                js::write_string(&mut contents, entry);
+            }
         }
 
         contents.push(']');
@@ -591,9 +665,17 @@ impl<'h> Helpers<'h> {
             return name.clone();
         }
 
-        let name = self.name("__zyzzClasses");
+        let name = self.name(if props {
+            "__zyzzEntries"
+        } else {
+            "__zyzzClasses"
+        });
 
-        self.statements.push(format!("const {name}={contents};"));
+        self.statements.push(if props {
+            format!("const {name}=/*#__PURE__*/{contents}.map(Object.freeze);")
+        } else {
+            format!("const {name}={contents};")
+        });
         self.tables.insert(contents, name.clone());
         name
     }
@@ -794,15 +876,20 @@ fn write_literal(output: &mut String, literal: &Literal) {
     }
 }
 
+/// The choice name a literal value selects on an axis with `default`: `undefined` selects the
+/// default, and `null` selects nothing, as at runtime. A name the axis does not declare selects
+/// nothing either, which callers check against the axis.
+pub fn selected(literal: &Literal, default: Option<&str>) -> Option<String> {
+    match literal {
+        Literal::Undefined => default.map(str::to_owned),
+        literal => literal.text(),
+    }
+}
+
 /// The slot of the class a literal selection adds on an axis, `0` adding none. `undefined`
 /// selects the default, and `null` or an unknown choice selects nothing, as at runtime.
 fn slot(axis: &Axis, slots: &[&str], literal: &Literal) -> usize {
-    let choice = match literal {
-        Literal::Undefined => axis.default.as_deref().map(str::to_owned),
-        literal => literal.text(),
-    };
-
-    choice
+    selected(literal, axis.default.as_deref())
         .and_then(|choice| axis.choices.iter().find(|(name, _)| **name == *choice))
         .and_then(|(_, class)| slots.iter().position(|slot| *slot == &**class))
         .unwrap_or(0)
@@ -1196,15 +1283,46 @@ pub enum Applied {
 /// Plans a class-selection recipe application spread onto a host element, with its authored
 /// values in authored order as each axis name and, for a literal value, the literal. Literal
 /// values fold into the class list, and each other value becomes a selector argument, so it
-/// evaluates once, in authored order. Few class combinations read a constant table. Returns
+/// evaluates once, in authored order. Few class combinations read a constant table. `copies`
+/// lists the classes a flat composition adds beside a choice class, by choice class. Returns
 /// `None` when a base list that starts with whitespace would join differently.
 pub fn application(
     classes: &str,
     definition: &runtime::Definition,
     values: &[(&str, Option<Literal>)],
+    copies: &[(Arc<str>, Vec<Arc<str>>)],
     helpers: &mut Helpers<'_>,
 ) -> Option<Applied> {
-    let axes: Vec<Axis> = axes(definition).collect();
+    let axes: Vec<Axis> = axes(definition)
+        .map(|axis| {
+            if copies.is_empty() {
+                return axis;
+            }
+
+            let choices = axis
+                .choices
+                .iter()
+                .map(|(choice, class)| {
+                    // A choice class is a space and the class.
+                    let added = copies
+                        .iter()
+                        .find(|(copied, _)| class.get(1..) == Some(&**copied))
+                        .map(|(_, classes)| classes.as_slice())
+                        .unwrap_or_default();
+                    let mut class = class.to_string();
+
+                    for added in added {
+                        class.push(' ');
+                        class.push_str(added);
+                    }
+
+                    (Arc::clone(choice), Arc::from(class))
+                })
+                .collect();
+
+            Axis { choices, ..axis }
+        })
+        .collect();
     let mut count = 0;
     let mut params: FxHashMap<&str, Binding> = FxHashMap::default();
 
@@ -1337,6 +1455,224 @@ enum Classes {
     Known(String),
 }
 
+/// The distinct classes an axis adds, the first of which adds none.
+fn slots(axis: &Axis) -> Vec<&str> {
+    let mut slots = vec![""];
+
+    for (_, class) in &axis.choices {
+        if !slots.contains(&&**class) {
+            slots.push(class);
+        }
+    }
+
+    slots
+}
+
+/// One parameter group of a composition selector, in authored order.
+pub enum Argument<'o> {
+    /// The presence bits of a run of conditional arguments, one parameter.
+    Mask,
+    /// A class-selection recipe application, one parameter per non-literal value.
+    Recipe {
+        /// Selection metadata.
+        definition: &'o runtime::Definition,
+        /// The prefix each presence alternative gives the recipe's choice classes, by mask, or
+        /// `None` when it copies no classed choice.
+        prefixes: &'o [Option<Arc<str>>],
+        /// Authored values in authored order: the axis and its literal, or `None` for a
+        /// parameter.
+        values: &'o [(&'o str, Option<Literal>)],
+    },
+}
+
+/// What a composition table selects.
+pub enum Composed {
+    /// A class list known at compile time.
+    Classes(String),
+    /// An expression reading one entry of a hoisted props table, with no parameters.
+    Entry(String),
+    /// A selector call, the name of a module-scope selector taking the composition's
+    /// parameters in order.
+    Select(String),
+}
+
+/// Plans a composition of known styles and class-selection recipe applications as one table
+/// indexed by the presence mask of its conditional arguments and the choices of its recipes.
+/// Each entry is the class list the runtime helper would render: the presence alternative's
+/// classes, then each recipe's choice classes under the prefix that alternative copies them to,
+/// in argument order. Literal values fold into the index, and each other value or mask becomes a
+/// selector parameter, so it evaluates once, in authored order. `props` selects frozen
+/// `className` props instead of class lists.
+pub fn composition(
+    cases: &[&str],
+    arguments: &[Argument<'_>],
+    props: bool,
+    helpers: &mut Helpers<'_>,
+) -> Composed {
+    struct Planned<'p> {
+        axes: Vec<Axis>,
+        prefix: Option<&'p str>,
+        prefixes: &'p [Option<Arc<str>>],
+        terms: Vec<Term>,
+    }
+
+    let mut count = 0;
+    let mut masks: Vec<usize> = Vec::new();
+    let mut recipes: Vec<Planned<'_>> = Vec::new();
+
+    for argument in arguments {
+        match argument {
+            Argument::Mask => {
+                masks.push(count);
+                count += 1;
+            }
+            Argument::Recipe {
+                definition,
+                prefixes,
+                values,
+            } => {
+                let axes: Vec<Axis> = axes(definition).collect();
+                let mut params: FxHashMap<&str, Binding> = FxHashMap::default();
+
+                for (key, literal) in *values {
+                    let binding = if let Some(literal) = literal {
+                        Binding::Known(literal.clone())
+                    } else {
+                        count += 1;
+                        Binding::Param(count - 1)
+                    };
+
+                    params.insert(key, binding);
+                }
+
+                let terms = axes
+                    .iter()
+                    .map(|axis| match params.get(&*axis.name) {
+                        Some(Binding::Known(literal)) => Term::Known(literal.clone()),
+                        Some(Binding::Param(index)) => Term::Param(*index),
+                        None => Term::Known(Literal::Undefined),
+                    })
+                    .collect();
+
+                recipes.push(Planned {
+                    axes,
+                    prefix: definition.prefix.as_deref(),
+                    prefixes,
+                    terms,
+                });
+            }
+        }
+    }
+
+    // The mask indexes directly, and each axis slot is scaled by the alternatives, so the mask
+    // varies fastest and the first axis slowest.
+    let slots: Vec<Vec<&str>> = recipes
+        .iter()
+        .flat_map(|recipe| recipe.axes.iter().map(slots))
+        .collect();
+    let mut strides = vec![cases.len(); slots.len()];
+
+    for index in (0..slots.len().saturating_sub(1)).rev() {
+        strides[index] = strides[index + 1] * slots.get(index + 1).map_or(1, Vec::len);
+    }
+
+    let size = slots
+        .iter()
+        .fold(cases.len(), |size, slots| size * slots.len());
+    let mut constant = 0;
+    let mut local = false;
+    let mut code = String::new();
+
+    for mask in &masks {
+        if !code.is_empty() {
+            code.push('+');
+        }
+
+        let _ = write!(code, "p{mask}");
+    }
+
+    for ((axis, term), (slots, stride)) in recipes
+        .iter()
+        .flat_map(|recipe| recipe.axes.iter().zip(&recipe.terms))
+        .zip(slots.iter().zip(&strides))
+    {
+        let write = |output: &mut String, slot: usize| {
+            let _ = write!(output, "{}", slot * stride);
+        };
+        let mut text = String::new();
+        let selected = match term {
+            Term::Known(literal) => Some(slot(axis, slots, literal)),
+            term => write_axis(&mut text, axis, slots, term, &mut local, &write),
+        };
+
+        if let Some(selected) = selected {
+            constant += selected * stride;
+        } else {
+            if !code.is_empty() {
+                code.push('+');
+            }
+
+            code.push_str(&text);
+        }
+    }
+
+    let entries: Vec<String> = (0..size)
+        .map(|index| {
+            let mask = index % cases.len().max(1);
+            let mut entry = String::from(cases.get(mask).copied().unwrap_or_default());
+            let mut position = 0;
+
+            for recipe in &recipes {
+                let prefix = recipe.prefixes.get(mask).and_then(Option::as_deref);
+
+                for _ in &recipe.axes {
+                    let (Some(slots), Some(stride)) = (slots.get(position), strides.get(position))
+                    else {
+                        break;
+                    };
+                    let class = slots
+                        .get((index / stride) % slots.len())
+                        .copied()
+                        .unwrap_or_default();
+
+                    position += 1;
+
+                    // A choice class is a space, the recipe's prefix, and the choice position,
+                    // which the alternative's copy keeps under its own prefix.
+                    match (prefix, recipe.prefix) {
+                        (Some(to), Some(from)) if !class.is_empty() => {
+                            entry.push(' ');
+                            entry.push_str(to);
+                            entry.push_str(class.get(1 + from.len()..).unwrap_or_default());
+                        }
+                        _ => entry.push_str(class),
+                    }
+                }
+            }
+
+            entry.trim_start_matches(js::is_whitespace).to_owned()
+        })
+        .collect();
+
+    if code.is_empty() {
+        if props {
+            let table = helpers.table(&entries, true);
+
+            return Composed::Entry(format!("{table}[{constant}]"));
+        }
+
+        return Composed::Classes(entries.get(constant).cloned().unwrap_or_default());
+    }
+
+    let table = helpers.table(&entries, props);
+
+    if constant > 0 {
+        let _ = write!(code, "+{constant}");
+    }
+
+    Composed::Select(helpers.function(count, format!("{table}[{code}]"), local))
+}
+
 /// `Props.merge`.
 fn merge(classes: &str, external: Option<&str>) -> String {
     match external {
@@ -1357,21 +1693,8 @@ fn classes(
     local: &mut bool,
     helpers: &mut Helpers<'_>,
 ) -> Option<Classes> {
-    // Each axis adds one of its distinct classes, the first of which adds none.
-    let slots: Vec<Vec<&str>> = axes
-        .iter()
-        .map(|axis| {
-            let mut slots = vec![""];
+    let slots: Vec<Vec<&str>> = axes.iter().map(slots).collect();
 
-            for (_, class) in &axis.choices {
-                if !slots.contains(&&**class) {
-                    slots.push(class);
-                }
-            }
-
-            slots
-        })
-        .collect();
     if base.starts_with(js::is_whitespace) {
         return None;
     }
@@ -1494,7 +1817,7 @@ fn classes(
     }
 
     let filled = entries.iter().all(|entry| !entry.is_empty());
-    let table = helpers.table(&entries);
+    let table = helpers.table(&entries, false);
 
     if constant > 0 {
         let _ = write!(code, "+{constant}");
