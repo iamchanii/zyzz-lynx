@@ -65,7 +65,7 @@ The script exits with status 1 when a state that does not animate differs. [Resu
 
 ## Results
 
-Recorded on 2026-11-02 with `Measure.ts` on an Apple Silicon macOS host: Rspeedy 0.18.2, `@lynx-js/react` 0.128.0, `@vanilla-extract/css` 1.21.2, and the workspace Zyzz build at `b61bff5`. Sizes are bytes on disk divided by 1024, compressed with `node:zlib` at gzip level 9 and the default Brotli quality (11). [Results.md](Results.md) holds the per-commit ledger, the experiments behind each change, and the analysis of what remains.
+Recorded on 2026-11-03 with `Measure.ts` on an Apple Silicon macOS host: Rspeedy 0.18.2, `@lynx-js/react` 0.128.0, `@vanilla-extract/css` 1.21.2, and the workspace Zyzz build at `45fbe5b`, whose compiler and plugin output equals `b61bff5`. Sizes are bytes on disk divided by 1024, compressed with `node:zlib` at gzip level 9 and the default Brotli quality (11). [Results.md](Results.md) holds the per-commit ledger, the experiments behind each change, and the analysis of what remains.
 
 ### Shipped Artifacts
 
@@ -73,16 +73,16 @@ The headline is `product.lynx.bundle` from a plain production build. The thread 
 
 | Artifact         | vanilla-extract raw / gzip / br | Zyzz raw / gzip / br   | Δ raw           | Δ gzip          | Δ br            |
 | ---------------- | ------------------------------- | ---------------------- | --------------- | --------------- | --------------- |
-| `.lynx.bundle`   | 247.3 / 63.3 / 52.4 kB          | 177.6 / 58.7 / 49.4 kB | −69.7 kB (−28%) | −4.6 kB (−7.3%) | −3.0 kB (−5.7%) |
-| `main-thread.js` | 131.4 / 29.0 / 24.5 kB          | 113.8 / 29.7 / 25.6 kB | −17.7 kB (−13%) | +0.7 kB (+2.3%) | +1.1 kB (+4.4%) |
-| `background.js`  | 37.3 / 12.3 / 10.4 kB           | 34.7 / 11.7 / 10.0 kB  | −2.6 kB (−6.9%) | −0.6 kB (−5.0%) | −0.4 kB (−4.0%) |
-| Encoded CSS      | 47.6 / 6.4 / 5.8 kB             | 18.1 / 3.9 / 3.4 kB    | −29.5 kB (−62%) | −2.5 kB (−39%)  | −2.3 kB (−40%)  |
+| `.lynx.bundle`   | 247.3 / 63.2 / 52.3 kB          | 177.4 / 58.6 / 49.3 kB | −69.9 kB (−28%) | −4.6 kB (−7.3%) | −3.1 kB (−5.9%) |
+| `main-thread.js` | 131.4 / 29.0 / 24.5 kB          | 113.7 / 29.7 / 25.5 kB | −17.7 kB (−14%) | +0.7 kB (+2.4%) | +1.0 kB (+4.2%) |
+| `background.js`  | 37.3 / 12.2 / 10.4 kB           | 34.6 / 11.6 / 9.9 kB   | −2.6 kB (−7.1%) | −0.6 kB (−4.9%) | −0.5 kB (−4.9%) |
+| Encoded CSS      | 47.7 / 6.4 / 5.7 kB             | 18.1 / 3.9 / 3.4 kB    | −29.6 kB (−62%) | −2.5 kB (−39%)  | −2.3 kB (−40%)  |
 | External chunks  | 54.8 / 20.6 / 18.7 kB           | 54.8 / 20.6 / 18.7 kB  | 0               | 0               | 0               |
 
 | Stylesheet         | vanilla-extract | Zyzz |
 | ------------------ | --------------- | ---- |
-| Rules              | 503             | 414  |
-| Declarations       | 1827            | 569  |
+| Rules              | 502             | 414  |
+| Declarations       | 1829            | 569  |
 | Classes            | 462             | 417  |
 | `@media` rules     | 3               | 3    |
 | `@keyframes` rules | 11              | 11   |
@@ -91,7 +91,7 @@ The raw bundle gap closes through the stylesheet and the class-name text, which 
 
 ### Progress
 
-Each row is the `zyzz` sample's `.lynx.bundle` after one change on this branch, measured against a worktree of that commit. The vanilla-extract sample stays at 247.3 / 63.3 / 52.4 kB.
+Each row is the `zyzz` sample's `.lynx.bundle` after one change on this branch, measured against a worktree of that commit. The vanilla-extract sample stays at 247.3 / 63.3 / 52.4 kB through the compiler rows. The last row changes the fixtures and copy of both samples, and measures vanilla-extract at 247.3 / 63.2 / 52.3 kB.
 
 | Change                                                                         | Commit    | raw      | gzip    | br      |
 | ------------------------------------------------------------------------------ | --------- | -------- | ------- | ------- |
@@ -109,7 +109,8 @@ Each row is the `zyzz` sample's `.lynx.bundle` after one change on this branch, 
 | Read recipe axes directly and coerce only boolean-like and numeric choices     | `921bb9e` | 194.1 kB | 60.7 kB | 50.8 kB |
 | Name token properties and keyframes densely and omit `var()` fallbacks on Lynx | `0e937c6` | 181.6 kB | 59.3 kB | 49.8 kB |
 | Merge units with identical usage sets in production bundles                    | `b61bff5` | 177.6 kB | 58.7 kB | 49.4 kB |
+| Rewrite both samples as a generic commerce product page                        | `45fbe5b` | 177.4 kB | 58.6 kB | 49.3 kB |
 
 ### Rendering
 
-`visual/Compare.ts` renders both samples through Lynx for Web and compares eleven interaction states pixel by pixel. Eight states are identical. The three states with the calendar open differ in at most 0.09% of pixels, all from one cause: the compiler prints `width: 14.285714285714286%` as `14.2857%`, since it reprints declarations through Lightning CSS with six significant digits, which shortens the calendar by 0.047 px and shifts half-pixel boxes below it by one device pixel. Rebuilding the vanilla-extract sample with `14.2857%` makes every state identical. Results.md records the run and the diff images live in `bench/results/lynx/visual/`.
+`visual/Compare.ts` renders both samples through Lynx for Web and compares eleven interaction states pixel by pixel. Eight states are identical. The three states with the calendar open differ in at most 0.1% of pixels, all from one cause: the compiler prints `width: 14.285714285714286%` as `14.2857%`, since it reprints declarations through Lightning CSS with six significant digits, which shortens the calendar by 0.047 px and shifts half-pixel boxes below it by one device pixel. Rebuilding the vanilla-extract sample with `14.2857%` makes every state identical. Results.md records the run and the diff images live in `bench/results/lynx/visual/`.
