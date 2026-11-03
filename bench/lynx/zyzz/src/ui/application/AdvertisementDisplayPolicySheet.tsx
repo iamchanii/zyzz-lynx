@@ -1,6 +1,6 @@
 import { style } from '../../zyzz.config.js'
 
-/** Bottom sheet explaining why advertised posts appear in the neighborhood list. */
+/** Bottom sheet explaining why advertised products appear in the nearby list. */
 export function AdvertisementDisplayPolicySheet(
   props: AdvertisementDisplayPolicySheet.Props,
 ) {
@@ -15,11 +15,11 @@ export function AdvertisementDisplayPolicySheet(
           <view {...styles.image()} />
         </view>
         <view {...styles.copy()}>
-          <text {...styles.title()}>광고 공고는 이렇게 보여드려요</text>
+          <text {...styles.title()}>광고 상품은 이렇게 보여드려요</text>
           <text {...styles.body()}>
-            광고 표시가 있는 공고는 사장님이 비용을 지불해 더 많은 이웃에게
-            노출돼요. 광고 여부와 관계없이 같은 기준으로 공고를 검수하고, 근무
-            조건은 사장님이 직접 작성해요.
+            광고 표시가 있는 상품은 판매자가 비용을 지불해 더 많은 고객에게
+            노출돼요. 광고 여부와 관계없이 같은 기준으로 상품을 검수하고, 판매
+            조건은 판매자가 직접 작성해요.
           </text>
         </view>
         <view {...styles.footer()}>

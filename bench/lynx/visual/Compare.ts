@@ -6,7 +6,7 @@
  * `bench/results/lynx/visual/`.
  *
  * Usage: `node bench/lynx/visual/Compare.ts [--out <dir>] [--threshold <0..1>]`
- * Both samples need a `dist-web/jobPost.web.bundle`, built with
+ * Both samples need a `dist-web/product.web.bundle`, built with
  * `pnpm exec rspeedy build -c lynx.web.config.ts` in each sample directory.
  * @module
  */
@@ -137,7 +137,7 @@ async function wheel(page: Page, distance: number) {
 
 async function ready(page: Page) {
   await page
-    .getByText('지원하기')
+    .getByText('구매하기')
     .first()
     .waitFor({ state: 'visible', timeout: 20000 })
   await page.waitForTimeout(1500)
@@ -208,7 +208,7 @@ const steps: readonly Step[] = [
   },
   {
     name: 'error',
-    run: (page) => tap(byText(page, '전화하기').first(), 800),
+    run: (page) => tap(byText(page, '문의하기').first(), 800),
   },
   {
     name: 'recovered',
@@ -221,7 +221,7 @@ const steps: readonly Step[] = [
 
 async function capture(app: App, out: string): Promise<Capture[]> {
   const distWeb = path.join(repo, 'bench/lynx', app, 'dist-web')
-  const bundle = path.join(distWeb, 'jobPost.web.bundle')
+  const bundle = path.join(distWeb, 'product.web.bundle')
 
   if (!fs.existsSync(bundle)) {
     throw new Error(
@@ -252,7 +252,7 @@ async function capture(app: App, out: string): Promise<Capture[]> {
     if (message.type() === 'error') errors.push(message.text())
   })
 
-  const query = new URLSearchParams({ bundle: '/jobPost.web.bundle' })
+  const query = new URLSearchParams({ bundle: '/product.web.bundle' })
   await page.goto(`http://127.0.0.1:${address.port}/visual/index.html?${query}`)
 
   const captures: Capture[] = []

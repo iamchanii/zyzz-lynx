@@ -10,5 +10,5 @@ export default defineConfig({
     pluginReactLynx({ enableCSSInvalidation: true, enableCSSSelector: true }),
     zyzz({ root: 'src' }),
   ],
-  source: { entry: { jobPost: './src/index.tsx' } },
+  source: { entry: { product: './src/index.tsx' } },
 })

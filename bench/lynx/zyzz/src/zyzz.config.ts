@@ -1,5 +1,5 @@
 /**
- * Design tokens of the job-post sample bound to the Zyzz authoring helpers. Components import
+ * Design tokens of the product sample bound to the Zyzz authoring helpers. Components import
  * `style`, `variants`, and `vars` from this module, so a renamed token fails type checking at
  * every use.
  * @module

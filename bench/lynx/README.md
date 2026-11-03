@@ -1,13 +1,13 @@
 # Lynx Bundle Comparison
 
-Two ReactLynx sample applications with the same component tree, fixture data, and interaction state, styled once with vanilla-extract and once with Zyzz. The screen mirrors the structure of a production job-post detail screen: a header overlaid on an image gallery, detail rows and cards, author and review sections, horizontal recommendation lists, a map fallback, a notification nudge, a snackbar, a bottom sheet, and a footer with action buttons.
+Two ReactLynx sample applications with the same component tree, fixture data, and interaction state, styled once with vanilla-extract and once with Zyzz. The screen is a product detail page of a commerce app, structured like a production screen: a header overlaid on an image gallery, detail rows and cards, seller and review sections, horizontal recommendation lists, a map fallback, a notification nudge, a snackbar, a bottom sheet, and a footer with action buttons.
 
 | Directory | Styling                                                                                | Plugin                                                                                            |
 | --------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
 | `ve/`     | `@vanilla-extract/css` modules (`style`, `styleVariants`, `keyframes`, `globalStyle`)  | `@vanilla-extract/webpack-plugin` with the Rspeedy child-compiler compat shim in `lynx.config.ts` |
 | `zyzz/`   | `zyzz` (`style`, `variants`, `cx`, `keyframes`, `global`) in `namespace styles` blocks | `zyzz/rspeedy`                                                                                    |
 
-Both configurations enable `enableCSSSelector` and `enableCSSInvalidation`, split dependencies by module, and build one `jobPost` entry. The `zyzz` sample uses the plugin defaults, including independent composition on Lynx. The `ve` sample keeps the reference application's class application form, template literals that join conditional class names. The `zyzz` sample follows the conventions in [Styling.md](Styling.md): definitions in a `namespace styles` at the bottom of each component file, tokens from `zyzz.config.ts`, spreads and `cx` for application, and `variants` recipes for enumerated choices.
+Both configurations enable `enableCSSSelector` and `enableCSSInvalidation`, split dependencies by module, and build one `product` entry. The `zyzz` sample uses the plugin defaults, including independent composition on Lynx. The `ve` sample keeps the reference application's class application form, template literals that join conditional class names. The `zyzz` sample follows the conventions in [Styling.md](Styling.md): definitions in a `namespace styles` at the bottom of each component file, tokens from `zyzz.config.ts`, spreads and `cx` for application, and `variants` recipes for enumerated choices.
 
 ## Measuring
 
@@ -21,7 +21,7 @@ node bench/lynx/Measure.ts --label main
 node bench/lynx/Measure.ts --label 1fa9ece --app zyzz --library ../zyzz-lynx-worktrees/1fa9ece
 ```
 
-The first build is a plain production build. It records the shipped `jobPost.lynx.bundle` and the external `static/js` chunks with raw, gzip, and Brotli sizes. The second build sets `DEBUG=rspeedy`, which keeps the intermediate `.lynx/jobPost/` assets the encoder otherwise deletes: `main-thread.js`, `background.<hash>.js`, the `jobPost.css` asset, the encoded template `tasm.json`, and `stats.json`.
+The first build is a plain production build. It records the shipped `product.lynx.bundle` and the external `static/js` chunks with raw, gzip, and Brotli sizes. The second build sets `DEBUG=rspeedy`, which keeps the intermediate `.lynx/product/` assets the encoder otherwise deletes: `main-thread.js`, `background.<hash>.js`, the `product.css` asset, the encoded template `tasm.json`, and `stats.json`.
 
 - **Encoded CSS:** the rules the Lynx encoder kept in the template, serialized from `tasm.json`, with rule, declaration, class, `@media`, and `@keyframes` counts.
 - **Threads:** `stats.json` module sizes grouped by the `react:main-thread` and `react:background` layers and split into application modules, style modules, and dependencies. These are pre-minification source sizes, useful for attribution rather than as shipped bytes.
@@ -49,7 +49,7 @@ The fork history is linear, so a worktree at commit N holds the Rspeedy base com
 
 ## Visual Comparison
 
-`visual/Compare.ts` checks that both samples render the same. Each sample's `lynx.web.config.ts` builds a `dist-web/jobPost.web.bundle` for Lynx for Web, and the script hosts each bundle in `@lynx-js/web-core`, drives both through the same interaction states in headless Chromium, and compares the screenshots with `pixelmatch`.
+`visual/Compare.ts` checks that both samples render the same. Each sample's `lynx.web.config.ts` builds a `dist-web/product.web.bundle` for Lynx for Web, and the script hosts each bundle in `@lynx-js/web-core`, drives both through the same interaction states in headless Chromium, and compares the screenshots with `pixelmatch`.
 
 ```sh
 # Builds the web bundles
@@ -69,7 +69,7 @@ Recorded on 2026-11-02 with `Measure.ts` on an Apple Silicon macOS host: Rspeedy
 
 ### Shipped Artifacts
 
-The headline is `jobPost.lynx.bundle` from a plain production build. The thread scripts and the encoded stylesheet come from the `DEBUG=rspeedy` build, which keeps the intermediates the encoder otherwise deletes.
+The headline is `product.lynx.bundle` from a plain production build. The thread scripts and the encoded stylesheet come from the `DEBUG=rspeedy` build, which keeps the intermediates the encoder otherwise deletes.
 
 | Artifact         | vanilla-extract raw / gzip / br | Zyzz raw / gzip / br   | Δ raw           | Δ gzip          | Δ br            |
 | ---------------- | ------------------------------- | ---------------------- | --------------- | --------------- | --------------- |

@@ -157,8 +157,8 @@ The `zyzz/rspeedy` plugin compiles every environment for the `lynx` target, beca
 | `styleVariants({ large: {...}, medium: {...} })` + `styles.size[x]` | `variants({ selection: 'className', variants: { size: {...} } })` + `className={styles.button({ size })}`                |
 | `keyframes({...})` from `@vanilla-extract/css`                      | `keyframes({...})` from `zyzz/web`, at module scope                                                                      |
 | `globalStyle(`\${cls} text`, {...})`                                | `global({ [`\${styles.cls} text`]: {...} })` from `zyzz/web`, or a `selectors` entry `'& text'` on the parent definition |
-| `vars.color.fg.neutral` holding `var(--seed-...)`                   | token name `'fg.neutral'` with `style` from `zyzz.config.ts`                                                             |
+| `vars.color.fg.neutral` holding `var(--base-...)`                   | token name `'fg.neutral'` with `style` from `zyzz.config.ts`                                                             |
 | `...typography.t4Medium` spread                                     | `typography: 't4Medium'` preset, or a local `as const` record spread                                                     |
-| `tokens.css` with `page { --seed-...: ... }`                        | `defineVars` values in `zyzz.config.ts`, emitted by the compiler                                                         |
+| `tokens.css` with `page { --base-...: ... }`                        | `defineVars` values in `zyzz.config.ts`, emitted by the compiler                                                         |
 | `'@media': { '(max-width: 360px)': {...} }`                         | `'@media (max-width: 360px)': {...}`                                                                                     |
 | `':active': {...}`                                                  | `':active': {...}`                                                                                                       |

@@ -1,6 +1,6 @@
 import { style } from '@vanilla-extract/css'
 import { typography, vars } from './tokens.js'
-import * as footerStyles from './ui/application/JobPostFooter.css.js'
+import * as footerStyles from './ui/application/ProductFooter.css.js'
 
 const column = { display: 'flex', flexDirection: 'column' } as const
 const row = { display: 'flex', flexDirection: 'row' } as const

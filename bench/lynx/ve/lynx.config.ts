@@ -1,10 +1,9 @@
 /**
  * Rspeedy configuration for the vanilla-extract baseline of the Lynx bundle comparison.
  *
- * The compat plugin reproduces `@daangn/vanilla-extract-rspeedy-plugin` 0.2.2, which the
- * reference application uses: it keeps the ReactLynx plugin out of the vanilla-extract child
- * compiler and compiles the `.css.ts` modules with the SWC loader, so the sample depends only on
- * the public webpack plugin.
+ * The compat plugin reproduces the reference application's vanilla-extract Rspeedy plugin: it
+ * keeps the ReactLynx plugin out of the vanilla-extract child compiler and compiles the `.css.ts`
+ * modules with the SWC loader, so the sample depends only on the public webpack plugin.
  * @module
  */
 import { pluginReactLynx } from '@lynx-js/react-rsbuild-plugin'
@@ -78,5 +77,5 @@ export default defineConfig({
     pluginReactLynx({ enableCSSInvalidation: true, enableCSSSelector: true }),
     pluginVanillaExtract(),
   ],
-  source: { entry: { jobPost: './src/index.tsx' } },
+  source: { entry: { product: './src/index.tsx' } },
 })

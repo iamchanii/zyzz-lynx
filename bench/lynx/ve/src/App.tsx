@@ -2,10 +2,10 @@ import { useEffect, useState } from '@lynx-js/react'
 import type { ScrollEvent } from '@lynx-js/types'
 import * as styles from './App.css.js'
 import { AdvertisementDisplayPolicySheet } from './ui/application/AdvertisementDisplayPolicySheet.js'
-import { JobPostFooter } from './ui/application/JobPostFooter.js'
-import { JobPostNotificationNudge } from './ui/application/JobPostNotificationNudge.js'
-import { JobPostScreen } from './ui/application/JobPostScreen.js'
-import { JobPostWatchSnackbar } from './ui/application/JobPostWatchSnackbar.js'
+import { ProductFooter } from './ui/application/ProductFooter.js'
+import { ProductNotificationNudge } from './ui/application/ProductNotificationNudge.js'
+import { ProductScreen } from './ui/application/ProductScreen.js'
+import { ProductWatchSnackbar } from './ui/application/ProductWatchSnackbar.js'
 import { SkeletonTransition } from './ui/general/SkeletonTransition.js'
 import { TextSkeleton } from './ui/general/TextSkeleton.js'
 
@@ -37,7 +37,7 @@ export function App() {
   function onInterestChange(active: boolean) {
     setInterested(active)
     setSnackbar(
-      active ? '관심 알바에 저장했어요.' : '관심 알바에서 삭제했어요.',
+      active ? '관심 상품에 저장했어요.' : '관심 상품에서 삭제했어요.',
     )
   }
 
@@ -47,7 +47,7 @@ export function App() {
         <AppBar solid onBack={() => {}} />
         <view className={styles.error}>
           <view className={styles.errorCopy}>
-            <text className={styles.errorTitle}>공고를 불러오지 못했어요</text>
+            <text className={styles.errorTitle}>상품을 불러오지 못했어요</text>
             <text className={styles.errorDescription}>
               네트워크 상태를 확인한 뒤 다시 시도해 주세요.
             </text>
@@ -75,22 +75,22 @@ export function App() {
             scroll-orientation="vertical"
             bindscroll={onScroll}
           >
-            <JobPostScreen
+            <ProductScreen
               onCopyAddress={() => setSnackbar('주소를 복사했어요.')}
               onOpenPolicy={() => setPolicyOpen(true)}
             />
           </scroll-view>
-          <JobPostFooter
+          <ProductFooter
             interested={interested}
-            onApply={() => setSnackbar('지원서를 보냈어요.')}
-            onCall={() => setState('error')}
+            onInquire={() => setState('error')}
             onInterestChange={onInterestChange}
+            onPurchase={() => setSnackbar('장바구니에 담았어요.')}
           />
         </view>
       </SkeletonTransition>
       <AppBar solid={solid} onBack={() => {}} />
       {snackbar !== undefined && (
-        <JobPostWatchSnackbar
+        <ProductWatchSnackbar
           actionLabel="보기"
           bottom={footerHeight}
           message={snackbar}
@@ -99,7 +99,7 @@ export function App() {
         />
       )}
       {state === 'ready' && nudgeVisible && (
-        <JobPostNotificationNudge
+        <ProductNotificationNudge
           bottom={footerHeight}
           onDismiss={() => setNudgeVisible(false)}
           onOpen={() => setNudgeVisible(false)}
@@ -132,7 +132,7 @@ function AppBar(props: AppBar.Props) {
             className={`${styles.barGlyph} ${props.solid ? styles.barGlyphSolid : ''}`}
           />
         </view>
-        {props.solid && <text className={styles.barTitle}>알바 공고</text>}
+        {props.solid && <text className={styles.barTitle}>상품 상세</text>}
         <view className={styles.barActions}>
           <view className={styles.barButton}>
             <view
